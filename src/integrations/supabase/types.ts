@@ -160,6 +160,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      debug_auth_state: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          auth_uid: string
+          session_exists: boolean
+          user_count: number
+        }[]
+      }
       get_public_live_streams: {
         Args: Record<PropertyKey, never>
         Returns: {

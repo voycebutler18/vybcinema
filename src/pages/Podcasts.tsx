@@ -189,8 +189,8 @@ const Podcasts = () => {
 
       toast({
         title: "Stream Created!",
-        description: `Your stream "${streamData.title}" is ready. Stream key: ${data.stream_key}`,
-        duration: 10000 // Show longer so user can copy the key
+        description: `Your stream "${streamData.title}" is ready. Check the "Manage Streams" tab to see your stream key.`,
+        duration: 10000
       });
 
       setStreamData({ title: '', description: '' });

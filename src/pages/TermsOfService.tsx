@@ -210,10 +210,10 @@ const TermsOfService = () => {
                 </p>
                 <div className="space-y-2">
                   <p className="text-foreground">
-                    <strong>Legal Questions:</strong> legal@vybcinema.com
+                    <strong>Legal Questions:</strong> voycebutler@vybcinema.com
                   </p>
                   <p className="text-foreground">
-                    <strong>General Contact:</strong> hello@vybcinema.com
+                    <strong>General Contact:</strong> voycebutler@vybcinema.com
                   </p>
                 </div>
               </div>

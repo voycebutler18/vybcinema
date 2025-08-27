@@ -104,19 +104,19 @@ const Press = () => {
                   <div>
                     <p className="text-foreground font-semibold">Media Contact:</p>
                     <a 
-                      href="mailto:press@vybcinema.com"
+                      href="mailto:voycebutler@vybcinema.com"
                       className="text-primary hover:underline"
                     >
-                      press@vybcinema.com
+                      voycebutler@vybcinema.com
                     </a>
                   </div>
                   <div>
                     <p className="text-foreground font-semibold">General Inquiries:</p>
                     <a 
-                      href="mailto:hello@vybcinema.com"
+                      href="mailto:voycebutler@vybcinema.com"
                       className="text-primary hover:underline"
                     >
-                      hello@vybcinema.com
+                      voycebutler@vybcinema.com
                     </a>
                   </div>
                 </div>

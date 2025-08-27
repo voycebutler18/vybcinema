@@ -92,10 +92,10 @@ const Careers = () => {
                   Send us your info and we'll keep you in mind as we grow
                 </p>
                 <a 
-                  href="mailto:careers@vybcinema.com"
+                  href="mailto:voycebutler@vybcinema.com"
                   className="inline-flex items-center px-6 py-3 bg-gradient-primary text-white rounded-lg hover:scale-105 transition-transform"
                 >
-                  careers@vybcinema.com
+                  voycebutler@vybcinema.com
                 </a>
               </div>
             </div>

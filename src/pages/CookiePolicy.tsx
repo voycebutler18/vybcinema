@@ -208,10 +208,10 @@ const CookiePolicy = () => {
                 </p>
                 <div className="space-y-2">
                   <p className="text-foreground">
-                    <strong>Privacy Questions:</strong> privacy@vybcinema.com
+                    <strong>Privacy Questions:</strong> voycebutler@vybcinema.com
                   </p>
                   <p className="text-foreground">
-                    <strong>General Contact:</strong> hello@vybcinema.com
+                    <strong>General Contact:</strong> voycebutler@vybcinema.com
                   </p>
                 </div>
               </div>

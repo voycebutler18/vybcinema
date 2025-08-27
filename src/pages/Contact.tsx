@@ -89,8 +89,8 @@ const Contact = () => {
                       <Mail className="h-6 w-6 text-primary mt-1" />
                       <div>
                         <h3 className="font-semibold text-foreground">General Inquiries</h3>
-                        <a href="mailto:hello@vybcinema.com" className="text-primary hover:underline">
-                          hello@vybcinema.com
+                        <a href="mailto:voycebutler@vybcinema.com" className="text-primary hover:underline">
+                          voycebutler@vybcinema.com
                         </a>
                       </div>
                     </div>
@@ -99,8 +99,8 @@ const Contact = () => {
                       <MessageCircle className="h-6 w-6 text-primary mt-1" />
                       <div>
                         <h3 className="font-semibold text-foreground">Business Inquiries</h3>
-                        <a href="mailto:voyce@vybcinema.com" className="text-primary hover:underline">
-                          voyce@vybcinema.com
+                        <a href="mailto:voycebutler@vybcinema.com" className="text-primary hover:underline">
+                          voycebutler@vybcinema.com
                         </a>
                       </div>
                     </div>
@@ -109,8 +109,8 @@ const Contact = () => {
                       <Mail className="h-6 w-6 text-primary mt-1" />
                       <div>
                         <h3 className="font-semibold text-foreground">Press & Media</h3>
-                        <a href="mailto:press@vybcinema.com" className="text-primary hover:underline">
-                          press@vybcinema.com
+                        <a href="mailto:voycebutler@vybcinema.com" className="text-primary hover:underline">
+                          voycebutler@vybcinema.com
                         </a>
                       </div>
                     </div>

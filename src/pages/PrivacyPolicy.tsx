@@ -136,7 +136,7 @@ const PrivacyPolicy = () => {
                     <li><strong className="text-foreground">Restrict processing:</strong> Limit how we use your data</li>
                   </ul>
                   <p>
-                    To exercise these rights, contact us at <strong className="text-foreground">privacy@vybcinema.com</strong>
+                    To exercise these rights, contact us at <strong className="text-foreground">voycebutler@vybcinema.com</strong>
                   </p>
                 </div>
               </div>
@@ -186,10 +186,10 @@ const PrivacyPolicy = () => {
                 </p>
                 <div className="space-y-2">
                   <p className="text-foreground">
-                    <strong>Email:</strong> privacy@vybcinema.com
+                    <strong>Email:</strong> voycebutler@vybcinema.com
                   </p>
                   <p className="text-foreground">
-                    <strong>General Contact:</strong> hello@vybcinema.com
+                    <strong>General Contact:</strong> voycebutler@vybcinema.com
                   </p>
                 </div>
               </div>

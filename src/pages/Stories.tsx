@@ -75,9 +75,20 @@ const Stories = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
+    if (!user) {
+      toast({
+        title: "Authentication Required",
+        description: "Please sign in to upload content.",
+        variant: "destructive"
+      });
+      return;
+    }
 
-    console.log('Form submission attempt:', formData);
+    console.log('Form submission attempt:', { 
+      formData, 
+      userId: user.id,
+      userEmail: user.email 
+    });
 
     if (!formData.fileUrl) {
       toast({
@@ -91,10 +102,18 @@ const Stories = () => {
     setUploading(true);
 
     try {
+      // Check current session
+      const { data: { session } } = await supabase.auth.getSession();
+      console.log('Current session:', session?.user?.id);
+      
+      if (!session?.user) {
+        throw new Error('No active session - please sign in again');
+      }
+
       const { error } = await supabase
         .from('content')
         .insert({
-          user_id: user.id,
+          user_id: session.user.id, // Use session user ID for RLS
           title: formData.title,
           description: formData.description,
           content_type: 'story',
@@ -102,7 +121,10 @@ const Stories = () => {
           file_url: formData.fileUrl
         });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Insert error:', error);
+        throw error;
+      }
 
       toast({
         title: "Success!",
@@ -112,9 +134,12 @@ const Stories = () => {
       setFormData({ title: '', description: '', genre: '', fileUrl: '', fileName: '' });
       fetchStories();
     } catch (error: any) {
+      console.error('Upload error:', error);
       toast({
         title: "Upload Failed",
-        description: error.message,
+        description: error.message === 'No active session - please sign in again' 
+          ? 'Please sign out and sign back in to continue.'
+          : error.message,
         variant: "destructive"
       });
     } finally {

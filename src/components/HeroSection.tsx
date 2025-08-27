@@ -32,13 +32,15 @@ export const HeroSection = () => {
           {/* Subheadline */}
           <p className="text-xl md:text-2xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
             Free for 30 days. Watch anywhere. Cancel anytime.
+            <br />
+            <span className="text-lg text-primary-glow">Premium content library coming soon</span>
           </p>
           
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-4">
             <Button className="btn-hero flex items-center gap-2 text-lg px-8 py-4">
               <Play className="h-5 w-5" />
-              Start your free trial
+              Join the waitlist
             </Button>
             <Button className="btn-secondary flex items-center gap-2 text-lg px-8 py-4">
               <Info className="h-5 w-5" />

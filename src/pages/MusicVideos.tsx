@@ -14,6 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
 import { FileUpload } from "@/components/FileUpload";
+import { VideoPlayer } from "@/components/VideoPlayer";
 
 const MusicVideos = () => {
   const { user } = useAuth();
@@ -27,7 +28,9 @@ const MusicVideos = () => {
     description: '',
     genre: '',
     fileUrl: '',
-    fileName: ''
+    fileName: '',
+    coverUrl: '',
+    trailerUrl: ''
   });
 
   const musicGenres = [
@@ -72,6 +75,20 @@ const MusicVideos = () => {
     }));
   };
 
+  const handleCoverUploaded = (url: string, fileName: string) => {
+    setFormData(prev => ({
+      ...prev,
+      coverUrl: url
+    }));
+  };
+
+  const handleTrailerUploaded = (url: string, fileName: string) => {
+    setFormData(prev => ({
+      ...prev,
+      trailerUrl: url
+    }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
@@ -96,7 +113,9 @@ const MusicVideos = () => {
           description: formData.description,
           content_type: 'music_video',
           genre: formData.genre,
-          file_url: formData.fileUrl
+          file_url: formData.fileUrl,
+          cover_url: formData.coverUrl || null,
+          trailer_url: formData.trailerUrl || null
         });
 
       if (error) throw error;
@@ -106,7 +125,15 @@ const MusicVideos = () => {
         description: "Your music video has been uploaded successfully."
       });
 
-      setFormData({ title: '', description: '', genre: '', fileUrl: '', fileName: '' });
+      setFormData({ 
+        title: '', 
+        description: '', 
+        genre: '', 
+        fileUrl: '', 
+        fileName: '', 
+        coverUrl: '', 
+        trailerUrl: '' 
+      });
       fetchMusicVideos();
     } catch (error: any) {
       toast({
@@ -265,41 +292,18 @@ const MusicVideos = () => {
                 ) : content.length > 0 ? (
                   <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {content.map((video) => (
-                      <Card key={video.id} className="cinema-card">
-                        <CardHeader>
-                          <div className="aspect-video bg-secondary/20 rounded-lg mb-4 flex items-center justify-center relative overflow-hidden">
-                            <Play className="h-12 w-12 text-primary" />
-                            <div className="absolute inset-0 bg-gradient-overlay"></div>
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <Badge variant="secondary">Music Video</Badge>
-                            {video.genre && (
-                              <Badge variant="outline">{video.genre}</Badge>
-                            )}
-                          </div>
-                          <CardTitle className="text-lg">{video.title}</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <p className="text-muted-foreground text-sm mb-4 line-clamp-3">
-                            {video.description || 'No description available'}
-                          </p>
-                          <p className="text-xs text-muted-foreground mb-4">
-                            Uploaded: {new Date(video.created_at).toLocaleDateString()}
-                          </p>
-                          {user && video.user_id === user.id && (
-                            <div className="flex justify-end">
-                              <Button 
-                                size="sm" 
-                                variant="destructive"
-                                onClick={() => deleteContent(video.id, video.file_url)}
-                              >
-                                <Trash2 className="h-4 w-4 mr-1" />
-                                Delete
-                              </Button>
-                            </div>
-                          )}
-                        </CardContent>
-                      </Card>
+                      <VideoPlayer
+                        key={video.id}
+                        videoUrl={video.file_url}
+                        coverUrl={video.cover_url}
+                        trailerUrl={video.trailer_url}
+                        title={video.title}
+                        description={video.description}
+                        genre={video.genre}
+                        contentType="Music Video"
+                        canDelete={user?.id === video.user_id}
+                        onDelete={() => deleteContent(video.id, video.file_url)}
+                      />
                     ))}
                   </div>
                 ) : (

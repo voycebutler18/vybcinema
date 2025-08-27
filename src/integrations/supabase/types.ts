@@ -44,6 +44,7 @@ export type Database = {
       content: {
         Row: {
           content_type: string
+          cover_url: string | null
           created_at: string
           description: string | null
           file_url: string | null
@@ -52,11 +53,13 @@ export type Database = {
           is_featured: boolean | null
           thumbnail_url: string | null
           title: string
+          trailer_url: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
           content_type: string
+          cover_url?: string | null
           created_at?: string
           description?: string | null
           file_url?: string | null
@@ -65,11 +68,13 @@ export type Database = {
           is_featured?: boolean | null
           thumbnail_url?: string | null
           title: string
+          trailer_url?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
           content_type?: string
+          cover_url?: string | null
           created_at?: string
           description?: string | null
           file_url?: string | null
@@ -78,6 +83,7 @@ export type Database = {
           is_featured?: boolean | null
           thumbnail_url?: string | null
           title?: string
+          trailer_url?: string | null
           updated_at?: string
           user_id?: string
         }

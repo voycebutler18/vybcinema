@@ -12,6 +12,7 @@ interface FileUploadProps {
   maxSizeMB?: number;
   label: string;
   currentFile?: string;
+  uploadType?: 'main' | 'cover' | 'trailer';
 }
 
 export const FileUpload = ({ 
@@ -19,7 +20,8 @@ export const FileUpload = ({
   acceptedTypes, 
   maxSizeMB = 500, 
   label,
-  currentFile 
+  currentFile,
+  uploadType = 'main'
 }: FileUploadProps) => {
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -115,7 +117,7 @@ export const FileUpload = ({
     try {
       const fileExt = selectedFile.name.split('.').pop();
       const fileName = `${Math.random().toString(36).substring(2)}.${fileExt}`;
-      const filePath = `content/${fileName}`;
+      const filePath = `${uploadType}/${fileName}`;
 
       // Simulate progress
       const progressInterval = setInterval(() => {

@@ -9,11 +9,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
 import { FileUpload } from "@/components/FileUpload";
+import { VideoPlayer } from "@/components/VideoPlayer";
 
 const Movies = () => {
   const { user } = useAuth();
@@ -27,7 +29,9 @@ const Movies = () => {
     description: '',
     genre: '',
     fileUrl: '',
-    fileName: ''
+    fileName: '',
+    coverUrl: '',
+    trailerUrl: ''
   });
 
   const movieGenres = [
@@ -72,6 +76,20 @@ const Movies = () => {
     }));
   };
 
+  const handleCoverUploaded = (url: string, fileName: string) => {
+    setFormData(prev => ({
+      ...prev,
+      coverUrl: url
+    }));
+  };
+
+  const handleTrailerUploaded = (url: string, fileName: string) => {
+    setFormData(prev => ({
+      ...prev,
+      trailerUrl: url
+    }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
@@ -96,7 +114,9 @@ const Movies = () => {
           description: formData.description,
           content_type: 'movie',
           genre: formData.genre,
-          file_url: formData.fileUrl
+          file_url: formData.fileUrl,
+          cover_url: formData.coverUrl || null,
+          trailer_url: formData.trailerUrl || null
         });
 
       if (error) throw error;
@@ -106,7 +126,15 @@ const Movies = () => {
         description: "Your movie has been uploaded successfully."
       });
 
-      setFormData({ title: '', description: '', genre: '', fileUrl: '', fileName: '' });
+      setFormData({ 
+        title: '', 
+        description: '', 
+        genre: '', 
+        fileUrl: '', 
+        fileName: '', 
+        coverUrl: '', 
+        trailerUrl: '' 
+      });
       fetchMovies();
     } catch (error: any) {
       toast({
@@ -182,12 +210,49 @@ const Movies = () => {
                     <h2 className="text-3xl font-bold text-foreground">Upload Your Movie</h2>
                   </div>
                   <form onSubmit={handleSubmit} className="space-y-6">
-                    <FileUpload
-                      onFileUploaded={handleFileUploaded}
-                      acceptedTypes=".mp4,.mov,.avi,.wmv,.flv,.webm,.mkv,.m4v,.3gp,.mpg,.mpeg,.ogv,.ts,.mts,.m2ts,.vob,video/*"
-                      maxSizeMB={500}
-                      label="Movie File"
-                    />
+                    <Tabs defaultValue="main" className="w-full">
+                      <TabsList className="grid grid-cols-3 w-full">
+                        <TabsTrigger value="main">Main Video</TabsTrigger>
+                        <TabsTrigger value="cover">Cover Image</TabsTrigger>
+                        <TabsTrigger value="trailer">Trailer</TabsTrigger>
+                      </TabsList>
+                      
+                      <TabsContent value="main" className="mt-6">
+                        <FileUpload
+                          onFileUploaded={handleFileUploaded}
+                          acceptedTypes=".mp4,.mov,.avi,.wmv,.flv,.webm,.mkv,.m4v,.3gp,.mpg,.mpeg,.ogv,.ts,.mts,.m2ts,.vob,video/*"
+                          maxSizeMB={500}
+                          label="Movie File"
+                          uploadType="main"
+                        />
+                      </TabsContent>
+                      
+                      <TabsContent value="cover" className="mt-6">
+                        <FileUpload
+                          onFileUploaded={handleCoverUploaded}
+                          acceptedTypes="image/*,.jpg,.jpeg,.png,.webp"
+                          maxSizeMB={10}
+                          label="Cover Image (Optional)"
+                          uploadType="cover"
+                        />
+                        <p className="text-sm text-muted-foreground mt-2">
+                          Upload a cover image to display as the movie thumbnail
+                        </p>
+                      </TabsContent>
+                      
+                      <TabsContent value="trailer" className="mt-6">
+                        <FileUpload
+                          onFileUploaded={handleTrailerUploaded}
+                          acceptedTypes=".mp4,.mov,.avi,.wmv,.flv,.webm,.mkv,.m4v,.3gp,.mpg,.mpeg,.ogv,.ts,.mts,.m2ts,.vob,video/*"
+                          maxSizeMB={100}
+                          label="Trailer Video (Optional)"
+                          uploadType="trailer"
+                        />
+                        <p className="text-sm text-muted-foreground mt-2">
+                          Upload a short trailer to preview your movie
+                        </p>
+                      </TabsContent>
+                    </Tabs>
                     
                     <div className="grid md:grid-cols-2 gap-6">
                       <div>
@@ -265,41 +330,18 @@ const Movies = () => {
                 ) : content.length > 0 ? (
                   <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {content.map((movie) => (
-                      <Card key={movie.id} className="cinema-card">
-                        <CardHeader>
-                          <div className="aspect-video bg-secondary/20 rounded-lg mb-4 flex items-center justify-center relative overflow-hidden">
-                            <Play className="h-12 w-12 text-primary" />
-                            <div className="absolute inset-0 bg-gradient-overlay"></div>
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <Badge variant="secondary">Movie</Badge>
-                            {movie.genre && (
-                              <Badge variant="outline">{movie.genre}</Badge>
-                            )}
-                          </div>
-                          <CardTitle className="text-lg">{movie.title}</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <p className="text-muted-foreground text-sm mb-4 line-clamp-3">
-                            {movie.description || 'No description available'}
-                          </p>
-                          <p className="text-xs text-muted-foreground mb-4">
-                            Uploaded: {new Date(movie.created_at).toLocaleDateString()}
-                          </p>
-                          {user && movie.user_id === user.id && (
-                            <div className="flex justify-end">
-                              <Button 
-                                size="sm" 
-                                variant="destructive"
-                                onClick={() => deleteContent(movie.id, movie.file_url)}
-                              >
-                                <Trash2 className="h-4 w-4 mr-1" />
-                                Delete
-                              </Button>
-                            </div>
-                          )}
-                        </CardContent>
-                      </Card>
+                      <VideoPlayer
+                        key={movie.id}
+                        videoUrl={movie.file_url}
+                        coverUrl={movie.cover_url}
+                        trailerUrl={movie.trailer_url}
+                        title={movie.title}
+                        description={movie.description}
+                        genre={movie.genre}
+                        contentType="Movie"
+                        canDelete={user?.id === movie.user_id}
+                        onDelete={() => deleteContent(movie.id, movie.file_url)}
+                      />
                     ))}
                   </div>
                 ) : (

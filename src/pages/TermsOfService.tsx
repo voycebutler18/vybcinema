@@ -17,8 +17,9 @@ const TermsOfService = () => {
               <p className="text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
                 Your rights and responsibilities when using VYB Cinema
               </p>
-              <div className="text-sm text-muted-foreground">
-                Last updated: December 2024
+              <div className="text-sm text-muted-foreground space-y-1">
+                <div>Version 2.0 | Last updated: December 2024</div>
+                <div>Effective Date: December 15, 2024</div>
               </div>
             </div>
           </div>
@@ -28,7 +29,26 @@ const TermsOfService = () => {
           <div className="container mx-auto px-4">
             <div className="max-w-4xl mx-auto space-y-8">
               
-              <div className="cinema-card p-8">
+              {/* Table of Contents */}
+              <div className="cinema-card p-6 bg-secondary/20">
+                <h2 className="text-xl font-bold text-foreground mb-4">Quick Navigation</h2>
+                <div className="grid md:grid-cols-2 gap-2 text-sm">
+                  <a href="#acceptance" className="text-primary hover:underline">1. Acceptance of Terms</a>
+                  <a href="#accounts" className="text-primary hover:underline">2. User Accounts & Eligibility</a>
+                  <a href="#use" className="text-primary hover:underline">3. Use of Service</a>
+                  <a href="#content" className="text-primary hover:underline">4. Content & IP</a>
+                  <a href="#advertising" className="text-primary hover:underline">5. Advertising</a>
+                  <a href="#liability" className="text-primary hover:underline">6. Limitation of Liability</a>
+                  <a href="#disclaimers" className="text-primary hover:underline">7. Disclaimers</a>
+                  <a href="#termination" className="text-primary hover:underline">8. Termination</a>
+                  <a href="#privacy" className="text-primary hover:underline">9. Privacy & Data</a>
+                  <a href="#changes" className="text-primary hover:underline">10. Changes to Terms</a>
+                  <a href="#disputes" className="text-primary hover:underline">11. Governing Law & Disputes</a>
+                  <a href="#international" className="text-primary hover:underline">12. International Users</a>
+                </div>
+              </div>
+
+              <div id="acceptance" className="cinema-card p-8">
                 <Scale className="h-12 w-12 text-primary mb-4" />
                 <h2 className="text-2xl font-bold text-foreground mb-6">Acceptance of Terms</h2>
                 <div className="space-y-4 text-muted-foreground">
@@ -42,13 +62,18 @@ const TermsOfService = () => {
                 </div>
               </div>
 
-              <div className="cinema-card p-8">
+              <div id="accounts" className="cinema-card p-8">
                 <Users className="h-12 w-12 text-primary mb-4" />
                 <h2 className="text-2xl font-bold text-foreground mb-6">User Accounts and Eligibility</h2>
                 <div className="space-y-4 text-muted-foreground">
                   <p>
                     <strong className="text-foreground">Age Requirements:</strong> You must be at least 13 years old to use VYB Cinema. 
                     Users between 13-18 must have parental consent.
+                  </p>
+                  <p>
+                    <strong className="text-foreground">Parental Consent:</strong> For users under 18, parental consent must be 
+                    obtained through our designated verification process, which may include email confirmation from a parent/guardian 
+                    and agreement to our parental consent terms.
                   </p>
                   <p>
                     <strong className="text-foreground">Account Creation:</strong> When account features become available, you will be 
@@ -61,7 +86,7 @@ const TermsOfService = () => {
                 </div>
               </div>
 
-              <div className="cinema-card p-8">
+              <div id="use" className="cinema-card p-8">
                 <h2 className="text-2xl font-bold text-foreground mb-6">Use of the Service</h2>
                 <div className="space-y-6">
                   <div>
@@ -88,7 +113,7 @@ const TermsOfService = () => {
                 </div>
               </div>
 
-              <div className="cinema-card p-8">
+              <div id="content" className="cinema-card p-8">
                 <Shield className="h-12 w-12 text-primary mb-4" />
                 <h2 className="text-2xl font-bold text-foreground mb-6">Content and Intellectual Property</h2>
                 <div className="space-y-4 text-muted-foreground">
@@ -109,7 +134,7 @@ const TermsOfService = () => {
                 </div>
               </div>
 
-              <div className="cinema-card p-8">
+              <div id="advertising" className="cinema-card p-8">
                 <h2 className="text-2xl font-bold text-foreground mb-6">Advertising and Sponsors</h2>
                 <div className="space-y-4 text-muted-foreground">
                   <p>
@@ -127,8 +152,28 @@ const TermsOfService = () => {
                 </div>
               </div>
 
-              <div className="cinema-card p-8">
+              <div id="liability" className="cinema-card p-8">
                 <AlertCircle className="h-12 w-12 text-primary mb-4" />
+                <h2 className="text-2xl font-bold text-foreground mb-6">Limitation of Liability</h2>
+                <div className="space-y-4 text-muted-foreground">
+                  <p>
+                    <strong className="text-foreground">Liability Cap:</strong> To the fullest extent permitted by law, VYB Cinema's 
+                    total liability to you for any claim related to these Terms or the service shall not exceed $100 or the amount 
+                    you paid us in the twelve months preceding the claim, whichever is greater.
+                  </p>
+                  <p>
+                    <strong className="text-foreground">Excluded Damages:</strong> VYB Cinema shall not be liable for any indirect, 
+                    incidental, special, consequential, or punitive damages, including but not limited to loss of profits, revenue, 
+                    data, or business opportunities, even if we have been advised of the possibility of such damages.
+                  </p>
+                  <p>
+                    <strong className="text-foreground">Exceptions:</strong> Some jurisdictions do not allow the exclusion or 
+                    limitation of liability for consequential or incidental damages, so the above limitations may not apply to you.
+                  </p>
+                </div>
+              </div>
+
+              <div id="disclaimers" className="cinema-card p-8">
                 <h2 className="text-2xl font-bold text-foreground mb-6">Disclaimers and Limitations</h2>
                 <div className="space-y-4 text-muted-foreground">
                   <p>
@@ -146,7 +191,7 @@ const TermsOfService = () => {
                 </div>
               </div>
 
-              <div className="cinema-card p-8">
+              <div id="termination" className="cinema-card p-8">
                 <h2 className="text-2xl font-bold text-foreground mb-6">Termination</h2>
                 <div className="space-y-4 text-muted-foreground">
                   <p>
@@ -163,7 +208,7 @@ const TermsOfService = () => {
                 </div>
               </div>
 
-              <div className="cinema-card p-8">
+              <div id="privacy" className="cinema-card p-8">
                 <h2 className="text-2xl font-bold text-foreground mb-6">Privacy and Data</h2>
                 <div className="space-y-4 text-muted-foreground">
                   <p>
@@ -176,7 +221,7 @@ const TermsOfService = () => {
                 </div>
               </div>
 
-              <div className="cinema-card p-8">
+              <div id="changes" className="cinema-card p-8">
                 <h2 className="text-2xl font-bold text-foreground mb-6">Changes to Terms</h2>
                 <div className="space-y-4 text-muted-foreground">
                   <p>
@@ -189,16 +234,48 @@ const TermsOfService = () => {
                 </div>
               </div>
 
-              <div className="cinema-card p-8">
+              <div id="disputes" className="cinema-card p-8">
                 <h2 className="text-2xl font-bold text-foreground mb-6">Governing Law and Disputes</h2>
                 <div className="space-y-4 text-muted-foreground">
                   <p>
-                    These Terms are governed by the laws of the United States and the State of Illinois, without regard to 
-                    conflict of law principles.
+                    <strong className="text-foreground">Governing Law:</strong> These Terms are governed by the laws of the 
+                    United States and the State of Illinois, without regard to conflict of law principles.
                   </p>
                   <p>
-                    Any disputes arising from these Terms or your use of VYB Cinema will be resolved through binding arbitration 
-                    in accordance with the rules of the American Arbitration Association.
+                    <strong className="text-foreground">Mandatory Arbitration:</strong> Any disputes arising from these Terms 
+                    or your use of VYB Cinema will be resolved through binding arbitration in accordance with the rules of the 
+                    American Arbitration Association, except as noted below.
+                  </p>
+                  <p>
+                    <strong className="text-foreground">Small Claims Exception:</strong> You may pursue claims in small claims 
+                    court if the claim qualifies, is brought only in your individual capacity, and remains in small claims court.
+                  </p>
+                  <p>
+                    <strong className="text-foreground">Class Action Waiver:</strong> You agree that disputes will be resolved 
+                    on an individual basis and you waive any right to participate in class action lawsuits or class-wide arbitration.
+                  </p>
+                </div>
+              </div>
+
+              <div id="international" className="cinema-card p-8">
+                <h2 className="text-2xl font-bold text-foreground mb-6">International Users</h2>
+                <div className="space-y-4 text-muted-foreground">
+                  <p>
+                    <strong className="text-foreground">Global Access:</strong> VYB Cinema may be accessed from countries around 
+                    the world. If you access our service from outside the United States, you are responsible for compliance with 
+                    local laws.
+                  </p>
+                  <p>
+                    <strong className="text-foreground">Content Availability:</strong> Content availability may vary by geographic 
+                    location due to licensing restrictions. Some content may not be available in all regions.
+                  </p>
+                  <p>
+                    <strong className="text-foreground">Data Processing:</strong> Personal information may be processed and stored 
+                    in the United States, regardless of your location. By using our service, you consent to this transfer and processing.
+                  </p>
+                  <p>
+                    <strong className="text-foreground">Local Laws:</strong> If any provision of these Terms conflicts with local 
+                    mandatory laws in your jurisdiction, the local law will prevail to the extent of the conflict for users in that jurisdiction.
                   </p>
                 </div>
               </div>

@@ -65,6 +65,7 @@ const Stories = () => {
   };
 
   const handleFileUploaded = (url: string, fileName: string) => {
+    console.log('File uploaded callback:', { url, fileName });
     setFormData(prev => ({
       ...prev,
       fileUrl: url,
@@ -75,6 +76,8 @@ const Stories = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
+
+    console.log('Form submission attempt:', formData);
 
     if (!formData.fileUrl) {
       toast({
@@ -182,12 +185,21 @@ const Stories = () => {
                     <h2 className="text-3xl font-bold text-foreground">Share Your Story</h2>
                   </div>
                   <form onSubmit={handleSubmit} className="space-y-6">
-                    <FileUpload
-                      onFileUploaded={handleFileUploaded}
-                      acceptedTypes=".mp4,.mov,.avi,.wmv,.flv,.webm,.mkv,.m4v,.3gp,.mpg,.mpeg,.ogv,.ts,.mts,.m2ts,.vob,video/*"
-                      maxSizeMB={500}
-                      label="Story Video File"
-                    />
+                    <div className="space-y-2">
+                      <FileUpload
+                        onFileUploaded={handleFileUploaded}
+                        acceptedTypes=".mp4,.mov,.avi,.wmv,.flv,.webm,.mkv,.m4v,.3gp,.mpg,.mpeg,.ogv,.ts,.mts,.m2ts,.vob,video/*"
+                        maxSizeMB={500}
+                        label="Story Video File"
+                        currentFile={formData.fileName}
+                      />
+                      {formData.fileUrl && (
+                        <div className="flex items-center space-x-2 text-sm text-green-600">
+                          <div className="h-2 w-2 bg-green-600 rounded-full"></div>
+                          <span>Video uploaded successfully!</span>
+                        </div>
+                      )}
+                    </div>
                     
                     <div className="grid md:grid-cols-2 gap-6">
                       <div>
@@ -228,9 +240,18 @@ const Stories = () => {
                         rows={4}
                       />
                     </div>
-                    <Button type="submit" disabled={uploading} className="btn-hero">
+                    <Button 
+                      type="submit" 
+                      disabled={uploading || !formData.fileUrl} 
+                      className="btn-hero"
+                    >
                       {uploading ? "Uploading..." : "Upload Story"}
                     </Button>
+                    {!formData.fileUrl && (
+                      <p className="text-sm text-muted-foreground">
+                        Please upload your video file first by clicking "Upload File" after selecting it.
+                      </p>
+                    )}
                   </form>
                 </div>
               ) : (

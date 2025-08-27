@@ -1,6 +1,7 @@
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
 import { Scale, Users, Shield, AlertCircle } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const TermsOfService = () => {
   return (
@@ -287,10 +288,10 @@ const TermsOfService = () => {
                 </p>
                 <div className="space-y-2">
                   <p className="text-foreground">
-                    <strong>Legal Questions:</strong> Please use our contact form
+                    <strong>Legal Questions:</strong> <Link to="/contact" className="text-primary hover:underline">Visit our contact page</Link>
                   </p>
                   <p className="text-foreground">
-                    <strong>General Contact:</strong> Please use our contact form
+                    <strong>General Contact:</strong> <Link to="/contact" className="text-primary hover:underline">Visit our contact page</Link>
                   </p>
                 </div>
               </div>

@@ -2,6 +2,7 @@ import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
 import { Cookie, Settings, Eye, BarChart } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Link } from "react-router-dom";
 
 const CookiePolicy = () => {
   const cookieTypes = [
@@ -208,10 +209,10 @@ const CookiePolicy = () => {
                 </p>
                 <div className="space-y-2">
                   <p className="text-foreground">
-                    <strong>Privacy Questions:</strong> Please use our contact form
+                    <strong>Privacy Questions:</strong> <Link to="/contact" className="text-primary hover:underline">Visit our contact page</Link>
                   </p>
                   <p className="text-foreground">
-                    <strong>General Contact:</strong> Please use our contact form
+                    <strong>General Contact:</strong> <Link to="/contact" className="text-primary hover:underline">Visit our contact page</Link>
                   </p>
                 </div>
               </div>

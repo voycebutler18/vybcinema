@@ -1,6 +1,7 @@
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
 import { Play, Users, Globe, Heart, Music, Video, Mic } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const About = () => {
   const values = [
@@ -219,10 +220,10 @@ const About = () => {
               </p>
               <div className="space-y-4">
                 <p className="text-foreground">
-                  <strong>Business Inquiries:</strong> Please use our contact form
+                  <strong>Business Inquiries:</strong> <Link to="/contact" className="text-primary hover:underline">Use our contact form</Link>
                 </p>
                 <p className="text-foreground">
-                  <strong>General Contact:</strong> Please use our contact form
+                  <strong>General Contact:</strong> <Link to="/contact" className="text-primary hover:underline">Use our contact form</Link>
                 </p>
               </div>
               <div className="pt-4">

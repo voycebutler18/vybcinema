@@ -1,6 +1,7 @@
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
 import { Shield, Eye, Lock, UserCheck } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const PrivacyPolicy = () => {
   return (
@@ -136,7 +137,7 @@ const PrivacyPolicy = () => {
                     <li><strong className="text-foreground">Restrict processing:</strong> Limit how we use your data</li>
                   </ul>
                   <p>
-                    To exercise these rights, please use our contact form
+                    To exercise these rights, please <Link to="/contact" className="text-primary hover:underline">visit our contact page</Link>
                   </p>
                 </div>
               </div>
@@ -186,10 +187,10 @@ const PrivacyPolicy = () => {
                 </p>
                 <div className="space-y-2">
                   <p className="text-foreground">
-                    <strong>Email:</strong> Please use our contact form
+                    <strong>Email:</strong> <Link to="/contact" className="text-primary hover:underline">Visit our contact page</Link>
                   </p>
                   <p className="text-foreground">  
-                    <strong>General Contact:</strong> Please use our contact form
+                    <strong>General Contact:</strong> <Link to="/contact" className="text-primary hover:underline">Visit our contact page</Link>
                   </p>
                 </div>
               </div>

@@ -71,7 +71,7 @@ const DMCA = () => {
                       Send your DMCA takedown notice to our designated copyright agent:
                     </p>
                     <div className="bg-secondary/20 p-4 rounded-lg space-y-2">
-                      <p><strong className="text-foreground">Contact:</strong> Use our contact form</p>
+                      <p><strong className="text-foreground">Contact:</strong> <Link to="/contact" className="text-primary hover:underline">Visit our contact page</Link></p>
                       <p><strong className="text-foreground">Subject Line:</strong> DMCA Takedown Notice</p>
                       <p><strong className="text-foreground">Response Time:</strong> Within 24-48 hours</p>
                     </div>
@@ -101,7 +101,7 @@ const DMCA = () => {
                     <li>Your name, address, telephone number, and consent to federal court jurisdiction</li>
                   </ul>
                   <p>
-                    Send counter-notifications through our contact form with "DMCA Counter-Notice" as the subject.
+                    Send counter-notifications through our <Link to="/contact" className="text-primary hover:underline">contact form</Link> with "DMCA Counter-Notice" as the subject.
                   </p>
                 </div>
               </div>

@@ -1,6 +1,7 @@
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
 import { Download, Mail, Users, Calendar } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const Press = () => {
   return (
@@ -103,11 +104,11 @@ const Press = () => {
                 <div className="space-y-4">
                   <div>
                     <p className="text-foreground font-semibold">Media Contact:</p>
-                    <p className="text-muted-foreground">Please use our contact form</p>
+                    <Link to="/contact" className="text-primary hover:underline">Visit our contact page</Link>
                   </div>
                   <div>
                     <p className="text-foreground font-semibold">General Inquiries:</p>
-                    <p className="text-muted-foreground">Please use our contact form</p>
+                    <Link to="/contact" className="text-primary hover:underline">Visit our contact page</Link>
                   </div>
                 </div>
               </div>

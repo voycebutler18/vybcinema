@@ -51,7 +51,7 @@ const HelpCenter = () => {
     },
     {
       question: "How can I contact support?",
-      answer: "Use our contact form for all support inquiries and we'll get back to you within 1-2 business days."
+      answer: "Visit our contact page to submit support requests and we'll get back to you within 1-2 business days."
     }
   ];
 

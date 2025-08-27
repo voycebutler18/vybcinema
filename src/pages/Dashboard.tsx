@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Upload, Film, Tv, Music, BookOpen, Edit, Trash2, Plus } from "lucide-react";
+import { Upload, Film, Tv, Music, BookOpen, Edit, Trash2, Plus, Mic } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface ContentItem {
@@ -68,6 +68,7 @@ const Dashboard = () => {
       case 'tv_show': return <Tv className="h-5 w-5" />;
       case 'music_video': return <Music className="h-5 w-5" />;
       case 'story': return <BookOpen className="h-5 w-5" />;
+      case 'podcast': return <Mic className="h-5 w-5" />;
       default: return <Upload className="h-5 w-5" />;
     }
   };
@@ -78,6 +79,7 @@ const Dashboard = () => {
       case 'tv_show': return 'TV Show';
       case 'music_video': return 'Music Video';
       case 'story': return 'Story';
+      case 'podcast': return 'Podcast';
       default: return type;
     }
   };
@@ -95,6 +97,9 @@ const Dashboard = () => {
         break;
       case 'story':
         navigate('/stories');
+        break;
+      case 'podcast':
+        navigate('/podcasts');
         break;
     }
   };
@@ -135,34 +140,41 @@ const Dashboard = () => {
               {/* Quick Upload Section */}
               <div className="cinema-card p-8">
                 <h2 className="text-3xl font-bold text-foreground mb-6 text-center">Quick Upload</h2>
-                <div className="grid md:grid-cols-4 gap-6">
+                <div className="grid md:grid-cols-5 gap-4">
                   <Button 
                     onClick={() => navigateToUpload('movie')}
-                    className="btn-secondary h-24 flex-col space-y-2"
+                    className="btn-secondary h-20 flex-col space-y-2"
                   >
-                    <Film className="h-8 w-8" />
-                    <span>Upload Movie</span>
+                    <Film className="h-6 w-6" />
+                    <span className="text-sm">Upload Movie</span>
                   </Button>
                   <Button 
                     onClick={() => navigateToUpload('tv_show')}
-                    className="btn-secondary h-24 flex-col space-y-2"
+                    className="btn-secondary h-20 flex-col space-y-2"
                   >
-                    <Tv className="h-8 w-8" />
-                    <span>Upload TV Show</span>
+                    <Tv className="h-6 w-6" />
+                    <span className="text-sm">Upload TV Show</span>
                   </Button>
                   <Button 
                     onClick={() => navigateToUpload('music_video')}
-                    className="btn-secondary h-24 flex-col space-y-2"
+                    className="btn-secondary h-20 flex-col space-y-2"
                   >
-                    <Music className="h-8 w-8" />
-                    <span>Upload Music Video</span>
+                    <Music className="h-6 w-6" />
+                    <span className="text-sm">Upload Music Video</span>
                   </Button>
                   <Button 
                     onClick={() => navigateToUpload('story')}
-                    className="btn-secondary h-24 flex-col space-y-2"
+                    className="btn-secondary h-20 flex-col space-y-2"
                   >
-                    <BookOpen className="h-8 w-8" />
-                    <span>Upload Story</span>
+                    <BookOpen className="h-6 w-6" />
+                    <span className="text-sm">Upload Story</span>
+                  </Button>
+                  <Button 
+                    onClick={() => navigateToUpload('podcast')}
+                    className="btn-secondary h-20 flex-col space-y-2"
+                  >
+                    <Mic className="h-6 w-6" />
+                    <span className="text-sm">Upload Podcast</span>
                   </Button>
                 </div>
               </div>

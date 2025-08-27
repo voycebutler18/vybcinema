@@ -88,6 +88,7 @@ const Stories = () => {
       setUploading(false);
     }
   };
+
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
@@ -110,51 +111,119 @@ const Stories = () => {
           <div className="container mx-auto px-4">
             <div className="max-w-6xl mx-auto space-y-12">
               
-              {/* Upload Section */}
-              <div className="cinema-card p-8 text-center">
-                <Camera className="h-16 w-16 mx-auto text-primary mb-6" />
-                <h2 className="text-3xl font-bold text-foreground mb-4">Share Your Stories</h2>
-                <p className="text-muted-foreground mb-6">
-                  Upload your narrative content, skits, and character-driven stories
-                </p>
-                <button className="btn-hero">
-                  Upload Story
-                </button>
-              </div>
-
-              {/* Featured Stories */}
-              <div>
-                <h2 className="text-3xl font-bold text-foreground mb-8 text-center">Featured Stories</h2>
-                <div className="cinema-card p-12 text-center">
-                  <BookOpen className="h-24 w-24 mx-auto text-primary/50 mb-6" />
-                  <h3 className="text-2xl font-bold text-foreground mb-4">Coming Soon</h3>
-                  <p className="text-muted-foreground mb-8">
-                    Compelling stories and character-driven content will be featured here. Share yours today!
+              {/* Upload Section - Protected */}
+              {user ? (
+                <div className="cinema-card p-8">
+                  <div className="flex items-center space-x-3 mb-6">
+                    <Upload className="h-8 w-8 text-primary" />
+                    <h2 className="text-3xl font-bold text-foreground">Share Your Story</h2>
+                  </div>
+                  <form onSubmit={handleSubmit} className="space-y-6">
+                    <div className="grid md:grid-cols-2 gap-6">
+                      <div>
+                        <Label htmlFor="title">Story Title *</Label>
+                        <Input
+                          id="title"
+                          name="title"
+                          value={formData.title}
+                          onChange={handleInputChange}
+                          placeholder="Enter your story title"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="genre">Category</Label>
+                        <Input
+                          id="genre"
+                          name="genre"
+                          value={formData.genre}
+                          onChange={handleInputChange}
+                          placeholder="e.g. Drama, Comedy, Documentary"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <Label htmlFor="description">Story Description</Label>
+                      <Textarea
+                        id="description"
+                        name="description"
+                        value={formData.description}
+                        onChange={handleInputChange}
+                        placeholder="Tell us about your story..."
+                        rows={4}
+                      />
+                    </div>
+                    <Button type="submit" disabled={uploading} className="btn-hero">
+                      {uploading ? "Uploading..." : "Upload Story"}
+                    </Button>
+                  </form>
+                </div>
+              ) : (
+                <div className="cinema-card p-8 text-center">
+                  <Camera className="h-16 w-16 mx-auto text-primary/50 mb-6" />
+                  <h2 className="text-3xl font-bold text-foreground mb-4">Share Your Stories</h2>
+                  <p className="text-muted-foreground mb-6">
+                    Join VYB Cinema to upload and share your narrative content
                   </p>
-                  <div className="grid md:grid-cols-3 gap-6 mt-8">
-                    <div className="cinema-card p-6 opacity-50">
-                      <div className="aspect-video bg-secondary/20 rounded-lg mb-4 flex items-center justify-center">
-                        <Play className="h-12 w-12 text-muted-foreground" />
-                      </div>
-                      <h4 className="font-semibold text-foreground">Story 1</h4>
-                      <p className="text-sm text-muted-foreground">Coming Soon</p>
-                    </div>
-                    <div className="cinema-card p-6 opacity-50">
-                      <div className="aspect-video bg-secondary/20 rounded-lg mb-4 flex items-center justify-center">
-                        <Play className="h-12 w-12 text-muted-foreground" />
-                      </div>
-                      <h4 className="font-semibold text-foreground">Story 2</h4>
-                      <p className="text-sm text-muted-foreground">Coming Soon</p>
-                    </div>
-                    <div className="cinema-card p-6 opacity-50">
-                      <div className="aspect-video bg-secondary/20 rounded-lg mb-4 flex items-center justify-center">
-                        <Play className="h-12 w-12 text-muted-foreground" />
-                      </div>
-                      <h4 className="font-semibold text-foreground">Story 3</h4>
-                      <p className="text-sm text-muted-foreground">Coming Soon</p>
-                    </div>
+                  <div className="space-x-4">
+                    <Button className="btn-hero" onClick={() => window.location.href = '/signup'}>
+                      Sign Up
+                    </Button>
+                    <Button variant="outline" onClick={() => window.location.href = '/login'}>
+                      Login
+                    </Button>
                   </div>
                 </div>
+              )}
+
+              {/* Stories Display */}
+              <div>
+                <h2 className="text-3xl font-bold text-foreground mb-8 text-center">
+                  {content.length > 0 ? 'Featured Stories' : 'Stories Coming Soon'}
+                </h2>
+                
+                {loading ? (
+                  <div className="cinema-card p-12 text-center">
+                    <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-primary mx-auto mb-4"></div>
+                    <p className="text-muted-foreground">Loading stories...</p>
+                  </div>
+                ) : content.length > 0 ? (
+                  <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {content.map((story) => (
+                      <Card key={story.id} className="cinema-card">
+                        <CardHeader>
+                          <div className="aspect-video bg-secondary/20 rounded-lg mb-4 flex items-center justify-center relative overflow-hidden">
+                            <BookOpen className="h-12 w-12 text-primary" />
+                            <div className="absolute inset-0 bg-gradient-overlay"></div>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <Badge variant="secondary">Story</Badge>
+                            {story.genre && (
+                              <Badge variant="outline">{story.genre}</Badge>
+                            )}
+                          </div>
+                          <CardTitle className="text-lg">{story.title}</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <p className="text-muted-foreground text-sm mb-4 line-clamp-3">
+                            {story.description || 'No description available'}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            Uploaded: {new Date(story.created_at).toLocaleDateString()}
+                          </p>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="cinema-card p-12 text-center">
+                    <BookOpen className="h-24 w-24 mx-auto text-primary/50 mb-6" />
+                    <h3 className="text-2xl font-bold text-foreground mb-4">Coming Soon</h3>
+                    <p className="text-muted-foreground mb-8">
+                      Compelling stories and character-driven content will be featured here. Share yours today!
+                    </p>
+                  </div>
+                )}
               </div>
 
             </div>

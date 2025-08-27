@@ -22,6 +22,7 @@ import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsOfService from "./pages/TermsOfService";
 import CookiePolicy from "./pages/CookiePolicy";
 import NotFound from "./pages/NotFound";
+import Podcasts from "./pages/Podcasts";
 import Dashboard from "./pages/Dashboard";
 
 const queryClient = new QueryClient();
@@ -39,6 +40,7 @@ const App = () => (
           <Route path="/tv-shows" element={<TVShows />} />
           <Route path="/music-videos" element={<MusicVideos />} />
           <Route path="/stories" element={<Stories />} />
+          <Route path="/podcasts" element={<Podcasts />} />
           <Route path="/about" element={<About />} />
           <Route path="/genre/:genreName" element={<Genre />} />
           <Route path="/login" element={<Login />} />

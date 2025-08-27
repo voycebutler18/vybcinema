@@ -41,6 +41,9 @@ export const Navigation = () => {
               <Link to="/stories" className="text-foreground hover:text-primary transition-colors">
                 Stories
               </Link>
+              <Link to="/podcasts" className="text-foreground hover:text-primary transition-colors">
+                Podcasts
+              </Link>
               <Link to="/about" className="text-foreground hover:text-primary transition-colors">
                 About
               </Link>
@@ -125,6 +128,9 @@ export const Navigation = () => {
             </Link>
             <Link to="/stories" className="block text-foreground hover:text-primary transition-colors">
               Stories
+            </Link>
+            <Link to="/podcasts" className="block text-foreground hover:text-primary transition-colors">
+              Podcasts
             </Link>
             <Link to="/about" className="block text-foreground hover:text-primary transition-colors">
               About

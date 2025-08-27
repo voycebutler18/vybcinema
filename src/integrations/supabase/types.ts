@@ -83,6 +83,48 @@ export type Database = {
         }
         Relationships: []
       }
+      live_streams: {
+        Row: {
+          created_at: string
+          description: string | null
+          ended_at: string | null
+          id: string
+          is_live: boolean | null
+          started_at: string | null
+          stream_key: string
+          title: string
+          updated_at: string
+          user_id: string
+          viewer_count: number | null
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          ended_at?: string | null
+          id?: string
+          is_live?: boolean | null
+          started_at?: string | null
+          stream_key?: string
+          title: string
+          updated_at?: string
+          user_id: string
+          viewer_count?: number | null
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          ended_at?: string | null
+          id?: string
+          is_live?: boolean | null
+          started_at?: string | null
+          stream_key?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+          viewer_count?: number | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null

@@ -104,6 +104,42 @@ const Dashboard = () => {
     }
   };
 
+  const deleteContent = async (contentId: string, fileUrl?: string) => {
+    try {
+      // Delete from database
+      const { error: dbError } = await supabase
+        .from('content')
+        .delete()
+        .eq('id', contentId);
+
+      if (dbError) throw dbError;
+
+      // Delete file from storage if exists
+      if (fileUrl) {
+        const fileName = fileUrl.split('/').pop();
+        if (fileName) {
+          await supabase.storage
+            .from('content-files')
+            .remove([`content/${fileName}`]);
+        }
+      }
+
+      // Update local state
+      setContent(prev => prev.filter(item => item.id !== contentId));
+      
+      toast({
+        title: "Content Deleted",
+        description: "Your content has been permanently removed."
+      });
+    } catch (error: any) {
+      toast({
+        title: "Delete Failed",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -240,7 +276,11 @@ const Dashboard = () => {
                               <Edit className="h-4 w-4 mr-1" />
                               Edit
                             </Button>
-                            <Button size="sm" variant="destructive">
+                            <Button 
+                              size="sm" 
+                              variant="destructive"
+                              onClick={() => deleteContent(item.id, item.file_url)}
+                            >
                               <Trash2 className="h-4 w-4 mr-1" />
                               Delete
                             </Button>

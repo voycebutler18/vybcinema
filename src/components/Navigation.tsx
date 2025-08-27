@@ -21,6 +21,12 @@ export const Navigation = () => {
               <Link to="/browse" className="text-foreground hover:text-primary transition-colors">
                 Browse
               </Link>
+              <Link to="/music-videos" className="text-foreground hover:text-primary transition-colors">
+                Music Videos
+              </Link>
+              <Link to="/stories" className="text-foreground hover:text-primary transition-colors">
+                Stories
+              </Link>
               <Link to="/about" className="text-foreground hover:text-primary transition-colors">
                 About
               </Link>
@@ -72,6 +78,12 @@ export const Navigation = () => {
           <div className="md:hidden border-t border-border/50 py-4 space-y-3 animate-fade-in">
             <Link to="/browse" className="block text-foreground hover:text-primary transition-colors">
               Browse
+            </Link>
+            <Link to="/music-videos" className="block text-foreground hover:text-primary transition-colors">
+              Music Videos
+            </Link>
+            <Link to="/stories" className="block text-foreground hover:text-primary transition-colors">
+              Stories
             </Link>
             <Link to="/about" className="block text-foreground hover:text-primary transition-colors">
               About

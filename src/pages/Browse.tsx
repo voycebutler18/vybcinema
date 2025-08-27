@@ -34,8 +34,8 @@ const Browse = () => {
                     <p className="text-muted-foreground">Independent films and cinematic experiences</p>
                   </div>
                   <div className="cinema-card p-6">
-                    <h3 className="text-xl font-bold text-foreground mb-3">Music</h3>
-                    <p className="text-muted-foreground">R&B vocals and original music content</p>
+                    <h3 className="text-xl font-bold text-foreground mb-3">Music Videos</h3>
+                    <p className="text-muted-foreground">R&B vocals and original music video content</p>
                   </div>
                   <div className="cinema-card p-6">
                     <h3 className="text-xl font-bold text-foreground mb-3">Stories</h3>

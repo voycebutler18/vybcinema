@@ -17,6 +17,8 @@ import DMCA from "./pages/DMCA";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsOfService from "./pages/TermsOfService";
 import CookiePolicy from "./pages/CookiePolicy";
+import MusicVideos from "./pages/MusicVideos";
+import Stories from "./pages/Stories";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -30,6 +32,8 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/browse" element={<Browse />} />
+          <Route path="/music-videos" element={<MusicVideos />} />
+          <Route path="/stories" element={<Stories />} />
           <Route path="/about" element={<About />} />
           <Route path="/genre/:genreName" element={<Genre />} />
           <Route path="/login" element={<Login />} />

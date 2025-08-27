@@ -42,6 +42,67 @@ export const FileUpload = ({
       return;
     }
 
+    // Enhanced file type validation for video files
+    if (acceptedTypes.includes('video/*')) {
+      const fileExtension = file.name.split('.').pop()?.toLowerCase();
+      const videoExtensions = [
+        'mp4', 'avi', 'mov', 'wmv', 'flv', 'webm', 'mkv', 'm4v', 
+        '3gp', 'mpg', 'mpeg', 'ogv', 'ts', 'mts', 'm2ts', 'vob'
+      ];
+      
+      const videoMimeTypes = [
+        'video/mp4', 'video/avi', 'video/quicktime', 'video/x-msvideo',
+        'video/x-flv', 'video/webm', 'video/x-matroska', 'video/3gpp',
+        'video/mpeg', 'video/ogg', 'video/mp2t'
+      ];
+
+      const isVideoFile = videoExtensions.includes(fileExtension || '') || 
+                          videoMimeTypes.includes(file.type) ||
+                          file.type.startsWith('video/');
+
+      if (!isVideoFile) {
+        toast({
+          title: "Invalid file type",
+          description: `Please upload a video file. Supported formats: ${videoExtensions.join(', ').toUpperCase()}`,
+          variant: "destructive"
+        });
+        return;
+      }
+    }
+
+    // Enhanced file type validation for audio files
+    if (acceptedTypes.includes('audio/*')) {
+      const fileExtension = file.name.split('.').pop()?.toLowerCase();
+      const audioExtensions = [
+        'mp3', 'wav', 'flac', 'aac', 'ogg', 'wma', 'm4a', 'opus'
+      ];
+      
+      const audioMimeTypes = [
+        'audio/mpeg', 'audio/wav', 'audio/flac', 'audio/aac',
+        'audio/ogg', 'audio/x-ms-wma', 'audio/mp4', 'audio/opus'
+      ];
+
+      const isAudioFile = audioExtensions.includes(fileExtension || '') || 
+                          audioMimeTypes.includes(file.type) ||
+                          file.type.startsWith('audio/');
+
+      if (!isAudioFile && !acceptedTypes.includes('video/*')) {
+        toast({
+          title: "Invalid file type",
+          description: `Please upload an audio file. Supported formats: ${audioExtensions.join(', ').toUpperCase()}`,
+          variant: "destructive"
+        });
+        return;
+      }
+    }
+
+    console.log('File selected:', {
+      name: file.name,
+      type: file.type,
+      size: file.size,
+      extension: file.name.split('.').pop()?.toLowerCase()
+    });
+
     setSelectedFile(file);
   };
 

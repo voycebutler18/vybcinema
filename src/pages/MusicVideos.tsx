@@ -184,7 +184,7 @@ const MusicVideos = () => {
                   <form onSubmit={handleSubmit} className="space-y-6">
                     <FileUpload
                       onFileUploaded={handleFileUploaded}
-                      acceptedTypes="video/*"
+                      acceptedTypes=".mp4,.mov,.avi,.wmv,.flv,.webm,.mkv,.m4v,.3gp,.mpg,.mpeg,.ogv,.ts,.mts,.m2ts,.vob,video/*"
                       maxSizeMB={500}
                       label="Music Video File"
                     />

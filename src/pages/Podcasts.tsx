@@ -279,7 +279,7 @@ const Podcasts = () => {
                     <form onSubmit={handleSubmit} className="space-y-6">
                       <FileUpload
                         onFileUploaded={handleFileUploaded}
-                        acceptedTypes="audio/*,video/*"
+                        acceptedTypes=".mp3,.wav,.flac,.aac,.ogg,.wma,.m4a,.opus,.mp4,.mov,.avi,.wmv,.flv,.webm,.mkv,.m4v,.3gp,.mpg,.mpeg,.ogv,audio/*,video/*"
                         maxSizeMB={500}
                         label="Podcast File (Audio or Video)"
                       />

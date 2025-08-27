@@ -40,10 +40,10 @@ export const ComingSoonSection = () => {
               </span>
             </h2>
             
-            <p className="text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-              We're curating an incredible collection of premium films, series, and documentaries. 
-              Get notified when we launch with exclusive early access.
-            </p>
+          <p className="text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+            We're curating an incredible collection of premium films, series, and documentaries. 
+            Join our free platform and get notified when we launch.
+          </p>
           </div>
 
           {/* Notification Signup */}
@@ -51,17 +51,17 @@ export const ComingSoonSection = () => {
             <div className="space-y-6">
               <div className="flex items-center justify-center gap-2 text-primary">
                 <Bell className="h-5 w-5" />
-                <span className="font-semibold">Get Early Access</span>
+                <span className="font-semibold">Join the Platform</span>
               </div>
               
               <div className="flex flex-col sm:flex-row gap-3">
                 <input
                   type="email"
-                  placeholder="Enter your email for early access"
+                  placeholder="Enter your email to join for free"
                   className="flex-1 px-4 py-3 bg-secondary/50 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors"
                 />
                 <Button className="btn-hero px-8 py-3">
-                  Notify Me
+                  Join Free
                 </Button>
               </div>
               

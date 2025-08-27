@@ -31,7 +31,7 @@ export const HeroSection = () => {
           
           {/* Subheadline */}
           <p className="text-xl md:text-2xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-            Free for 30 days. Watch anywhere. Cancel anytime.
+            Completely free streaming with ads. Watch anywhere, anytime.
             <br />
             <span className="text-lg text-primary-glow">Premium content library coming soon</span>
           </p>
@@ -40,7 +40,7 @@ export const HeroSection = () => {
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-4">
             <Button className="btn-hero flex items-center gap-2 text-lg px-8 py-4">
               <Play className="h-5 w-5" />
-              Join the waitlist
+              Start watching free
             </Button>
             <Button className="btn-secondary flex items-center gap-2 text-lg px-8 py-4">
               <Info className="h-5 w-5" />
@@ -58,10 +58,10 @@ export const HeroSection = () => {
               </div>
             </div>
             <div className="text-center space-y-2">
-              <div className="text-2xl">🎯</div>
-              <div className="font-semibold">No Ads</div>
+              <div className="text-2xl">📺</div>
+              <div className="font-semibold">Completely Free</div>
               <div className="text-sm text-muted-foreground">
-                Enjoy your movies without interruption
+                Watch unlimited content with short ad breaks
               </div>
             </div>
             <div className="text-center space-y-2">

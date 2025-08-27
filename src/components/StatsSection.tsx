@@ -6,9 +6,9 @@ export const StatsSection = () => {
       description: "Crystal clear streaming"
     },
     {
-      number: "30",
-      label: "Day Free Trial", 
-      description: "No commitment required"
+      number: "100%",
+      label: "Free Forever",
+      description: "No subscriptions ever"
     },
     {
       number: "∞",

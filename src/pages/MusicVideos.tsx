@@ -1,6 +1,6 @@
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
-import { Music, Video, Play, Upload } from "lucide-react";
+import { Music, Video, Play, Upload, Trash2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -116,6 +116,39 @@ const MusicVideos = () => {
       });
     } finally {
       setUploading(false);
+    }
+  };
+
+  const deleteContent = async (contentId: string, fileUrl?: string) => {
+    try {
+      const { error: dbError } = await supabase
+        .from('content')
+        .delete()
+        .eq('id', contentId);
+
+      if (dbError) throw dbError;
+
+      if (fileUrl) {
+        const fileName = fileUrl.split('/').pop();
+        if (fileName) {
+          await supabase.storage
+            .from('content-files')
+            .remove([`content/${fileName}`]);
+        }
+      }
+
+      setContent(prev => prev.filter(item => item.id !== contentId));
+      
+      toast({
+        title: "Content Deleted",
+        description: "Your music video has been permanently removed."
+      });
+    } catch (error: any) {
+      toast({
+        title: "Delete Failed",
+        description: error.message,
+        variant: "destructive"
+      });
     }
   };
 
@@ -250,9 +283,21 @@ const MusicVideos = () => {
                           <p className="text-muted-foreground text-sm mb-4 line-clamp-3">
                             {video.description || 'No description available'}
                           </p>
-                          <p className="text-xs text-muted-foreground">
+                          <p className="text-xs text-muted-foreground mb-4">
                             Uploaded: {new Date(video.created_at).toLocaleDateString()}
                           </p>
+                          {user && video.user_id === user.id && (
+                            <div className="flex justify-end">
+                              <Button 
+                                size="sm" 
+                                variant="destructive"
+                                onClick={() => deleteContent(video.id, video.file_url)}
+                              >
+                                <Trash2 className="h-4 w-4 mr-1" />
+                                Delete
+                              </Button>
+                            </div>
+                          )}
                         </CardContent>
                       </Card>
                     ))}

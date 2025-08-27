@@ -160,7 +160,37 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_public_live_streams: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          created_at: string
+          description: string
+          ended_at: string
+          id: string
+          is_live: boolean
+          started_at: string
+          title: string
+          updated_at: string
+          user_id: string
+          viewer_count: number
+        }[]
+      }
+      get_user_live_streams: {
+        Args: { user_uuid: string }
+        Returns: {
+          created_at: string
+          description: string
+          ended_at: string
+          id: string
+          is_live: boolean
+          started_at: string
+          stream_key: string
+          title: string
+          updated_at: string
+          user_id: string
+          viewer_count: number
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never

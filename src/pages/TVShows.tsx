@@ -1,40 +1,23 @@
-import { Navigation } from "@/components/Navigation";
-import { Footer } from "@/components/Footer";
-import { Tv, Play, Upload, Trash2 } from "lucide-react";
-import { useAuth } from "@/hooks/useAuth";
-import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useToast } from "@/hooks/use-toast";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { useNavigate } from "react-router-dom";
-import { FileUpload } from "@/components/FileUpload";
+import React, { useState, useEffect } from 'react';
+import { NetflixNavigation } from '@/components/NetflixNavigation';
+import { NetflixHero } from '@/components/NetflixHero';
+import { NetflixRow } from '@/components/NetflixRow';
+import { NetflixDetailModal } from '@/components/NetflixDetailModal';
+import { VideoPlayer } from '@/components/VideoPlayer';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/hooks/use-toast';
 
 const TVShows = () => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const navigate = useNavigate();
   const [content, setContent] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [uploading, setUploading] = useState(false);
-  const [formData, setFormData] = useState({
-    title: '',
-    description: '',
-    genre: '',
-    fileUrl: '',
-    fileName: ''
-  });
-
-  const tvGenres = [
-    'Drama', 'Comedy', 'Reality TV', 'Documentary', 'News', 'Sports', 'Talk Show',
-    'Game Show', 'Variety', 'Children', 'Educational', 'Crime', 'Thriller',
-    'Sci-Fi', 'Fantasy', 'Animation', 'Sitcom', 'Soap Opera', 'Mini-Series'
-  ];
+  const [selectedContent, setSelectedContent] = useState<any>(null);
+  const [playingContent, setPlayingContent] = useState<any>(null);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [showVideoPlayer, setShowVideoPlayer] = useState(false);
 
   useEffect(() => {
     fetchTVShows();
@@ -57,268 +40,167 @@ const TVShows = () => {
     }
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setFormData(prev => ({
-      ...prev,
-      [e.target.name]: e.target.value
-    }));
+  const handleContentClick = (item: any) => {
+    setSelectedContent(item);
+    setShowDetailModal(true);
   };
 
-  const handleFileUploaded = (url: string, fileName: string) => {
-    setFormData(prev => ({
-      ...prev,
-      fileUrl: url,
-      fileName: fileName
-    }));
+  const handlePlay = (item: any) => {
+    setPlayingContent(item);
+    setShowVideoPlayer(true);
+    setShowDetailModal(false);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user) return;
-
-    if (!formData.fileUrl) {
-      toast({
-        title: "Upload Required",
-        description: "Please upload a TV show file before submitting.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    setUploading(true);
-
+  const deleteContent = async (id: string, fileUrl?: string) => {
     try {
       const { error } = await supabase
         .from('content')
-        .insert({
-          user_id: user.id,
-          title: formData.title,
-          description: formData.description,
-          content_type: 'tv_show',
-          genre: formData.genre,
-          file_url: formData.fileUrl
-        });
+        .delete()
+        .eq('id', id);
 
       if (error) throw error;
-
-      toast({
-        title: "Success!",
-        description: "Your TV show has been uploaded successfully."
-      });
-
-      setFormData({ title: '', description: '', genre: '', fileUrl: '', fileName: '' });
-      fetchTVShows();
-    } catch (error: any) {
-      toast({
-        title: "Upload Failed",
-        description: error.message,
-        variant: "destructive"
-      });
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  const deleteContent = async (contentId: string, fileUrl?: string) => {
-    try {
-      const { error: dbError } = await supabase
-        .from('content')
-        .delete()
-        .eq('id', contentId);
-
-      if (dbError) throw dbError;
 
       if (fileUrl) {
         const fileName = fileUrl.split('/').pop();
         if (fileName) {
           await supabase.storage
             .from('content-files')
-            .remove([`content/${fileName}`]);
+            .remove([`main/${fileName}`]);
         }
       }
 
-      setContent(prev => prev.filter(item => item.id !== contentId));
+      setContent(prev => prev.filter(item => item.id !== id));
+      setShowDetailModal(false);
       
       toast({
-        title: "Content Deleted",
-        description: "Your TV show has been permanently removed."
+        title: "Content deleted",
+        description: "TV show has been successfully deleted."
       });
     } catch (error: any) {
+      console.error('Error deleting content:', error);
       toast({
-        title: "Delete Failed",
+        title: "Delete failed",
         description: error.message,
         variant: "destructive"
       });
     }
   };
 
+  // Organize content into categories
+  const featuredShow = content.find(show => show.is_featured) || content[0];
+  const recentlyAdded = content.slice(0, 10);
+  const dramaShows = content.filter(show => show.genre?.toLowerCase().includes('drama'));
+  const comedyShows = content.filter(show => show.genre?.toLowerCase().includes('comedy'));
+  const sciFiShows = content.filter(show => show.genre?.toLowerCase().includes('sci-fi'));
+  const myShows = user ? content.filter(show => show.user_id === user.id) : [];
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-black">
+        <NetflixNavigation />
+        <div className="pt-20 flex items-center justify-center h-screen">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-red-600"></div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-background">
-      <Navigation />
+    <div className="min-h-screen bg-black">
+      <NetflixNavigation />
       
-      <main className="pt-8">
-        <section className="py-16 bg-gradient-hero">
-          <div className="container mx-auto px-4 text-center">
-            <div className="max-w-4xl mx-auto space-y-6">
-              <h1 className="text-4xl md:text-6xl font-bold">
-                <span className="text-cinema-gradient">TV Shows</span>
-              </h1>
-              <p className="text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-                Episodic content and serialized storytelling
-              </p>
-            </div>
+      <NetflixHero
+        content={featuredShow}
+        contentType="TV Show"
+        onPlay={() => featuredShow && handlePlay(featuredShow)}
+        onMoreInfo={() => featuredShow && handleContentClick(featuredShow)}
+      />
+
+      <div className="pb-20 -mt-32 relative z-10">
+        {recentlyAdded.length > 0 && (
+          <NetflixRow
+            title="Recently Added TV Shows"
+            content={recentlyAdded}
+            contentType="TV Show"
+            onContentClick={handleContentClick}
+            onContentPlay={handlePlay}
+          />
+        )}
+
+        {dramaShows.length > 0 && (
+          <NetflixRow
+            title="Drama Series"
+            content={dramaShows}
+            contentType="TV Show"
+            onContentClick={handleContentClick}
+            onContentPlay={handlePlay}
+          />
+        )}
+
+        {comedyShows.length > 0 && (
+          <NetflixRow
+            title="Comedy Shows"
+            content={comedyShows}
+            contentType="TV Show"
+            onContentClick={handleContentClick}
+            onContentPlay={handlePlay}
+          />
+        )}
+
+        {sciFiShows.length > 0 && (
+          <NetflixRow
+            title="Sci-Fi & Fantasy"
+            content={sciFiShows}
+            contentType="TV Show"
+            onContentClick={handleContentClick}
+            onContentPlay={handlePlay}
+          />
+        )}
+
+        {myShows.length > 0 && (
+          <NetflixRow
+            title="My TV Shows"
+            content={myShows}
+            contentType="TV Show"
+            onContentClick={handleContentClick}
+            onContentPlay={handlePlay}
+          />
+        )}
+
+        {content.length === 0 && (
+          <div className="text-center py-20">
+            <h2 className="text-2xl font-bold text-white mb-4">No TV Shows Available</h2>
+            <p className="text-gray-400">Be the first to upload a TV show!</p>
           </div>
-        </section>
+        )}
+      </div>
 
-        <section className="py-16">
-          <div className="container mx-auto px-4">
-            <div className="max-w-6xl mx-auto space-y-12">
-              
-              {/* Upload Section - Protected */}
-              {user ? (
-                <div className="cinema-card p-8">
-                  <div className="flex items-center space-x-3 mb-6">
-                    <Upload className="h-8 w-8 text-primary" />
-                    <h2 className="text-3xl font-bold text-foreground">Upload Your TV Show</h2>
-                  </div>
-                  <form onSubmit={handleSubmit} className="space-y-6">
-                    <FileUpload
-                      onFileUploaded={handleFileUploaded}
-                      acceptedTypes=".mp4,.mov,.avi,.wmv,.flv,.webm,.mkv,.m4v,.3gp,.mpg,.mpeg,.ogv,.ts,.mts,.m2ts,.vob,video/*"
-                      maxSizeMB={500}
-                      label="TV Show File"
-                    />
-                    
-                    <div className="grid md:grid-cols-2 gap-6">
-                      <div>
-                        <Label htmlFor="title">TV Show Title *</Label>
-                        <Input
-                          id="title"
-                          name="title"
-                          value={formData.title}
-                          onChange={handleInputChange}
-                          placeholder="Enter TV show title"
-                          required
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="genre">Genre</Label>
-                        <Select value={formData.genre} onValueChange={(value) => setFormData(prev => ({ ...prev, genre: value }))}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select a genre" />
-                          </SelectTrigger>
-                          <SelectContent className="bg-popover border z-50">
-                            {tvGenres.map((genre) => (
-                              <SelectItem key={genre} value={genre}>
-                                {genre}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                    <div>
-                      <Label htmlFor="description">Description</Label>
-                      <Textarea
-                        id="description"
-                        name="description"
-                        value={formData.description}
-                        onChange={handleInputChange}
-                        placeholder="Describe your TV show..."
-                        rows={4}
-                      />
-                    </div>
-                    <Button type="submit" disabled={uploading} className="btn-hero">
-                      {uploading ? "Uploading..." : "Upload TV Show"}
-                    </Button>
-                  </form>
-                </div>
-              ) : (
-                <div className="cinema-card p-8 text-center">
-                  <Upload className="h-16 w-16 mx-auto text-primary/50 mb-6" />
-                  <h2 className="text-3xl font-bold text-foreground mb-4">Want to Upload?</h2>
-                  <p className="text-muted-foreground mb-6">
-                    Sign up to share your TV shows with the VYB Cinema community
-                  </p>
-                  <div className="space-x-4">
-                    <Button className="btn-hero" onClick={() => navigate('/signup')}>
-                      Sign Up
-                    </Button>
-                    <Button variant="outline" onClick={() => navigate('/login')}>
-                      Login
-                    </Button>
-                  </div>
-                </div>
-              )}
+      <NetflixDetailModal
+        content={selectedContent}
+        contentType="TV Show"
+        isOpen={showDetailModal}
+        onClose={() => setShowDetailModal(false)}
+        onPlay={() => selectedContent && handlePlay(selectedContent)}
+        onDelete={() => selectedContent && deleteContent(selectedContent.id, selectedContent.file_url)}
+        canDelete={user?.id === selectedContent?.user_id}
+      />
 
-              {/* TV Shows Display */}
-              <div>
-                <h2 className="text-3xl font-bold text-foreground mb-8 text-center">
-                  {content.length > 0 ? 'Featured TV Shows' : 'TV Shows Coming Soon'}
-                </h2>
-                
-                {loading ? (
-                  <div className="cinema-card p-12 text-center">
-                    <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-primary mx-auto mb-4"></div>
-                    <p className="text-muted-foreground">Loading TV shows...</p>
-                  </div>
-                ) : content.length > 0 ? (
-                  <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {content.map((show) => (
-                      <Card key={show.id} className="cinema-card">
-                        <CardHeader>
-                          <div className="aspect-video bg-secondary/20 rounded-lg mb-4 flex items-center justify-center relative overflow-hidden">
-                            <Play className="h-12 w-12 text-primary" />
-                            <div className="absolute inset-0 bg-gradient-overlay"></div>
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <Badge variant="secondary">TV Show</Badge>
-                            {show.genre && (
-                              <Badge variant="outline">{show.genre}</Badge>
-                            )}
-                          </div>
-                          <CardTitle className="text-lg">{show.title}</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <p className="text-muted-foreground text-sm mb-4 line-clamp-3">
-                            {show.description || 'No description available'}
-                          </p>
-                          <p className="text-xs text-muted-foreground mb-4">
-                            Uploaded: {new Date(show.created_at).toLocaleDateString()}
-                          </p>
-                          {user && show.user_id === user.id && (
-                            <div className="flex justify-end">
-                              <Button 
-                                size="sm" 
-                                variant="destructive"
-                                onClick={() => deleteContent(show.id, show.file_url)}
-                              >
-                                <Trash2 className="h-4 w-4 mr-1" />
-                                Delete
-                              </Button>
-                            </div>
-                          )}
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="cinema-card p-12 text-center">
-                    <Tv className="h-24 w-24 mx-auto text-primary/50 mb-6" />
-                    <h3 className="text-2xl font-bold text-foreground mb-4">Coming Soon</h3>
-                    <p className="text-muted-foreground mb-8">
-                      Original TV shows and episodic content will be featured here. Be the first to share yours!
-                    </p>
-                  </div>
-                )}
-              </div>
-
-            </div>
-          </div>
-        </section>
-      </main>
-      
-      <Footer />
+      <Dialog open={showVideoPlayer} onOpenChange={setShowVideoPlayer}>
+        <DialogContent className="max-w-6xl w-full p-0 bg-black">
+          {playingContent && (
+            <VideoPlayer
+              videoUrl={playingContent.file_url}
+              coverUrl={playingContent.cover_url}
+              trailerUrl={playingContent.trailer_url}
+              title={playingContent.title}
+              description={playingContent.description}
+              genre={playingContent.genre}
+              contentType="TV Show"
+              canDelete={false}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

@@ -1,0 +1,171 @@
+import React, { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Play, Plus, ThumbsUp, ChevronDown } from 'lucide-react';
+
+interface NetflixCardProps {
+  content: any;
+  contentType: string;
+  index: number;
+  onClick: () => void;
+  onPlay: () => void;
+}
+
+export const NetflixCard: React.FC<NetflixCardProps> = ({
+  content,
+  contentType,
+  index,
+  onClick,
+  onPlay
+}) => {
+  const [isHovered, setIsHovered] = useState(false);
+  const [imageLoaded, setImageLoaded] = useState(false);
+
+  return (
+    <div 
+      className={`flex-shrink-0 w-64 cursor-pointer transition-all duration-300 ${
+        isHovered ? 'scale-110 z-20' : 'scale-100 z-10'
+      }`}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      style={{ 
+        transformOrigin: index === 0 ? 'left center' : 'center',
+        marginRight: isHovered ? '2rem' : '0'
+      }}
+    >
+      <div className="relative overflow-hidden rounded-lg bg-gray-800">
+        {/* Main Image/Video */}
+        <div className="aspect-video relative">
+          {content.cover_url ? (
+            <img
+              src={content.cover_url}
+              alt={content.title}
+              className={`w-full h-full object-cover transition-opacity duration-300 ${
+                imageLoaded ? 'opacity-100' : 'opacity-0'
+              }`}
+              onLoad={() => setImageLoaded(true)}
+            />
+          ) : content.file_url && content.file_url.includes('video') ? (
+            <video
+              className="w-full h-full object-cover"
+              muted
+              loop
+              playsInline
+              onLoadedData={() => setImageLoaded(true)}
+            >
+              <source src={content.file_url} type="video/mp4" />
+            </video>
+          ) : (
+            <div className="w-full h-full bg-gradient-to-br from-gray-700 to-gray-800 flex items-center justify-center">
+              <Play className="h-12 w-12 text-gray-400" />
+            </div>
+          )}
+
+          {/* Loading placeholder */}
+          {!imageLoaded && (
+            <div className="absolute inset-0 bg-gray-700 animate-pulse flex items-center justify-center">
+              <div className="w-12 h-12 bg-gray-600 rounded"></div>
+            </div>
+          )}
+
+          {/* Hover overlay with trailer */}
+          {isHovered && content.trailer_url && (
+            <video
+              className="absolute inset-0 w-full h-full object-cover"
+              autoPlay
+              muted
+              loop
+              playsInline
+            >
+              <source src={content.trailer_url} type="video/mp4" />
+            </video>
+          )}
+        </div>
+
+        {/* Expanded Info Panel (appears on hover) */}
+        {isHovered && (
+          <div className="bg-gray-900 p-4 space-y-3">
+            {/* Action Buttons */}
+            <div className="flex items-center justify-between">
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  className="rounded-full bg-white text-black hover:bg-gray-200 p-2"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onPlay();
+                  }}
+                >
+                  <Play className="h-4 w-4" />
+                </Button>
+                
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="rounded-full border border-gray-500 text-white hover:border-white p-2"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+                
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="rounded-full border border-gray-500 text-white hover:border-white p-2"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <ThumbsUp className="h-4 w-4" />
+                </Button>
+              </div>
+
+              <Button
+                size="sm"
+                variant="ghost"
+                className="rounded-full border border-gray-500 text-white hover:border-white p-2"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onClick();
+                }}
+              >
+                <ChevronDown className="h-4 w-4" />
+              </Button>
+            </div>
+
+            {/* Content Info */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Badge variant="secondary" className="bg-red-600 text-white text-xs">
+                  {contentType}
+                </Badge>
+                {content.genre && (
+                  <Badge variant="outline" className="border-gray-500 text-gray-300 text-xs">
+                    {content.genre}
+                  </Badge>
+                )}
+              </div>
+              
+              <h3 className="text-white font-semibold text-sm line-clamp-1">
+                {content.title}
+              </h3>
+              
+              {content.description && (
+                <p className="text-gray-300 text-xs line-clamp-2 leading-relaxed">
+                  {content.description}
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Simple title overlay when not hovered */}
+        {!isHovered && (
+          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-3">
+            <h3 className="text-white font-semibold text-sm line-clamp-1">
+              {content.title}
+            </h3>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};

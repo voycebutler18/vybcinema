@@ -1,40 +1,23 @@
-import { Navigation } from "@/components/Navigation";
-import { Footer } from "@/components/Footer";
-import { BookOpen, Camera, Play, Upload, Trash2 } from "lucide-react";
-import { useAuth } from "@/hooks/useAuth";
-import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useToast } from "@/hooks/use-toast";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { useNavigate } from "react-router-dom";
-import { FileUpload } from "@/components/FileUpload";
+import React, { useState, useEffect } from 'react';
+import { NetflixNavigation } from '@/components/NetflixNavigation';
+import { NetflixHero } from '@/components/NetflixHero';
+import { NetflixRow } from '@/components/NetflixRow';
+import { NetflixDetailModal } from '@/components/NetflixDetailModal';
+import { VideoPlayer } from '@/components/VideoPlayer';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/hooks/use-toast';
 
 const Stories = () => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const navigate = useNavigate();
   const [content, setContent] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [uploading, setUploading] = useState(false);
-  const [formData, setFormData] = useState({
-    title: '',
-    description: '',
-    genre: '',
-    fileUrl: '',
-    fileName: ''
-  });
-
-  const storyCategories = [
-    'Drama', 'Comedy', 'Documentary', 'Animation', 'Short Film', 'Web Series',
-    'Narrative', 'Experimental', 'Historical', 'Biography', 'Horror', 'Romance',
-    'Thriller', 'Sci-Fi', 'Fantasy', 'Adventure', 'Coming of Age', 'Social Issues'
-  ];
+  const [selectedContent, setSelectedContent] = useState<any>(null);
+  const [playingContent, setPlayingContent] = useState<any>(null);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [showVideoPlayer, setShowVideoPlayer] = useState(false);
 
   useEffect(() => {
     fetchStories();
@@ -57,314 +40,167 @@ const Stories = () => {
     }
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setFormData(prev => ({
-      ...prev,
-      [e.target.name]: e.target.value
-    }));
+  const handleContentClick = (item: any) => {
+    setSelectedContent(item);
+    setShowDetailModal(true);
   };
 
-  const handleFileUploaded = (url: string, fileName: string) => {
-    console.log('File uploaded callback:', { url, fileName });
-    setFormData(prev => ({
-      ...prev,
-      fileUrl: url,
-      fileName: fileName
-    }));
+  const handlePlay = (item: any) => {
+    setPlayingContent(item);
+    setShowVideoPlayer(true);
+    setShowDetailModal(false);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user) {
-      toast({
-        title: "Authentication Required",
-        description: "Please sign in to upload content.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    console.log('Form submission attempt:', { 
-      formData, 
-      userId: user.id,
-      userEmail: user.email 
-    });
-
-    if (!formData.fileUrl) {
-      toast({
-        title: "Upload Required",
-        description: "Please upload a story file before submitting.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    setUploading(true);
-
+  const deleteContent = async (id: string, fileUrl?: string) => {
     try {
-      // Check current session
-      const { data: { session } } = await supabase.auth.getSession();
-      console.log('Current session:', session?.user?.id);
-      
-      if (!session?.user) {
-        throw new Error('No active session - please sign in again');
-      }
-
       const { error } = await supabase
         .from('content')
-        .insert({
-          user_id: session.user.id, // Use session user ID for RLS
-          title: formData.title,
-          description: formData.description,
-          content_type: 'story',
-          genre: formData.genre,
-          file_url: formData.fileUrl
-        });
-
-      if (error) {
-        console.error('Insert error:', error);
-        throw error;
-      }
-
-      toast({
-        title: "Success!",
-        description: "Your story has been uploaded successfully."
-      });
-
-      setFormData({ title: '', description: '', genre: '', fileUrl: '', fileName: '' });
-      fetchStories();
-    } catch (error: any) {
-      console.error('Upload error:', error);
-      toast({
-        title: "Upload Failed",
-        description: error.message === 'No active session - please sign in again' 
-          ? 'Please sign out and sign back in to continue.'
-          : error.message,
-        variant: "destructive"
-      });
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  const deleteContent = async (contentId: string, fileUrl?: string) => {
-    try {
-      const { error: dbError } = await supabase
-        .from('content')
         .delete()
-        .eq('id', contentId);
+        .eq('id', id);
 
-      if (dbError) throw dbError;
+      if (error) throw error;
 
       if (fileUrl) {
         const fileName = fileUrl.split('/').pop();
         if (fileName) {
           await supabase.storage
             .from('content-files')
-            .remove([`content/${fileName}`]);
+            .remove([`main/${fileName}`]);
         }
       }
 
-      setContent(prev => prev.filter(item => item.id !== contentId));
+      setContent(prev => prev.filter(item => item.id !== id));
+      setShowDetailModal(false);
       
       toast({
-        title: "Content Deleted",
-        description: "Your story has been permanently removed."
+        title: "Content deleted",
+        description: "Story has been successfully deleted."
       });
     } catch (error: any) {
+      console.error('Error deleting content:', error);
       toast({
-        title: "Delete Failed",
+        title: "Delete failed",
         description: error.message,
         variant: "destructive"
       });
     }
   };
 
+  // Organize content into categories
+  const featuredStory = content.find(story => story.is_featured) || content[0];
+  const recentlyAdded = content.slice(0, 10);
+  const dramaStories = content.filter(story => story.genre?.toLowerCase().includes('drama'));
+  const comedyStories = content.filter(story => story.genre?.toLowerCase().includes('comedy'));
+  const mysteryStories = content.filter(story => story.genre?.toLowerCase().includes('mystery'));
+  const myStories = user ? content.filter(story => story.user_id === user.id) : [];
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-black">
+        <NetflixNavigation />
+        <div className="pt-20 flex items-center justify-center h-screen">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-red-600"></div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-background">
-      <Navigation />
+    <div className="min-h-screen bg-black">
+      <NetflixNavigation />
       
-      <main className="pt-8">
-        <section className="py-16 bg-gradient-hero">
-          <div className="container mx-auto px-4 text-center">
-            <div className="max-w-4xl mx-auto space-y-6">
-              <h1 className="text-4xl md:text-6xl font-bold">
-                <span className="text-cinema-gradient">Stories</span>
-              </h1>
-              <p className="text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-                Character-driven narratives and cinematic skits
-              </p>
-            </div>
+      <NetflixHero
+        content={featuredStory}
+        contentType="Story"
+        onPlay={() => featuredStory && handlePlay(featuredStory)}
+        onMoreInfo={() => featuredStory && handleContentClick(featuredStory)}
+      />
+
+      <div className="pb-20 -mt-32 relative z-10">
+        {recentlyAdded.length > 0 && (
+          <NetflixRow
+            title="Recently Added Stories"
+            content={recentlyAdded}
+            contentType="Story"
+            onContentClick={handleContentClick}
+            onContentPlay={handlePlay}
+          />
+        )}
+
+        {dramaStories.length > 0 && (
+          <NetflixRow
+            title="Drama Stories"
+            content={dramaStories}
+            contentType="Story"
+            onContentClick={handleContentClick}
+            onContentPlay={handlePlay}
+          />
+        )}
+
+        {comedyStories.length > 0 && (
+          <NetflixRow
+            title="Comedy Stories"
+            content={comedyStories}
+            contentType="Story"
+            onContentClick={handleContentClick}
+            onContentPlay={handlePlay}
+          />
+        )}
+
+        {mysteryStories.length > 0 && (
+          <NetflixRow
+            title="Mystery & Thriller Stories"
+            content={mysteryStories}
+            contentType="Story"
+            onContentClick={handleContentClick}
+            onContentPlay={handlePlay}
+          />
+        )}
+
+        {myStories.length > 0 && (
+          <NetflixRow
+            title="My Stories"
+            content={myStories}
+            contentType="Story"
+            onContentClick={handleContentClick}
+            onContentPlay={handlePlay}
+          />
+        )}
+
+        {content.length === 0 && (
+          <div className="text-center py-20">
+            <h2 className="text-2xl font-bold text-white mb-4">No Stories Available</h2>
+            <p className="text-gray-400">Be the first to upload a story!</p>
           </div>
-        </section>
+        )}
+      </div>
 
-        <section className="py-16">
-          <div className="container mx-auto px-4">
-            <div className="max-w-6xl mx-auto space-y-12">
-              
-              {/* Upload Section - Protected */}
-              {user ? (
-                <div className="cinema-card p-8">
-                  <div className="flex items-center space-x-3 mb-6">
-                    <Upload className="h-8 w-8 text-primary" />
-                    <h2 className="text-3xl font-bold text-foreground">Share Your Story</h2>
-                  </div>
-                  <form onSubmit={handleSubmit} className="space-y-6">
-                    <div className="space-y-2">
-                      <FileUpload
-                        onFileUploaded={handleFileUploaded}
-                        acceptedTypes=".mp4,.mov,.avi,.wmv,.flv,.webm,.mkv,.m4v,.3gp,.mpg,.mpeg,.ogv,.ts,.mts,.m2ts,.vob,video/*"
-                        maxSizeMB={500}
-                        label="Story Video File"
-                        currentFile={formData.fileName}
-                      />
-                      {formData.fileUrl && (
-                        <div className="flex items-center space-x-2 text-sm text-green-600">
-                          <div className="h-2 w-2 bg-green-600 rounded-full"></div>
-                          <span>Video uploaded successfully!</span>
-                        </div>
-                      )}
-                    </div>
-                    
-                    <div className="grid md:grid-cols-2 gap-6">
-                      <div>
-                        <Label htmlFor="title">Story Title *</Label>
-                        <Input
-                          id="title"
-                          name="title"
-                          value={formData.title}
-                          onChange={handleInputChange}
-                          placeholder="Enter your story title"
-                          required
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="genre">Category</Label>
-                        <Select value={formData.genre} onValueChange={(value) => setFormData(prev => ({ ...prev, genre: value }))}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select a category" />
-                          </SelectTrigger>
-                          <SelectContent className="bg-popover border z-50">
-                            {storyCategories.map((category) => (
-                              <SelectItem key={category} value={category}>
-                                {category}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                    <div>
-                      <Label htmlFor="description">Story Description</Label>
-                      <Textarea
-                        id="description"
-                        name="description"
-                        value={formData.description}
-                        onChange={handleInputChange}
-                        placeholder="Tell us about your story..."
-                        rows={4}
-                      />
-                    </div>
-                    <Button 
-                      type="submit" 
-                      disabled={uploading || !formData.fileUrl} 
-                      className="btn-hero"
-                    >
-                      {uploading ? "Uploading..." : "Upload Story"}
-                    </Button>
-                    {!formData.fileUrl && (
-                      <p className="text-sm text-muted-foreground">
-                        Please upload your video file first by clicking "Upload File" after selecting it.
-                      </p>
-                    )}
-                  </form>
-                </div>
-              ) : (
-                <div className="cinema-card p-8 text-center">
-                  <Camera className="h-16 w-16 mx-auto text-primary/50 mb-6" />
-                  <h2 className="text-3xl font-bold text-foreground mb-4">Share Your Stories</h2>
-                  <p className="text-muted-foreground mb-6">
-                    Join VYB Cinema to upload and share your narrative content
-                  </p>
-                  <div className="space-x-4">
-                    <Button className="btn-hero" onClick={() => navigate('/signup')}>
-                      Sign Up
-                    </Button>
-                    <Button variant="outline" onClick={() => navigate('/login')}>
-                      Login
-                    </Button>
-                  </div>
-                </div>
-              )}
+      <NetflixDetailModal
+        content={selectedContent}
+        contentType="Story"
+        isOpen={showDetailModal}
+        onClose={() => setShowDetailModal(false)}
+        onPlay={() => selectedContent && handlePlay(selectedContent)}
+        onDelete={() => selectedContent && deleteContent(selectedContent.id, selectedContent.file_url)}
+        canDelete={user?.id === selectedContent?.user_id}
+      />
 
-              {/* Stories Display */}
-              <div>
-                <h2 className="text-3xl font-bold text-foreground mb-8 text-center">
-                  {content.length > 0 ? 'Featured Stories' : 'Stories Coming Soon'}
-                </h2>
-                
-                {loading ? (
-                  <div className="cinema-card p-12 text-center">
-                    <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-primary mx-auto mb-4"></div>
-                    <p className="text-muted-foreground">Loading stories...</p>
-                  </div>
-                ) : content.length > 0 ? (
-                  <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {content.map((story) => (
-                      <Card key={story.id} className="cinema-card">
-                        <CardHeader>
-                          <div className="aspect-video bg-secondary/20 rounded-lg mb-4 flex items-center justify-center relative overflow-hidden">
-                            <BookOpen className="h-12 w-12 text-primary" />
-                            <div className="absolute inset-0 bg-gradient-overlay"></div>
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <Badge variant="secondary">Story</Badge>
-                            {story.genre && (
-                              <Badge variant="outline">{story.genre}</Badge>
-                            )}
-                          </div>
-                          <CardTitle className="text-lg">{story.title}</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <p className="text-muted-foreground text-sm mb-4 line-clamp-3">
-                            {story.description || 'No description available'}
-                          </p>
-                          <p className="text-xs text-muted-foreground mb-4">
-                            Uploaded: {new Date(story.created_at).toLocaleDateString()}
-                          </p>
-                          {user && story.user_id === user.id && (
-                            <div className="flex justify-end">
-                              <Button 
-                                size="sm" 
-                                variant="destructive"
-                                onClick={() => deleteContent(story.id, story.file_url)}
-                              >
-                                <Trash2 className="h-4 w-4 mr-1" />
-                                Delete
-                              </Button>
-                            </div>
-                          )}
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="cinema-card p-12 text-center">
-                    <BookOpen className="h-24 w-24 mx-auto text-primary/50 mb-6" />
-                    <h3 className="text-2xl font-bold text-foreground mb-4">Coming Soon</h3>
-                    <p className="text-muted-foreground mb-8">
-                      Compelling stories and character-driven content will be featured here. Share yours today!
-                    </p>
-                  </div>
-                )}
-              </div>
-
-            </div>
-          </div>
-        </section>
-      </main>
-      
-      <Footer />
+      <Dialog open={showVideoPlayer} onOpenChange={setShowVideoPlayer}>
+        <DialogContent className="max-w-6xl w-full p-0 bg-black">
+          {playingContent && (
+            <VideoPlayer
+              videoUrl={playingContent.file_url}
+              coverUrl={playingContent.cover_url}
+              trailerUrl={playingContent.trailer_url}
+              title={playingContent.title}
+              description={playingContent.description}
+              genre={playingContent.genre}
+              contentType="Story"
+              canDelete={false}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

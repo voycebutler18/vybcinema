@@ -1,44 +1,23 @@
-import { Navigation } from "@/components/Navigation";
-import { Footer } from "@/components/Footer";
-import { Film, Play, Upload, Trash2 } from "lucide-react";
-import { useAuth } from "@/hooks/useAuth";
-import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useToast } from "@/hooks/use-toast";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { useNavigate } from "react-router-dom";
-import { FileUpload } from "@/components/FileUpload";
-import { VideoPlayer } from "@/components/VideoPlayer";
+import React, { useState, useEffect } from 'react';
+import { NetflixNavigation } from '@/components/NetflixNavigation';
+import { NetflixHero } from '@/components/NetflixHero';
+import { NetflixRow } from '@/components/NetflixRow';
+import { NetflixDetailModal } from '@/components/NetflixDetailModal';
+import { VideoPlayer } from '@/components/VideoPlayer';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/hooks/use-toast';
 
-const Movies = () => {
+const NetflixMovies = () => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const navigate = useNavigate();
   const [content, setContent] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [uploading, setUploading] = useState(false);
-  const [formData, setFormData] = useState({
-    title: '',
-    description: '',
-    genre: '',
-    fileUrl: '',
-    fileName: '',
-    coverUrl: '',
-    trailerUrl: ''
-  });
-
-  const movieGenres = [
-    'Action', 'Adventure', 'Comedy', 'Drama', 'Horror', 'Romance', 'Thriller',
-    'Sci-Fi', 'Fantasy', 'Mystery', 'Crime', 'Documentary', 'Animation',
-    'Family', 'Western', 'War', 'Biography', 'Musical', 'Historical'
-  ];
+  const [selectedContent, setSelectedContent] = useState<any>(null);
+  const [playingContent, setPlayingContent] = useState<any>(null);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [showVideoPlayer, setShowVideoPlayer] = useState(false);
 
   useEffect(() => {
     fetchMovies();
@@ -61,308 +40,176 @@ const Movies = () => {
     }
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setFormData(prev => ({
-      ...prev,
-      [e.target.name]: e.target.value
-    }));
+  const handleContentClick = (item: any) => {
+    setSelectedContent(item);
+    setShowDetailModal(true);
   };
 
-  const handleFileUploaded = (url: string, fileName: string) => {
-    setFormData(prev => ({
-      ...prev,
-      fileUrl: url,
-      fileName: fileName
-    }));
+  const handlePlay = (item: any) => {
+    setPlayingContent(item);
+    setShowVideoPlayer(true);
+    setShowDetailModal(false);
   };
 
-  const handleCoverUploaded = (url: string, fileName: string) => {
-    setFormData(prev => ({
-      ...prev,
-      coverUrl: url
-    }));
-  };
-
-  const handleTrailerUploaded = (url: string, fileName: string) => {
-    setFormData(prev => ({
-      ...prev,
-      trailerUrl: url
-    }));
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user) return;
-
-    if (!formData.fileUrl) {
-      toast({
-        title: "Upload Required",
-        description: "Please upload a movie file before submitting.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    setUploading(true);
-
+  const deleteContent = async (id: string, fileUrl?: string) => {
     try {
+      // Delete from database
       const { error } = await supabase
         .from('content')
-        .insert({
-          user_id: user.id,
-          title: formData.title,
-          description: formData.description,
-          content_type: 'movie',
-          genre: formData.genre,
-          file_url: formData.fileUrl,
-          cover_url: formData.coverUrl || null,
-          trailer_url: formData.trailerUrl || null
-        });
+        .delete()
+        .eq('id', id);
 
       if (error) throw error;
 
-      toast({
-        title: "Success!",
-        description: "Your movie has been uploaded successfully."
-      });
-
-      setFormData({ 
-        title: '', 
-        description: '', 
-        genre: '', 
-        fileUrl: '', 
-        fileName: '', 
-        coverUrl: '', 
-        trailerUrl: '' 
-      });
-      fetchMovies();
-    } catch (error: any) {
-      toast({
-        title: "Upload Failed",
-        description: error.message,
-        variant: "destructive"
-      });
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  const deleteContent = async (contentId: string, fileUrl?: string) => {
-    try {
-      const { error: dbError } = await supabase
-        .from('content')
-        .delete()
-        .eq('id', contentId);
-
-      if (dbError) throw dbError;
-
+      // Delete file from storage if exists
       if (fileUrl) {
         const fileName = fileUrl.split('/').pop();
         if (fileName) {
           await supabase.storage
             .from('content-files')
-            .remove([`content/${fileName}`]);
+            .remove([`main/${fileName}`]);
         }
       }
 
-      setContent(prev => prev.filter(item => item.id !== contentId));
+      // Update local state
+      setContent(prev => prev.filter(item => item.id !== id));
+      setShowDetailModal(false);
       
       toast({
-        title: "Content Deleted",
-        description: "Your movie has been permanently removed."
+        title: "Content deleted",
+        description: "Movie has been successfully deleted."
       });
     } catch (error: any) {
+      console.error('Error deleting content:', error);
       toast({
-        title: "Delete Failed",
+        title: "Delete failed",
         description: error.message,
         variant: "destructive"
       });
     }
   };
 
+  // Organize content into categories
+  const featuredMovie = content.find(movie => movie.is_featured) || content[0];
+  const recentlyAdded = content.slice(0, 10);
+  const actionMovies = content.filter(movie => movie.genre?.toLowerCase().includes('action'));
+  const dramaMovies = content.filter(movie => movie.genre?.toLowerCase().includes('drama'));
+  const comedyMovies = content.filter(movie => movie.genre?.toLowerCase().includes('comedy'));
+  const myMovies = user ? content.filter(movie => movie.user_id === user.id) : [];
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-black">
+        <NetflixNavigation />
+        <div className="pt-20 flex items-center justify-center h-screen">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-red-600"></div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-background">
-      <Navigation />
+    <div className="min-h-screen bg-black">
+      <NetflixNavigation />
       
-      <main className="pt-8">
-        <section className="py-16 bg-gradient-hero">
-          <div className="container mx-auto px-4 text-center">
-            <div className="max-w-4xl mx-auto space-y-6">
-              <h1 className="text-4xl md:text-6xl font-bold">
-                <span className="text-cinema-gradient">Movies</span>
-              </h1>
-              <p className="text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-                Independent films and cinematic experiences
-              </p>
-            </div>
+      {/* Hero Section */}
+      <NetflixHero
+        content={featuredMovie}
+        contentType="Movie"
+        onPlay={() => featuredMovie && handlePlay(featuredMovie)}
+        onMoreInfo={() => featuredMovie && handleContentClick(featuredMovie)}
+      />
+
+      {/* Content Rows */}
+      <div className="pb-20 -mt-32 relative z-10">
+        {recentlyAdded.length > 0 && (
+          <NetflixRow
+            title="Recently Added Movies"
+            content={recentlyAdded}
+            contentType="Movie"
+            onContentClick={handleContentClick}
+            onContentPlay={handlePlay}
+          />
+        )}
+
+        {actionMovies.length > 0 && (
+          <NetflixRow
+            title="Action Movies"
+            content={actionMovies}
+            contentType="Movie"
+            onContentClick={handleContentClick}
+            onContentPlay={handlePlay}
+          />
+        )}
+
+        {dramaMovies.length > 0 && (
+          <NetflixRow
+            title="Drama Movies"
+            content={dramaMovies}
+            contentType="Movie"
+            onContentClick={handleContentClick}
+            onContentPlay={handlePlay}
+          />
+        )}
+
+        {comedyMovies.length > 0 && (
+          <NetflixRow
+            title="Comedy Movies"
+            content={comedyMovies}
+            contentType="Movie"
+            onContentClick={handleContentClick}
+            onContentPlay={handlePlay}
+          />
+        )}
+
+        {myMovies.length > 0 && (
+          <NetflixRow
+            title="My Movies"
+            content={myMovies}
+            contentType="Movie"
+            onContentClick={handleContentClick}
+            onContentPlay={handlePlay}
+          />
+        )}
+
+        {content.length === 0 && (
+          <div className="text-center py-20">
+            <h2 className="text-2xl font-bold text-white mb-4">No Movies Available</h2>
+            <p className="text-gray-400">Be the first to upload a movie!</p>
           </div>
-        </section>
+        )}
+      </div>
 
-        <section className="py-16">
-          <div className="container mx-auto px-4">
-            <div className="max-w-6xl mx-auto space-y-12">
-              
-              {/* Upload Section - Protected */}
-              {user ? (
-                <div className="cinema-card p-8">
-                  <div className="flex items-center space-x-3 mb-6">
-                    <Upload className="h-8 w-8 text-primary" />
-                    <h2 className="text-3xl font-bold text-foreground">Upload Your Movie</h2>
-                  </div>
-                  <form onSubmit={handleSubmit} className="space-y-6">
-                    <Tabs defaultValue="main" className="w-full">
-                      <TabsList className="grid grid-cols-3 w-full">
-                        <TabsTrigger value="main">Main Video</TabsTrigger>
-                        <TabsTrigger value="cover">Cover Image</TabsTrigger>
-                        <TabsTrigger value="trailer">Trailer</TabsTrigger>
-                      </TabsList>
-                      
-                      <TabsContent value="main" className="mt-6">
-                        <FileUpload
-                          onFileUploaded={handleFileUploaded}
-                          acceptedTypes=".mp4,.mov,.avi,.wmv,.flv,.webm,.mkv,.m4v,.3gp,.mpg,.mpeg,.ogv,.ts,.mts,.m2ts,.vob,video/*"
-                          maxSizeMB={500}
-                          label="Movie File"
-                          uploadType="main"
-                        />
-                      </TabsContent>
-                      
-                      <TabsContent value="cover" className="mt-6">
-                        <FileUpload
-                          onFileUploaded={handleCoverUploaded}
-                          acceptedTypes="image/*,.jpg,.jpeg,.png,.webp"
-                          maxSizeMB={10}
-                          label="Cover Image (Optional)"
-                          uploadType="cover"
-                        />
-                        <p className="text-sm text-muted-foreground mt-2">
-                          Upload a cover image to display as the movie thumbnail
-                        </p>
-                      </TabsContent>
-                      
-                      <TabsContent value="trailer" className="mt-6">
-                        <FileUpload
-                          onFileUploaded={handleTrailerUploaded}
-                          acceptedTypes=".mp4,.mov,.avi,.wmv,.flv,.webm,.mkv,.m4v,.3gp,.mpg,.mpeg,.ogv,.ts,.mts,.m2ts,.vob,video/*"
-                          maxSizeMB={100}
-                          label="Trailer Video (Optional)"
-                          uploadType="trailer"
-                        />
-                        <p className="text-sm text-muted-foreground mt-2">
-                          Upload a short trailer to preview your movie
-                        </p>
-                      </TabsContent>
-                    </Tabs>
-                    
-                    <div className="grid md:grid-cols-2 gap-6">
-                      <div>
-                        <Label htmlFor="title">Movie Title *</Label>
-                        <Input
-                          id="title"
-                          name="title"
-                          value={formData.title}
-                          onChange={handleInputChange}
-                          placeholder="Enter movie title"
-                          required
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="genre">Genre</Label>
-                        <Select value={formData.genre} onValueChange={(value) => setFormData(prev => ({ ...prev, genre: value }))}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select a genre" />
-                          </SelectTrigger>
-                          <SelectContent className="bg-popover border z-50">
-                            {movieGenres.map((genre) => (
-                              <SelectItem key={genre} value={genre}>
-                                {genre}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                    <div>
-                      <Label htmlFor="description">Description</Label>
-                      <Textarea
-                        id="description"
-                        name="description"
-                        value={formData.description}
-                        onChange={handleInputChange}
-                        placeholder="Describe your movie..."
-                        rows={4}
-                      />
-                    </div>
-                    <Button type="submit" disabled={uploading} className="btn-hero">
-                      {uploading ? "Uploading..." : "Upload Movie"}
-                    </Button>
-                  </form>
-                </div>
-              ) : (
-                <div className="cinema-card p-8 text-center">
-                  <Upload className="h-16 w-16 mx-auto text-primary/50 mb-6" />
-                  <h2 className="text-3xl font-bold text-foreground mb-4">Want to Upload?</h2>
-                  <p className="text-muted-foreground mb-6">
-                    Sign up to share your movies with the VYB Cinema community
-                  </p>
-                  <div className="space-x-4">
-                    <Button className="btn-hero" onClick={() => navigate('/signup')}>
-                      Sign Up
-                    </Button>
-                    <Button variant="outline" onClick={() => navigate('/login')}>
-                      Login
-                    </Button>
-                  </div>
-                </div>
-              )}
+      {/* Detail Modal */}
+      <NetflixDetailModal
+        content={selectedContent}
+        contentType="Movie"
+        isOpen={showDetailModal}
+        onClose={() => setShowDetailModal(false)}
+        onPlay={() => selectedContent && handlePlay(selectedContent)}
+        onDelete={() => selectedContent && deleteContent(selectedContent.id, selectedContent.file_url)}
+        canDelete={user?.id === selectedContent?.user_id}
+      />
 
-              {/* Movies Display */}
-              <div>
-                <h2 className="text-3xl font-bold text-foreground mb-8 text-center">
-                  {content.length > 0 ? 'Featured Movies' : 'Movies Coming Soon'}
-                </h2>
-                
-                {loading ? (
-                  <div className="cinema-card p-12 text-center">
-                    <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-primary mx-auto mb-4"></div>
-                    <p className="text-muted-foreground">Loading movies...</p>
-                  </div>
-                ) : content.length > 0 ? (
-                  <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {content.map((movie) => (
-                      <VideoPlayer
-                        key={movie.id}
-                        videoUrl={movie.file_url}
-                        coverUrl={movie.cover_url}
-                        trailerUrl={movie.trailer_url}
-                        title={movie.title}
-                        description={movie.description}
-                        genre={movie.genre}
-                        contentType="Movie"
-                        canDelete={user?.id === movie.user_id}
-                        onDelete={() => deleteContent(movie.id, movie.file_url)}
-                      />
-                    ))}
-                  </div>
-                ) : (
-                  <div className="cinema-card p-12 text-center">
-                    <Film className="h-24 w-24 mx-auto text-primary/50 mb-6" />
-                    <h3 className="text-2xl font-bold text-foreground mb-4">Coming Soon</h3>
-                    <p className="text-muted-foreground mb-8">
-                      Independent films and cinematic experiences will be featured here. Be the first to share yours!
-                    </p>
-                  </div>
-                )}
-              </div>
-
-            </div>
-          </div>
-        </section>
-      </main>
-      
-      <Footer />
+      {/* Video Player */}
+      <Dialog open={showVideoPlayer} onOpenChange={setShowVideoPlayer}>
+        <DialogContent className="max-w-6xl w-full p-0 bg-black">
+          {playingContent && (
+            <VideoPlayer
+              videoUrl={playingContent.file_url}
+              coverUrl={playingContent.cover_url}
+              trailerUrl={playingContent.trailer_url}
+              title={playingContent.title}
+              description={playingContent.description}
+              genre={playingContent.genre}
+              contentType="Movie"
+              canDelete={false}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
 
-export default Movies;
+export default NetflixMovies;

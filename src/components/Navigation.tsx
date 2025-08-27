@@ -21,7 +21,7 @@ export const Navigation = () => {
                 Browse
               </a>
               <a href="#" className="text-foreground hover:text-primary transition-colors">
-                Pricing
+                About
               </a>
             </div>
           </div>
@@ -69,7 +69,7 @@ export const Navigation = () => {
               Browse
             </a>
             <a href="#" className="block text-foreground hover:text-primary transition-colors">
-              Pricing
+              About
             </a>
             <div className="flex flex-col space-y-2 pt-3">
               <Button variant="ghost" size="sm" className="justify-start">

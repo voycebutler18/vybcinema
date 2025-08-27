@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Search, Menu, User } from "lucide-react";
+import { Link } from "react-router-dom";
 import { useState } from "react";
 
 export const Navigation = () => {
@@ -11,18 +12,18 @@ export const Navigation = () => {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <div className="flex items-center space-x-8">
-            <div className="text-2xl font-bold text-cinema-gradient">
+            <Link to="/" className="text-2xl font-bold text-cinema-gradient">
               VYB Cinema
-            </div>
+            </Link>
             
             {/* Desktop Navigation */}
             <div className="hidden md:flex items-center space-x-6">
-              <a href="#" className="text-foreground hover:text-primary transition-colors">
+              <Link to="/browse" className="text-foreground hover:text-primary transition-colors">
                 Browse
-              </a>
-              <a href="#" className="text-foreground hover:text-primary transition-colors">
+              </Link>
+              <Link to="/about" className="text-foreground hover:text-primary transition-colors">
                 About
-              </a>
+              </Link>
             </div>
           </div>
 
@@ -65,12 +66,12 @@ export const Navigation = () => {
         {/* Mobile Menu */}
         {isMenuOpen && (
           <div className="md:hidden border-t border-border/50 py-4 space-y-3 animate-fade-in">
-            <a href="#" className="block text-foreground hover:text-primary transition-colors">
+            <Link to="/browse" className="block text-foreground hover:text-primary transition-colors">
               Browse
-            </a>
-            <a href="#" className="block text-foreground hover:text-primary transition-colors">
+            </Link>
+            <Link to="/about" className="block text-foreground hover:text-primary transition-colors">
               About
-            </a>
+            </Link>
             <div className="flex flex-col space-y-2 pt-3">
               <Button variant="ghost" size="sm" className="justify-start">
                 Log in

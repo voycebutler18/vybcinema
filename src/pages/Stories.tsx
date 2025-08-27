@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -23,6 +24,12 @@ const Stories = () => {
     description: '',
     genre: ''
   });
+
+  const storyCategories = [
+    'Drama', 'Comedy', 'Documentary', 'Animation', 'Short Film', 'Web Series',
+    'Narrative', 'Experimental', 'Historical', 'Biography', 'Horror', 'Romance',
+    'Thriller', 'Sci-Fi', 'Fantasy', 'Adventure', 'Coming of Age', 'Social Issues'
+  ];
 
   useEffect(() => {
     fetchStories();
@@ -133,13 +140,18 @@ const Stories = () => {
                       </div>
                       <div>
                         <Label htmlFor="genre">Category</Label>
-                        <Input
-                          id="genre"
-                          name="genre"
-                          value={formData.genre}
-                          onChange={handleInputChange}
-                          placeholder="e.g. Drama, Comedy, Documentary"
-                        />
+                        <Select value={formData.genre} onValueChange={(value) => setFormData(prev => ({ ...prev, genre: value }))}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select a category" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-popover border z-50">
+                            {storyCategories.map((category) => (
+                              <SelectItem key={category} value={category}>
+                                {category}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
                     </div>
                     <div>

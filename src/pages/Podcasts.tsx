@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -30,6 +31,13 @@ const Podcasts = () => {
     title: '',
     description: ''
   });
+
+  const podcastCategories = [
+    'Technology', 'Business', 'Comedy', 'News', 'Sports', 'Health & Fitness',
+    'Education', 'True Crime', 'History', 'Science', 'Arts', 'Society & Culture',
+    'Music', 'Self-Improvement', 'Politics', 'Entertainment', 'Religion',
+    'Kids & Family', 'Gaming', 'Food', 'Travel', 'Interviews'
+  ];
 
   useEffect(() => {
     fetchPodcasts();
@@ -204,16 +212,21 @@ const Podcasts = () => {
                             required
                           />
                         </div>
-                        <div>
-                          <Label htmlFor="genre">Category</Label>
-                          <Input
-                            id="genre"
-                            name="genre"
-                            value={formData.genre}
-                            onChange={handleInputChange}
-                            placeholder="e.g. Tech, Business, Comedy"
-                          />
-                        </div>
+                      <div>
+                        <Label htmlFor="genre">Category</Label>
+                        <Select value={formData.genre} onValueChange={(value) => setFormData(prev => ({ ...prev, genre: value }))}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select a category" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-popover border z-50">
+                            {podcastCategories.map((category) => (
+                              <SelectItem key={category} value={category}>
+                                {category}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
                       </div>
                       <div>
                         <Label htmlFor="description">Description</Label>

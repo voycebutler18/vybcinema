@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -23,6 +24,12 @@ const TVShows = () => {
     description: '',
     genre: ''
   });
+
+  const tvGenres = [
+    'Drama', 'Comedy', 'Reality TV', 'Documentary', 'News', 'Sports', 'Talk Show',
+    'Game Show', 'Variety', 'Children', 'Educational', 'Crime', 'Thriller',
+    'Sci-Fi', 'Fantasy', 'Animation', 'Sitcom', 'Soap Opera', 'Mini-Series'
+  ];
 
   useEffect(() => {
     fetchTVShows();
@@ -133,13 +140,18 @@ const TVShows = () => {
                       </div>
                       <div>
                         <Label htmlFor="genre">Genre</Label>
-                        <Input
-                          id="genre"
-                          name="genre"
-                          value={formData.genre}
-                          onChange={handleInputChange}
-                          placeholder="e.g. Drama, Comedy, Thriller"
-                        />
+                        <Select value={formData.genre} onValueChange={(value) => setFormData(prev => ({ ...prev, genre: value }))}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select a genre" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-popover border z-50">
+                            {tvGenres.map((genre) => (
+                              <SelectItem key={genre} value={genre}>
+                                {genre}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
                     </div>
                     <div>

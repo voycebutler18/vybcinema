@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -23,6 +24,12 @@ const MusicVideos = () => {
     description: '',
     genre: ''
   });
+
+  const musicGenres = [
+    'Pop', 'Rock', 'Hip-Hop', 'R&B', 'Country', 'Electronic', 'Jazz', 'Blues',
+    'Folk', 'Classical', 'Reggae', 'Punk', 'Metal', 'Alternative', 'Indie',
+    'Soul', 'Funk', 'Dance', 'Gospel', 'World Music', 'Latin', 'Rap'
+  ];
 
   useEffect(() => {
     fetchMusicVideos();
@@ -133,13 +140,18 @@ const MusicVideos = () => {
                       </div>
                       <div>
                         <Label htmlFor="genre">Genre</Label>
-                        <Input
-                          id="genre"
-                          name="genre"
-                          value={formData.genre}
-                          onChange={handleInputChange}
-                          placeholder="e.g. Pop, Rock, Hip-Hop"
-                        />
+                        <Select value={formData.genre} onValueChange={(value) => setFormData(prev => ({ ...prev, genre: value }))}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select a genre" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-popover border z-50">
+                            {musicGenres.map((genre) => (
+                              <SelectItem key={genre} value={genre}>
+                                {genre}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
                     </div>
                     <div>

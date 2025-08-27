@@ -1,3 +1,5 @@
+import { Link } from "react-router-dom";
+
 export const Footer = () => {
   return (
     <footer className="bg-card/50 border-t border-border/50 py-12 mt-16">
@@ -17,15 +19,15 @@ export const Footer = () => {
           <div className="space-y-4">
             <h4 className="font-semibold text-foreground">Company</h4>
             <div className="space-y-2 text-sm">
-              <a href="#" className="block text-muted-foreground hover:text-primary transition-colors">
+              <Link to="/about" className="block text-muted-foreground hover:text-primary transition-colors">
                 About
-              </a>
-              <a href="#" className="block text-muted-foreground hover:text-primary transition-colors">
+              </Link>
+              <Link to="/careers" className="block text-muted-foreground hover:text-primary transition-colors">
                 Careers
-              </a>
-              <a href="#" className="block text-muted-foreground hover:text-primary transition-colors">
+              </Link>
+              <Link to="/press" className="block text-muted-foreground hover:text-primary transition-colors">
                 Press
-              </a>
+              </Link>
             </div>
           </div>
           
@@ -33,15 +35,15 @@ export const Footer = () => {
           <div className="space-y-4">
             <h4 className="font-semibold text-foreground">Support</h4>
             <div className="space-y-2 text-sm">
-              <a href="#" className="block text-muted-foreground hover:text-primary transition-colors">
+              <Link to="/help" className="block text-muted-foreground hover:text-primary transition-colors">
                 Help Center
-              </a>
-              <a href="#" className="block text-muted-foreground hover:text-primary transition-colors">
+              </Link>
+              <Link to="/contact" className="block text-muted-foreground hover:text-primary transition-colors">
                 Contact Us
-              </a>
-              <a href="#" className="block text-muted-foreground hover:text-primary transition-colors">
+              </Link>
+              <Link to="/dmca" className="block text-muted-foreground hover:text-primary transition-colors">
                 DMCA
-              </a>
+              </Link>
             </div>
           </div>
           
@@ -49,15 +51,15 @@ export const Footer = () => {
           <div className="space-y-4">
             <h4 className="font-semibold text-foreground">Legal</h4>
             <div className="space-y-2 text-sm">
-              <a href="#" className="block text-muted-foreground hover:text-primary transition-colors">
+              <Link to="/privacy" className="block text-muted-foreground hover:text-primary transition-colors">
                 Privacy Policy
-              </a>
-              <a href="#" className="block text-muted-foreground hover:text-primary transition-colors">
+              </Link>
+              <Link to="/terms" className="block text-muted-foreground hover:text-primary transition-colors">
                 Terms of Service
-              </a>
-              <a href="#" className="block text-muted-foreground hover:text-primary transition-colors">
+              </Link>
+              <Link to="/cookies" className="block text-muted-foreground hover:text-primary transition-colors">
                 Cookie Policy
-              </a>
+              </Link>
             </div>
           </div>
         </div>

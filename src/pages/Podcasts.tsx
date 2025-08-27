@@ -22,6 +22,7 @@ const Podcasts = () => {
   const navigate = useNavigate();
   const [content, setContent] = useState<any[]>([]);
   const [liveStreams, setLiveStreams] = useState<any[]>([]);
+  const [userStreams, setUserStreams] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [creatingStream, setCreatingStream] = useState(false);
@@ -47,7 +48,10 @@ const Podcasts = () => {
   useEffect(() => {
     fetchPodcasts();
     fetchLiveStreams();
-  }, []);
+    if (user) {
+      fetchUserStreams();
+    }
+  }, [user]);
 
   const fetchPodcasts = async () => {
     try {
@@ -68,15 +72,29 @@ const Podcasts = () => {
 
   const fetchLiveStreams = async () => {
     try {
+      // Use secure function to get public stream data (no sensitive fields)
       const { data, error } = await supabase
-        .from('live_streams')
-        .select('*')
-        .order('created_at', { ascending: false });
+        .rpc('get_public_live_streams');
 
       if (error) throw error;
       setLiveStreams(data || []);
     } catch (error) {
       console.error('Error fetching live streams:', error);
+    }
+  };
+
+  const fetchUserStreams = async () => {
+    if (!user) return;
+    
+    try {
+      // Use secure function to get user's own streams (with sensitive fields)
+      const { data, error } = await supabase
+        .rpc('get_user_live_streams', { user_uuid: user.id });
+
+      if (error) throw error;
+      setUserStreams(data || []);
+    } catch (error) {
+      console.error('Error fetching user streams:', error);
     }
   };
 
@@ -171,11 +189,13 @@ const Podcasts = () => {
 
       toast({
         title: "Stream Created!",
-        description: `Your stream "${streamData.title}" is ready. Stream key: ${data.stream_key}`
+        description: `Your stream "${streamData.title}" is ready. Stream key: ${data.stream_key}`,
+        duration: 10000 // Show longer so user can copy the key
       });
 
       setStreamData({ title: '', description: '' });
       fetchLiveStreams();
+      fetchUserStreams();
     } catch (error: any) {
       toast({
         title: "Stream Creation Failed",
@@ -245,9 +265,10 @@ const Podcasts = () => {
               {/* Upload/Streaming Section - Protected */}
               {user ? (
                 <Tabs defaultValue="upload" className="cinema-card p-8">
-                  <TabsList className="grid w-full grid-cols-2">
+                  <TabsList className="grid w-full grid-cols-3">
                     <TabsTrigger value="upload">Upload Podcast</TabsTrigger>
                     <TabsTrigger value="stream">Go Live</TabsTrigger>
+                    <TabsTrigger value="manage">Manage Streams</TabsTrigger>
                   </TabsList>
                   
                   <TabsContent value="upload">
@@ -340,6 +361,72 @@ const Podcasts = () => {
                         {creatingStream ? "Creating..." : "Create Stream"}
                       </Button>
                     </form>
+                  </TabsContent>
+
+                  <TabsContent value="manage">
+                    <div className="flex items-center space-x-3 mb-6">
+                      <Eye className="h-8 w-8 text-primary" />
+                      <h2 className="text-3xl font-bold text-foreground">Your Streams</h2>
+                    </div>
+                    {userStreams.length > 0 ? (
+                      <div className="space-y-4">
+                        {userStreams.map((stream) => (
+                          <Card key={stream.id} className="cinema-card">
+                            <CardHeader>
+                              <div className="flex items-center justify-between">
+                                <CardTitle className="text-lg">{stream.title}</CardTitle>
+                                <div className="flex items-center space-x-2">
+                                  {stream.is_live && <Badge className="bg-red-500 text-white">LIVE</Badge>}
+                                  <Badge variant="outline">
+                                    Viewers: {stream.viewer_count || 0}
+                                  </Badge>
+                                </div>
+                              </div>
+                            </CardHeader>
+                            <CardContent>
+                              <p className="text-muted-foreground text-sm mb-4">
+                                {stream.description || 'No description'}
+                              </p>
+                              
+                              {/* Stream Key - Only visible to owner */}
+                              <div className="bg-muted p-4 rounded-lg mb-4">
+                                <Label className="text-sm font-medium">Stream Key (Keep Secret!)</Label>
+                                <div className="flex items-center space-x-2 mt-2">
+                                  <code className="bg-background px-3 py-2 rounded text-sm font-mono flex-1">
+                                    {stream.stream_key}
+                                  </code>
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline"
+                                    onClick={() => {
+                                      navigator.clipboard.writeText(stream.stream_key);
+                                      toast({
+                                        title: "Copied!",
+                                        description: "Stream key copied to clipboard"
+                                      });
+                                    }}
+                                  >
+                                    Copy
+                                  </Button>
+                                </div>
+                              </div>
+                              
+                              <div className="flex justify-between items-center text-xs text-muted-foreground">
+                                <span>Created: {new Date(stream.created_at).toLocaleDateString()}</span>
+                                {stream.started_at && (
+                                  <span>Started: {new Date(stream.started_at).toLocaleString()}</span>
+                                )}
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-8">
+                        <Radio className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
+                        <p className="text-muted-foreground">No streams created yet. Create your first stream!</p>
+                      </div>
+                    )}
                   </TabsContent>
                 </Tabs>
               ) : (

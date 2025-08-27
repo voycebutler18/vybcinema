@@ -1,10 +1,21 @@
 import { Button } from "@/components/ui/button";
-import { Search, Menu, User } from "lucide-react";
+import { Search, Menu, User, LogOut } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useState } from "react";
+import { useAuth } from "@/hooks/useAuth";
+import { useNavigate } from "react-router-dom";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export const Navigation = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
 
   return (
     <nav className="sticky top-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border/50">
@@ -52,16 +63,40 @@ export const Navigation = () => {
 
             {/* Auth Buttons */}
             <div className="hidden md:flex items-center space-x-3">
-              <Link to="/login">
-                <Button variant="ghost" size="sm">
-                  Log in
-                </Button>
-              </Link>
-              <Link to="/signup">
-                <Button className="btn-hero text-sm px-6 py-2">
-                  Sign up
-                </Button>
-              </Link>
+              {user ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm" className="flex items-center space-x-2">
+                      <User className="h-4 w-4" />
+                      <span>Dashboard</span>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48">
+                    <DropdownMenuItem onClick={() => navigate('/dashboard')}>
+                      <User className="mr-2 h-4 w-4" />
+                      Dashboard
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={signOut} className="text-destructive">
+                      <LogOut className="mr-2 h-4 w-4" />
+                      Sign out
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                <>
+                  <Link to="/login">
+                    <Button variant="ghost" size="sm">
+                      Log in
+                    </Button>
+                  </Link>
+                  <Link to="/signup">
+                    <Button className="btn-hero text-sm px-6 py-2">
+                      Sign up
+                    </Button>
+                  </Link>
+                </>
+              )}
             </div>
 
             {/* Mobile Menu Button */}
@@ -95,16 +130,38 @@ export const Navigation = () => {
               About
             </Link>
             <div className="flex flex-col space-y-2 pt-3">
-              <Link to="/login">
-                <Button variant="ghost" size="sm" className="justify-start w-full">
-                  Log in
-                </Button>
-              </Link>
-              <Link to="/signup">
-                <Button className="btn-hero text-sm w-full">
-                  Sign up
-                </Button>
-              </Link>
+              {user ? (
+                <>
+                  <Link to="/dashboard">
+                    <Button variant="ghost" size="sm" className="justify-start w-full">
+                      <User className="mr-2 h-4 w-4" />
+                      Dashboard
+                    </Button>
+                  </Link>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="justify-start w-full text-destructive" 
+                    onClick={signOut}
+                  >
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Sign out
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Link to="/login">
+                    <Button variant="ghost" size="sm" className="justify-start w-full">
+                      Log in
+                    </Button>
+                  </Link>
+                  <Link to="/signup">
+                    <Button className="btn-hero text-sm w-full">
+                      Sign up
+                    </Button>
+                  </Link>
+                </>
+              )}
             </div>
           </div>
         )}

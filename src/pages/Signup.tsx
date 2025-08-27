@@ -5,10 +5,46 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Link } from "react-router-dom";
 import { Eye, EyeOff } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useAuth } from "@/hooks/useAuth";
+import { useNavigate } from "react-router-dom";
 
 const Signup = () => {
   const [showPassword, setShowPassword] = useState(false);
+  const [formData, setFormData] = useState({
+    fullName: "",
+    email: "",
+    password: ""
+  });
+  const [loading, setLoading] = useState(false);
+  const { signUp, user } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (user) {
+      navigate('/dashboard');
+    }
+  }, [user, navigate]);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData(prev => ({
+      ...prev,
+      [e.target.name]: e.target.value
+    }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    
+    const { error } = await signUp(formData.email, formData.password, formData.fullName);
+    
+    if (!error) {
+      // Success message is handled by the auth context
+    }
+    
+    setLoading(false);
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -29,14 +65,18 @@ const Signup = () => {
                 </div>
 
                 {/* Signup Form */}
-                <form className="space-y-4">
+                <form onSubmit={handleSubmit} className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="fullName">Full Name</Label>
                     <Input
                       id="fullName"
+                      name="fullName"
                       type="text"
                       placeholder="Enter your full name"
                       className="w-full"
+                      value={formData.fullName}
+                      onChange={handleInputChange}
+                      required
                     />
                   </div>
                   
@@ -44,9 +84,13 @@ const Signup = () => {
                     <Label htmlFor="email">Email</Label>
                     <Input
                       id="email"
+                      name="email"
                       type="email"
                       placeholder="Enter your email"
                       className="w-full"
+                      value={formData.email}
+                      onChange={handleInputChange}
+                      required
                     />
                   </div>
                   
@@ -55,9 +99,14 @@ const Signup = () => {
                     <div className="relative">
                       <Input
                         id="password"
+                        name="password"
                         type={showPassword ? "text" : "password"}
                         placeholder="Create a password"
                         className="w-full pr-10"
+                        value={formData.password}
+                        onChange={handleInputChange}
+                        required
+                        minLength={6}
                       />
                       <Button
                         type="button"
@@ -74,7 +123,7 @@ const Signup = () => {
                       </Button>
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      Must be at least 8 characters long
+                      Must be at least 6 characters long
                     </p>
                   </div>
 
@@ -83,16 +132,17 @@ const Signup = () => {
                       type="checkbox"
                       id="terms"
                       className="w-4 h-4 mt-1 text-primary border-border rounded"
+                      required
                     />
                     <Label htmlFor="terms" className="text-sm leading-5">
                       I agree to the{" "}
-                      <a href="#" className="text-primary hover:underline">
+                      <Link to="/terms" className="text-primary hover:underline">
                         Terms of Service
-                      </a>{" "}
+                      </Link>{" "}
                       and{" "}
-                      <a href="#" className="text-primary hover:underline">
+                      <Link to="/privacy" className="text-primary hover:underline">
                         Privacy Policy
-                      </a>
+                      </Link>
                     </Label>
                   </div>
 
@@ -107,8 +157,8 @@ const Signup = () => {
                     </Label>
                   </div>
 
-                  <Button className="btn-hero w-full">
-                    Create Account
+                  <Button type="submit" disabled={loading} className="btn-hero w-full">
+                    {loading ? "Creating Account..." : "Create Account"}
                   </Button>
                 </form>
 
@@ -145,7 +195,7 @@ const Signup = () => {
                 {/* Note about Supabase */}
                 <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 text-center">
                   <p className="text-sm text-muted-foreground">
-                    <strong>Note:</strong> To make signup functionality work, connect your project to Supabase for authentication.
+                    <strong>Welcome!</strong> Your authentication system is now ready. Sign up to start uploading content.
                   </p>
                 </div>
               </div>

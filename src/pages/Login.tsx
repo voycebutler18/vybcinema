@@ -5,10 +5,36 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Link } from "react-router-dom";
 import { Eye, EyeOff } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useAuth } from "@/hooks/useAuth";
+import { useNavigate } from "react-router-dom";
 
 const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const { signIn, user } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (user) {
+      navigate('/dashboard');
+    }
+  }, [user, navigate]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    
+    const { error } = await signIn(email, password);
+    
+    if (!error) {
+      navigate('/dashboard');
+    }
+    
+    setLoading(false);
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -29,7 +55,7 @@ const Login = () => {
                 </div>
 
                 {/* Login Form */}
-                <form className="space-y-4">
+                <form onSubmit={handleSubmit} className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="email">Email</Label>
                     <Input
@@ -37,6 +63,9 @@ const Login = () => {
                       type="email"
                       placeholder="Enter your email"
                       className="w-full"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
                     />
                   </div>
                   
@@ -48,6 +77,9 @@ const Login = () => {
                         type={showPassword ? "text" : "password"}
                         placeholder="Enter your password"
                         className="w-full pr-10"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
                       />
                       <Button
                         type="button"
@@ -81,8 +113,8 @@ const Login = () => {
                     </a>
                   </div>
 
-                  <Button className="btn-hero w-full">
-                    Sign In
+                  <Button type="submit" disabled={loading} className="btn-hero w-full">
+                    {loading ? "Signing In..." : "Sign In"}
                   </Button>
                 </form>
 
@@ -119,7 +151,7 @@ const Login = () => {
                 {/* Note about Supabase */}
                 <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 text-center">
                   <p className="text-sm text-muted-foreground">
-                    <strong>Note:</strong> To make login functionality work, connect your project to Supabase for authentication.
+                    <strong>Welcome!</strong> Your authentication system is now ready. Create an account to get started.
                   </p>
                 </div>
               </div>

@@ -1,8 +1,93 @@
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
-import { BookOpen, Camera, Play } from "lucide-react";
+import { BookOpen, Camera, Play, Upload } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/hooks/use-toast";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 
 const Stories = () => {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [content, setContent] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
+  const [formData, setFormData] = useState({
+    title: '',
+    description: '',
+    genre: ''
+  });
+
+  useEffect(() => {
+    fetchStories();
+  }, []);
+
+  const fetchStories = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('content')
+        .select('*')
+        .eq('content_type', 'story')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setContent(data || []);
+    } catch (error) {
+      console.error('Error fetching stories:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    setFormData(prev => ({
+      ...prev,
+      [e.target.name]: e.target.value
+    }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) return;
+
+    setUploading(true);
+
+    try {
+      const { error } = await supabase
+        .from('content')
+        .insert({
+          user_id: user.id,
+          title: formData.title,
+          description: formData.description,
+          content_type: 'story',
+          genre: formData.genre
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "Success!",
+        description: "Your story has been uploaded successfully."
+      });
+
+      setFormData({ title: '', description: '', genre: '' });
+      fetchStories();
+    } catch (error: any) {
+      toast({
+        title: "Upload Failed",
+        description: error.message,
+        variant: "destructive"
+      });
+    } finally {
+      setUploading(false);
+    }
+  };
   return (
     <div className="min-h-screen bg-background">
       <Navigation />

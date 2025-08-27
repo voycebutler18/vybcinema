@@ -2,6 +2,7 @@ import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
 import { Search, Filter, Grid, List } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Link } from "react-router-dom";
 
 const Browse = () => {
   const genres = [
@@ -79,14 +80,15 @@ const Browse = () => {
               <h2 className="text-2xl font-bold text-foreground mb-4">Browse by Genre</h2>
               <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
                 {genres.map((genre) => (
-                  <div
+                  <Link
                     key={genre}
-                    className="cinema-card p-6 text-center cursor-pointer hover:ring-2 hover:ring-primary transition-all"
+                    to={`/genre/${genre.toLowerCase()}`}
+                    className="cinema-card p-6 text-center cursor-pointer hover:ring-2 hover:ring-primary transition-all block"
                   >
                     <div className="text-lg font-semibold text-foreground">
                       {genre}
                     </div>
-                  </div>
+                  </Link>
                 ))}
               </div>
             </div>
@@ -106,9 +108,11 @@ const Browse = () => {
                   <Button className="btn-hero">
                     Get Notified When We Launch
                   </Button>
-                  <Button variant="secondary">
-                    Learn More About VYB Cinema
-                  </Button>
+                  <Link to="/about">
+                    <Button variant="secondary">
+                      Learn More About VYB Cinema
+                    </Button>
+                  </Link>
                 </div>
               </div>
             </div>

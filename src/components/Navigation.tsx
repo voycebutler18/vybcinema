@@ -43,12 +43,16 @@ export const Navigation = () => {
 
             {/* Auth Buttons */}
             <div className="hidden md:flex items-center space-x-3">
-              <Button variant="ghost" size="sm">
-                Log in
-              </Button>
-              <Button className="btn-hero text-sm px-6 py-2">
-                Sign up
-              </Button>
+              <Link to="/login">
+                <Button variant="ghost" size="sm">
+                  Log in
+                </Button>
+              </Link>
+              <Link to="/signup">
+                <Button className="btn-hero text-sm px-6 py-2">
+                  Sign up
+                </Button>
+              </Link>
             </div>
 
             {/* Mobile Menu Button */}
@@ -73,12 +77,16 @@ export const Navigation = () => {
               About
             </Link>
             <div className="flex flex-col space-y-2 pt-3">
-              <Button variant="ghost" size="sm" className="justify-start">
-                Log in
-              </Button>
-              <Button className="btn-hero text-sm">
-                Sign up
-              </Button>
+              <Link to="/login">
+                <Button variant="ghost" size="sm" className="justify-start w-full">
+                  Log in
+                </Button>
+              </Link>
+              <Link to="/signup">
+                <Button className="btn-hero text-sm w-full">
+                  Sign up
+                </Button>
+              </Link>
             </div>
           </div>
         )}

@@ -2,6 +2,7 @@ import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
 import { Search, HelpCircle, Book, MessageSquare, Video, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Link } from "react-router-dom";
 
 const HelpCenter = () => {
   const topics = [
@@ -136,12 +137,16 @@ const HelpCenter = () => {
                   Can't find what you're looking for? Our support team is here to help.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                  <Button className="btn-hero">
-                    Contact Support
-                  </Button>
-                  <Button variant="secondary">
-                    Send Feedback
-                  </Button>
+                  <a href="mailto:hello@vybcinema.com?subject=Support Request">
+                    <Button className="btn-hero">
+                      Contact Support
+                    </Button>
+                  </a>
+                  <Link to="/contact">
+                    <Button variant="secondary">
+                      Send Feedback
+                    </Button>
+                  </Link>
                 </div>
               </div>
 

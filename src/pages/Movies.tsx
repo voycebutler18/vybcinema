@@ -12,10 +12,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { useNavigate } from "react-router-dom";
 
 const Movies = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [content, setContent] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -178,10 +180,10 @@ const Movies = () => {
                     Sign up to share your movies with the VYB Cinema community
                   </p>
                   <div className="space-x-4">
-                    <Button className="btn-hero" onClick={() => window.location.href = '/signup'}>
+                    <Button className="btn-hero" onClick={() => navigate('/signup')}>
                       Sign Up
                     </Button>
-                    <Button variant="outline" onClick={() => window.location.href = '/login'}>
+                    <Button variant="outline" onClick={() => navigate('/login')}>
                       Login
                     </Button>
                   </div>

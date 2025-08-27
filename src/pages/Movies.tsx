@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
+import { FileUpload } from "@/components/FileUpload";
 
 const Movies = () => {
   const { user } = useAuth();
@@ -24,7 +25,9 @@ const Movies = () => {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    genre: ''
+    genre: '',
+    fileUrl: '',
+    fileName: ''
   });
 
   const movieGenres = [
@@ -61,9 +64,26 @@ const Movies = () => {
     }));
   };
 
+  const handleFileUploaded = (url: string, fileName: string) => {
+    setFormData(prev => ({
+      ...prev,
+      fileUrl: url,
+      fileName: fileName
+    }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
+
+    if (!formData.fileUrl) {
+      toast({
+        title: "Upload Required",
+        description: "Please upload a movie file before submitting.",
+        variant: "destructive"
+      });
+      return;
+    }
 
     setUploading(true);
 
@@ -75,7 +95,8 @@ const Movies = () => {
           title: formData.title,
           description: formData.description,
           content_type: 'movie',
-          genre: formData.genre
+          genre: formData.genre,
+          file_url: formData.fileUrl
         });
 
       if (error) throw error;
@@ -85,7 +106,7 @@ const Movies = () => {
         description: "Your movie has been uploaded successfully."
       });
 
-      setFormData({ title: '', description: '', genre: '' });
+      setFormData({ title: '', description: '', genre: '', fileUrl: '', fileName: '' });
       fetchMovies();
     } catch (error: any) {
       toast({
@@ -128,6 +149,13 @@ const Movies = () => {
                     <h2 className="text-3xl font-bold text-foreground">Upload Your Movie</h2>
                   </div>
                   <form onSubmit={handleSubmit} className="space-y-6">
+                    <FileUpload
+                      onFileUploaded={handleFileUploaded}
+                      acceptedTypes="video/*"
+                      maxSizeMB={500}
+                      label="Movie File"
+                    />
+                    
                     <div className="grid md:grid-cols-2 gap-6">
                       <div>
                         <Label htmlFor="title">Movie Title *</Label>

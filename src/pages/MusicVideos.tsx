@@ -12,17 +12,22 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { useNavigate } from "react-router-dom";
+import { FileUpload } from "@/components/FileUpload";
 
 const MusicVideos = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [content, setContent] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    genre: ''
+    genre: '',
+    fileUrl: '',
+    fileName: ''
   });
 
   const musicGenres = [
@@ -59,9 +64,26 @@ const MusicVideos = () => {
     }));
   };
 
+  const handleFileUploaded = (url: string, fileName: string) => {
+    setFormData(prev => ({
+      ...prev,
+      fileUrl: url,
+      fileName: fileName
+    }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
+
+    if (!formData.fileUrl) {
+      toast({
+        title: "Upload Required",
+        description: "Please upload a music video file before submitting.",
+        variant: "destructive"
+      });
+      return;
+    }
 
     setUploading(true);
 
@@ -73,7 +95,8 @@ const MusicVideos = () => {
           title: formData.title,
           description: formData.description,
           content_type: 'music_video',
-          genre: formData.genre
+          genre: formData.genre,
+          file_url: formData.fileUrl
         });
 
       if (error) throw error;
@@ -83,7 +106,7 @@ const MusicVideos = () => {
         description: "Your music video has been uploaded successfully."
       });
 
-      setFormData({ title: '', description: '', genre: '' });
+      setFormData({ title: '', description: '', genre: '', fileUrl: '', fileName: '' });
       fetchMusicVideos();
     } catch (error: any) {
       toast({
@@ -126,6 +149,13 @@ const MusicVideos = () => {
                     <h2 className="text-3xl font-bold text-foreground">Upload Your Music Video</h2>
                   </div>
                   <form onSubmit={handleSubmit} className="space-y-6">
+                    <FileUpload
+                      onFileUploaded={handleFileUploaded}
+                      acceptedTypes="video/*"
+                      maxSizeMB={500}
+                      label="Music Video File"
+                    />
+                    
                     <div className="grid md:grid-cols-2 gap-6">
                       <div>
                         <Label htmlFor="title">Title *</Label>
@@ -178,10 +208,10 @@ const MusicVideos = () => {
                     Sign up to share your music videos with the VYB Cinema community
                   </p>
                   <div className="space-x-4">
-                    <Button className="btn-hero" onClick={() => window.location.href = '/signup'}>
+                    <Button className="btn-hero" onClick={() => navigate('/signup')}>
                       Sign Up
                     </Button>
-                    <Button variant="outline" onClick={() => window.location.href = '/login'}>
+                    <Button variant="outline" onClick={() => navigate('/login')}>
                       Login
                     </Button>
                   </div>

@@ -21,23 +21,59 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const { toast } = useToast();
 
   useEffect(() => {
+    let mounted = true;
+
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
+      async (event, session) => {
+        console.log('Auth state changed:', event, session?.user?.id);
+        
+        if (!mounted) return;
+        
+        // Handle different auth events
+        if (event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED') {
+          setSession(session);
+          setUser(session?.user ?? null);
+        } else if (event === 'SIGNED_IN') {
+          setSession(session);
+          setUser(session?.user ?? null);
+        } else {
+          setSession(session);
+          setUser(session?.user ?? null);
+        }
+        
         setLoading(false);
       }
     );
 
-    // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
+    // THEN check for existing session with retry logic for mobile
+    const getInitialSession = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error('Error getting session:', error);
+        }
+        
+        if (mounted) {
+          setSession(session);
+          setUser(session?.user ?? null);
+          setLoading(false);
+        }
+      } catch (error) {
+        console.error('Failed to get initial session:', error);
+        if (mounted) {
+          setLoading(false);
+        }
+      }
+    };
 
-    return () => subscription.unsubscribe();
+    getInitialSession();
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signUp = async (email: string, password: string, displayName?: string) => {
@@ -114,24 +150,36 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signOut = async () => {
     try {
-      const { error } = await supabase.auth.signOut();
+      // Use 'local' scope to ensure sign out works on mobile browsers
+      const { error } = await supabase.auth.signOut({ scope: 'local' });
+      
       if (error) {
+        console.error('Sign out error:', error);
         toast({
           title: "Sign Out Failed",
           description: error.message,
           variant: "destructive"
         });
       } else {
+        // Clear local state immediately for mobile browsers
+        setSession(null);
+        setUser(null);
+        
         toast({
           title: "Signed Out",
           description: "Come back soon!"
         });
       }
     } catch (error: any) {
+      console.error('Sign out exception:', error);
+      
+      // Force clear session on mobile if there's an error
+      setSession(null);
+      setUser(null);
+      
       toast({
-        title: "Sign Out Failed",
-        description: error.message,
-        variant: "destructive"
+        title: "Signed Out",
+        description: "Session cleared locally"
       });
     }
   };

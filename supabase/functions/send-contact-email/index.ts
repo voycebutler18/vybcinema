@@ -50,7 +50,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Send email to voycebutler@vybcinema.com
     const emailResponse = await resend.emails.send({
-      from: "VYB Cinema Contact <onboarding@resend.dev>",
+      from: "VYB Cinema Contact <noreply@vybcinema.com>",
       to: ["voycebutler@vybcinema.com"],
       subject: `New Contact Form Submission: ${subject}`,
       html: `

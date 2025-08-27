@@ -51,7 +51,7 @@ const HelpCenter = () => {
     },
     {
       question: "How can I contact support?",
-      answer: "Email us at voycebutler@vybcinema.com and we'll get back to you within 1-2 business days."
+      answer: "Use our contact form for all support inquiries and we'll get back to you within 1-2 business days."
     }
   ];
 
@@ -137,11 +137,11 @@ const HelpCenter = () => {
                   Can't find what you're looking for? Our support team is here to help.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                  <a href="mailto:voycebutler@vybcinema.com?subject=Support Request">
+                  <Link to="/contact">
                     <Button className="btn-hero">
                       Contact Support
                     </Button>
-                  </a>
+                  </Link>
                   <Link to="/contact">
                     <Button variant="secondary">
                       Send Feedback

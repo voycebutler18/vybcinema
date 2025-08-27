@@ -103,21 +103,11 @@ const Press = () => {
                 <div className="space-y-4">
                   <div>
                     <p className="text-foreground font-semibold">Media Contact:</p>
-                    <a 
-                      href="mailto:voycebutler@vybcinema.com"
-                      className="text-primary hover:underline"
-                    >
-                      voycebutler@vybcinema.com
-                    </a>
+                    <p className="text-muted-foreground">Please use our contact form</p>
                   </div>
                   <div>
                     <p className="text-foreground font-semibold">General Inquiries:</p>
-                    <a 
-                      href="mailto:voycebutler@vybcinema.com"
-                      className="text-primary hover:underline"
-                    >
-                      voycebutler@vybcinema.com
-                    </a>
+                    <p className="text-muted-foreground">Please use our contact form</p>
                   </div>
                 </div>
               </div>

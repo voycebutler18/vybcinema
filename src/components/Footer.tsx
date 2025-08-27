@@ -64,8 +64,21 @@ export const Footer = () => {
           </div>
         </div>
         
-        <div className="border-t border-border/50 mt-8 pt-8 text-center text-sm text-muted-foreground">
-          <p>&copy; 2024 VYB Cinema. All rights reserved.</p>
+        <div className="border-t border-border/50 mt-8 pt-8 space-y-4">
+          <div className="text-center">
+            <a 
+              href="mailto:voycebutler@vybcinema.com" 
+              className="text-primary hover:underline font-medium"
+            >
+              voycebutler@vybcinema.com
+            </a>
+            <p className="text-xs text-muted-foreground mt-2">
+              For legal or general questions, please use our contact form
+            </p>
+          </div>
+          <div className="text-center text-sm text-muted-foreground border-t border-border/50 pt-4">
+            <p>&copy; 2024 VYB Cinema. All rights reserved.</p>
+          </div>
         </div>
       </div>
     </footer>

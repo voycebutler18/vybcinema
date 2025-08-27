@@ -219,10 +219,10 @@ const About = () => {
               </p>
               <div className="space-y-4">
                 <p className="text-foreground">
-                  <strong>Business Inquiries:</strong> voycebutler@vybcinema.com
+                  <strong>Business Inquiries:</strong> Please use our contact form
                 </p>
                 <p className="text-foreground">
-                  <strong>General Contact:</strong> voycebutler@vybcinema.com
+                  <strong>General Contact:</strong> Please use our contact form
                 </p>
               </div>
               <div className="pt-4">

@@ -287,10 +287,10 @@ const TermsOfService = () => {
                 </p>
                 <div className="space-y-2">
                   <p className="text-foreground">
-                    <strong>Legal Questions:</strong> voycebutler@vybcinema.com
+                    <strong>Legal Questions:</strong> Please use our contact form
                   </p>
                   <p className="text-foreground">
-                    <strong>General Contact:</strong> voycebutler@vybcinema.com
+                    <strong>General Contact:</strong> Please use our contact form
                   </p>
                 </div>
               </div>

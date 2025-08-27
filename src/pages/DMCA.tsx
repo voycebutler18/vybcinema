@@ -2,6 +2,7 @@ import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
 import { Shield, Mail, AlertTriangle, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Link } from "react-router-dom";
 
 const DMCA = () => {
   return (
@@ -70,7 +71,7 @@ const DMCA = () => {
                       Send your DMCA takedown notice to our designated copyright agent:
                     </p>
                     <div className="bg-secondary/20 p-4 rounded-lg space-y-2">
-                      <p><strong className="text-foreground">Email:</strong> voycebutler@vybcinema.com</p>
+                      <p><strong className="text-foreground">Contact:</strong> Use our contact form</p>
                       <p><strong className="text-foreground">Subject Line:</strong> DMCA Takedown Notice</p>
                       <p><strong className="text-foreground">Response Time:</strong> Within 24-48 hours</p>
                     </div>
@@ -100,7 +101,7 @@ const DMCA = () => {
                     <li>Your name, address, telephone number, and consent to federal court jurisdiction</li>
                   </ul>
                   <p>
-                    Send counter-notifications to the same email address: <strong className="text-foreground">voycebutler@vybcinema.com</strong>
+                    Send counter-notifications through our contact form with "DMCA Counter-Notice" as the subject.
                   </p>
                 </div>
               </div>
@@ -126,16 +127,16 @@ const DMCA = () => {
                     If you have questions about our DMCA policy or need assistance with a claim
                   </p>
                   <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                    <a href="mailto:voycebutler@vybcinema.com">
+                    <Link to="/contact">
                       <Button variant="secondary">
-                        Contact DMCA Agent
+                        Submit DMCA Notice
                       </Button>
-                    </a>
-                    <a href="mailto:voycebutler@vybcinema.com">
+                    </Link>
+                    <Link to="/contact">
                       <Button variant="secondary">
-                        General Support
+                        General Questions
                       </Button>
-                    </a>
+                    </Link>
                   </div>
                 </div>
               </div>

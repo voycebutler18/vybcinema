@@ -85,42 +85,15 @@ const Contact = () => {
                   <h2 className="text-3xl font-bold text-foreground mb-6">Contact Information</h2>
                   
                   <div className="space-y-6">
-                    <div className="flex items-start space-x-4">
-                      <Mail className="h-6 w-6 text-primary mt-1" />
-                      <div>
-                        <h3 className="font-semibold text-foreground">General Inquiries</h3>
-                        <a href="mailto:voycebutler@vybcinema.com" className="text-primary hover:underline">
-                          voycebutler@vybcinema.com
-                        </a>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-start space-x-4">
-                      <MessageCircle className="h-6 w-6 text-primary mt-1" />
-                      <div>
-                        <h3 className="font-semibold text-foreground">Business Inquiries</h3>
-                        <a href="mailto:voycebutler@vybcinema.com" className="text-primary hover:underline">
-                          voycebutler@vybcinema.com
-                        </a>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-start space-x-4">
-                      <Mail className="h-6 w-6 text-primary mt-1" />
-                      <div>
-                        <h3 className="font-semibold text-foreground">Press & Media</h3>
-                        <a href="mailto:voycebutler@vybcinema.com" className="text-primary hover:underline">
-                          voycebutler@vybcinema.com
-                        </a>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-start space-x-4">
-                      <MapPin className="h-6 w-6 text-primary mt-1" />
-                      <div>
-                        <h3 className="font-semibold text-foreground">Location</h3>
-                        <p className="text-muted-foreground">Chicago-based</p>
-                      </div>
+                    <div className="bg-primary/10 p-6 rounded-lg text-center">
+                      <h3 className="font-semibold text-foreground mb-3">For All Inquiries</h3>
+                      <p className="text-muted-foreground mb-4">
+                        For legal questions, general inquiries, business matters, and press requests, 
+                        please use our contact form for fastest response.
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        Direct email contact is available in the footer of every page for urgent matters.
+                      </p>
                     </div>
                   </div>
                 </div>

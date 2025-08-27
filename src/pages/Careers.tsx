@@ -1,6 +1,7 @@
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
 import { Briefcase, Heart, TrendingUp } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const Careers = () => {
   return (
@@ -91,12 +92,12 @@ const Careers = () => {
                 <p className="text-muted-foreground mb-6">
                   Send us your info and we'll keep you in mind as we grow
                 </p>
-                <a 
-                  href="mailto:voycebutler@vybcinema.com"
+                <Link 
+                  to="/contact"
                   className="inline-flex items-center px-6 py-3 bg-gradient-primary text-white rounded-lg hover:scale-105 transition-transform"
                 >
-                  voycebutler@vybcinema.com
-                </a>
+                  Use Contact Form
+                </Link>
               </div>
             </div>
           </div>

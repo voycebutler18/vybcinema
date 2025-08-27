@@ -4,7 +4,10 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
-import Browse from "./pages/Browse";
+import Movies from "./pages/Movies";
+import TVShows from "./pages/TVShows";
+import MusicVideos from "./pages/MusicVideos";
+import Stories from "./pages/Stories";
 import About from "./pages/About";
 import Genre from "./pages/Genre";
 import Login from "./pages/Login";
@@ -17,8 +20,6 @@ import DMCA from "./pages/DMCA";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsOfService from "./pages/TermsOfService";
 import CookiePolicy from "./pages/CookiePolicy";
-import MusicVideos from "./pages/MusicVideos";
-import Stories from "./pages/Stories";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -31,7 +32,8 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
-          <Route path="/browse" element={<Browse />} />
+          <Route path="/movies" element={<Movies />} />
+          <Route path="/tv-shows" element={<TVShows />} />
           <Route path="/music-videos" element={<MusicVideos />} />
           <Route path="/stories" element={<Stories />} />
           <Route path="/about" element={<About />} />
@@ -46,6 +48,8 @@ const App = () => (
           <Route path="/privacy" element={<PrivacyPolicy />} />
           <Route path="/terms" element={<TermsOfService />} />
           <Route path="/cookies" element={<CookiePolicy />} />
+          {/* Legacy redirect */}
+          <Route path="/browse" element={<Movies />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

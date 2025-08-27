@@ -18,8 +18,11 @@ export const Navigation = () => {
             
             {/* Desktop Navigation */}
             <div className="hidden md:flex items-center space-x-6">
-              <Link to="/browse" className="text-foreground hover:text-primary transition-colors">
-                Browse
+              <Link to="/movies" className="text-foreground hover:text-primary transition-colors">
+                Movies
+              </Link>
+              <Link to="/tv-shows" className="text-foreground hover:text-primary transition-colors">
+                TV Shows
               </Link>
               <Link to="/music-videos" className="text-foreground hover:text-primary transition-colors">
                 Music Videos
@@ -76,8 +79,11 @@ export const Navigation = () => {
         {/* Mobile Menu */}
         {isMenuOpen && (
           <div className="md:hidden border-t border-border/50 py-4 space-y-3 animate-fade-in">
-            <Link to="/browse" className="block text-foreground hover:text-primary transition-colors">
-              Browse
+            <Link to="/movies" className="block text-foreground hover:text-primary transition-colors">
+              Movies
+            </Link>
+            <Link to="/tv-shows" className="block text-foreground hover:text-primary transition-colors">
+              TV Shows
             </Link>
             <Link to="/music-videos" className="block text-foreground hover:text-primary transition-colors">
               Music Videos

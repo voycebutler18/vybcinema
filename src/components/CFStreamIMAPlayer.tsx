@@ -109,21 +109,37 @@ export const CFStreamIMAPlayer: React.FC<CFStreamIMAPlayerProps> = ({
             setIsAdPlaying(true);
           });
 
+          adsManager.addEventListener(window.google.ima.AdEvent.Type.CONTENT_PAUSE_REQUESTED, () => {
+            console.log('Content pause requested');
+            if (videoRef.current) {
+              videoRef.current.pause();
+            }
+            if (adContainerRef.current) {
+              adContainerRef.current.style.display = 'block';
+              adContainerRef.current.style.pointerEvents = 'auto';
+            }
+            setIsAdPlaying(true);
+          });
+
+          adsManager.addEventListener(window.google.ima.AdEvent.Type.CONTENT_RESUME_REQUESTED, () => {
+            console.log('Content resume requested');
+            resumeContent();
+          });
+
           adsManager.addEventListener(window.google.ima.AdEvent.Type.COMPLETE, () => {
             console.log('Ad complete');
-            setIsAdPlaying(false);
-            startContentVideo();
+            resumeContent();
           });
 
           adsManager.addEventListener(window.google.ima.AdEvent.Type.SKIPPED, () => {
             console.log('Ad skipped');
-            setIsAdPlaying(false);
-            startContentVideo();
+            resumeContent();
           });
 
           adsManager.addEventListener(window.google.ima.AdEvent.Type.ALL_ADS_COMPLETED, () => {
             console.log('All ads completed');
-            setIsAdPlaying(false);
+            resumeContent();
+            adsManager?.destroy();
           });
 
           try {
@@ -158,6 +174,31 @@ export const CFStreamIMAPlayer: React.FC<CFStreamIMAPlayerProps> = ({
   const startContentVideo = () => {
     if (videoRef.current) {
       videoRef.current.play().catch(console.error);
+      setIsPlaying(true);
+    }
+  };
+
+  const resumeContent = () => {
+    try {
+      adsManager?.destroy();
+    } catch {}
+    
+    // Hide ad container
+    if (adContainerRef.current) {
+      adContainerRef.current.style.display = 'none';
+      adContainerRef.current.style.pointerEvents = 'none';
+    }
+    
+    setIsAdPlaying(false);
+    
+    // Ensure video plays after ad
+    if (videoRef.current) {
+      videoRef.current.play().catch(() => {
+        // If autoplay is blocked, try muted
+        videoRef.current!.muted = true;
+        setIsMuted(true);
+        videoRef.current!.play().catch(console.error);
+      });
       setIsPlaying(true);
     }
   };

@@ -11,10 +11,6 @@ interface CFStreamIMAPlayerProps {
   vastTagUrl?: string;
   title: string;
   onError?: (error: string) => void;
-  onAdStart?: () => void;
-  onAdComplete?: () => void;
-  onContentStart?: () => void;
-  onContentPause?: () => void;
 }
 
 declare global {
@@ -31,6 +27,7 @@ declare global {
         settings: any;
       };
     };
+    Hls?: any;
   }
 }
 
@@ -39,14 +36,10 @@ export const CFStreamIMAPlayer: React.FC<CFStreamIMAPlayerProps> = ({
   channelSlug,
   contentId,
   durationSec = 0,
-  adBreaks = [0],
+  adBreaks = [0], // Default preroll
   vastTagUrl,
   title,
-  onError,
-  onAdStart,
-  onAdComplete,
-  onContentStart,
-  onContentPause
+  onError
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const adContainerRef = useRef<HTMLDivElement>(null);
@@ -58,11 +51,58 @@ export const CFStreamIMAPlayer: React.FC<CFStreamIMAPlayerProps> = ({
   const [adsLoader, setAdsLoader] = useState<any>(null);
   const [adsManager, setAdsManager] = useState<any>(null);
   const [adDisplayContainer, setAdDisplayContainer] = useState<any>(null);
-  const [contentStarted, setContentStarted] = useState(false);
-  const [adsInitialized, setAdsInitialized] = useState(false);
 
+  const hlsUrl = `https://videodelivery.net/${playbackId}/manifest/video.m3u8`;
+
+  /* ---------- FIX 1: Attach HLS.js on non-Safari so .m3u8 plays ---------- */
   useEffect(() => {
-    if (window.google && window.google.ima) {
+    const v = videoRef.current;
+    if (!v) return;
+
+    const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+
+    if (isSafari) {
+      // Safari plays HLS natively
+      v.src = hlsUrl;
+      return;
+    }
+
+    // Load Hls.js from CDN (no bundler changes)
+    const script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/hls.js@latest';
+    script.async = true;
+    script.onload = () => {
+      try {
+        if (window.Hls && window.Hls.isSupported()) {
+          const hls = new window.Hls();
+          hls.loadSource(hlsUrl);
+          hls.attachMedia(v);
+          // keep a ref for cleanup
+          (v as any)._hls = hls;
+        } else {
+          // Fallback: set src directly
+          v.src = hlsUrl;
+        }
+      } catch (e) {
+        console.error(e);
+        v.src = hlsUrl;
+      }
+    };
+    script.onerror = () => {
+      // If Hls.js fails to load, try direct src
+      v.src = hlsUrl;
+    };
+    document.head.appendChild(script);
+
+    return () => {
+      try { (v as any)._hls?.destroy?.(); } catch {}
+      document.head.removeChild(script);
+    };
+  }, [hlsUrl]);
+
+  // Load Google IMA SDK
+  useEffect(() => {
+    if ((window as any).google && (window as any).google.ima) {
       setImaLoaded(true);
       return;
     }
@@ -70,231 +110,151 @@ export const CFStreamIMAPlayer: React.FC<CFStreamIMAPlayerProps> = ({
     const script = document.createElement('script');
     script.src = 'https://imasdk.googleapis.com/js/sdkloader/ima3.js';
     script.async = true;
-    script.onload = () => {
-      setImaLoaded(true);
-    };
+    script.onload = () => setImaLoaded(true);
     script.onerror = () => {
       console.error('Failed to load Google IMA SDK');
       setAdLoadError('Failed to load ad system');
-      if (onError) {
-        onError('Failed to load ad system');
-      }
+      onError?.('Failed to load ad system');
     };
     document.head.appendChild(script);
 
     return () => {
-      if (document.head.contains(script)) {
-        document.head.removeChild(script);
-      }
+      document.head.removeChild(script);
     };
   }, [onError]);
 
+  // Initialize IMA
   useEffect(() => {
-    if (!imaLoaded || !videoRef.current || !adContainerRef.current || !vastTagUrl || adsInitialized) {
-      return;
-    }
+    if (!imaLoaded || !videoRef.current || !adContainerRef.current || !vastTagUrl) return;
 
     try {
-      console.log('Initializing IMA...');
-      
-      const adDisplayContainer = new window.google.ima.AdDisplayContainer(
+      // Create ad display container
+      const adc = new window.google.ima.AdDisplayContainer(
         adContainerRef.current,
         videoRef.current
       );
-      setAdDisplayContainer(adDisplayContainer);
+      setAdDisplayContainer(adc);
 
-      const adsLoader = new window.google.ima.AdsLoader(adDisplayContainer);
-      setAdsLoader(adsLoader);
+      // Create ads loader
+      const loader = new window.google.ima.AdsLoader(adc);
+      setAdsLoader(loader);
 
-      adsLoader.addEventListener(
+      // Listen for ads manager loaded event
+      loader.addEventListener(
         window.google.ima.AdsManagerLoadedEvent.Type.ADS_MANAGER_LOADED,
         (event: any) => {
-          console.log('AdsManager loaded');
-          const adsManager = event.getAdsManager(videoRef.current);
-          setAdsManager(adsManager);
+          const manager = event.getAdsManager(videoRef.current);
+          setAdsManager(manager);
 
-          adsManager.addEventListener(window.google.ima.AdEvent.Type.LOADED, () => {
+          // Add event listeners
+          manager.addEventListener(window.google.ima.AdEvent.Type.LOADED, () => {
             console.log('Ad loaded');
           });
 
-          adsManager.addEventListener(window.google.ima.AdEvent.Type.STARTED, () => {
+          manager.addEventListener(window.google.ima.AdEvent.Type.STARTED, () => {
             console.log('Ad started');
             setIsAdPlaying(true);
-            if (onAdStart) {
-              onAdStart();
-            }
           });
 
-          adsManager.addEventListener(window.google.ima.AdEvent.Type.CONTENT_PAUSE_REQUESTED, () => {
+          manager.addEventListener(window.google.ima.AdEvent.Type.CONTENT_PAUSE_REQUESTED, () => {
             console.log('Content pause requested');
             if (videoRef.current) {
               videoRef.current.pause();
             }
-            setIsPlaying(false);
-            setIsAdPlaying(true);
-            if (onContentPause) {
-              onContentPause();
+            if (adContainerRef.current) {
+              adContainerRef.current.style.display = 'block';
+              adContainerRef.current.style.pointerEvents = 'auto';
             }
+            setIsAdPlaying(true);
           });
 
-          adsManager.addEventListener(window.google.ima.AdEvent.Type.CONTENT_RESUME_REQUESTED, () => {
+          manager.addEventListener(window.google.ima.AdEvent.Type.CONTENT_RESUME_REQUESTED, () => {
             console.log('Content resume requested');
             resumeContent();
           });
 
-          adsManager.addEventListener(window.google.ima.AdEvent.Type.COMPLETE, () => {
+          manager.addEventListener(window.google.ima.AdEvent.Type.COMPLETE, () => {
             console.log('Ad complete');
-            if (onAdComplete) {
-              onAdComplete();
-            }
             resumeContent();
           });
 
-          adsManager.addEventListener(window.google.ima.AdEvent.Type.SKIPPED, () => {
+          manager.addEventListener(window.google.ima.AdEvent.Type.SKIPPED, () => {
             console.log('Ad skipped');
-            if (onAdComplete) {
-              onAdComplete();
-            }
             resumeContent();
           });
 
-          adsManager.addEventListener(window.google.ima.AdEvent.Type.ALL_ADS_COMPLETED, () => {
+          manager.addEventListener(window.google.ima.AdEvent.Type.ALL_ADS_COMPLETED, () => {
             console.log('All ads completed');
-            if (onAdComplete) {
-              onAdComplete();
-            }
             resumeContent();
-            setTimeout(() => {
-              try {
-                if (adsManager) {
-                  adsManager.destroy();
-                }
-              } catch (e) {
-                console.warn('Error destroying ads manager:', e);
-              }
-            }, 100);
+            try { manager?.destroy(); } catch {}
           });
 
           try {
-            adsManager.init(
-              videoRef.current?.clientWidth || 640,
-              videoRef.current?.clientHeight || 480,
-              window.google.ima.ViewMode.NORMAL
-            );
+            /* ---------- FIX 2: Use actual player size, not 640x480 ---------- */
+            const v = videoRef.current!;
+            const w = v?.clientWidth || 1280;
+            const h = v?.clientHeight || 720;
+            manager.init(w, h, window.google.ima.ViewMode.NORMAL);
+            manager.start();
           } catch (adError) {
-            console.error('AdsManager init error:', adError);
-            setAdLoadError('Ad failed to initialize');
-            startContentVideo();
+            console.error('AdsManager error:', adError);
+            setAdLoadError('Ad failed to start');
+            startContentVideo(); // Fallback to content
           }
         }
       );
 
-      adsLoader.addEventListener(
+      // Listen for ad errors
+      loader.addEventListener(
         window.google.ima.AdErrorEvent.Type.AD_ERROR,
         (event: any) => {
-          console.error('Ad error:', event.getError());
+          console.error('Ad error:', event.getError?.() || event);
           setAdLoadError('Ad failed to load');
           setIsAdPlaying(false);
-          startContentVideo();
+          startContentVideo(); // Fallback to content
         }
       );
-
-      setAdsInitialized(true);
 
     } catch (error) {
       console.error('IMA initialization error:', error);
       setAdLoadError('Ad system initialization failed');
-      if (onError) {
-        onError('Ad system initialization failed');
-      }
-      startContentVideo();
+      onError?.('Ad system initialization failed');
     }
-  }, [imaLoaded, vastTagUrl, onError, adsInitialized, onAdStart, onAdComplete, onContentPause]);
+  }, [imaLoaded, vastTagUrl, onError]);
 
   const startContentVideo = () => {
-    console.log('Starting content video');
     if (videoRef.current) {
-      setContentStarted(true);
-      setIsAdPlaying(false);
-      
-      videoRef.current.style.display = 'block';
-      
-      const playPromise = videoRef.current.play();
-      if (playPromise !== undefined) {
-        playPromise
-          .then(() => {
-            setIsPlaying(true);
-            if (onContentStart) {
-              onContentStart();
-            }
-          })
-          .catch((error) => {
-            console.warn('Autoplay failed, trying muted:', error);
-            if (videoRef.current) {
-              videoRef.current.muted = true;
-              setIsMuted(true);
-              videoRef.current.play()
-                .then(() => {
-                  setIsPlaying(true);
-                  if (onContentStart) {
-                    onContentStart();
-                  }
-                })
-                .catch(console.error);
-            }
-          });
-      }
+      videoRef.current.play().catch(console.error);
+      setIsPlaying(true);
     }
   };
 
   const resumeContent = () => {
-    console.log('Resuming content');
-    
+    try { adsManager?.destroy(); } catch {}
+
+    // Hide ad container
     if (adContainerRef.current) {
       adContainerRef.current.style.display = 'none';
       adContainerRef.current.style.pointerEvents = 'none';
     }
-    
+
     setIsAdPlaying(false);
-    
+
+    // Ensure video plays after ad
     if (videoRef.current) {
       videoRef.current.style.display = 'block';
-      
-      setTimeout(() => {
-        if (videoRef.current) {
-          const playPromise = videoRef.current.play();
-          if (playPromise !== undefined) {
-            playPromise
-              .then(() => {
-                setIsPlaying(true);
-                if (onContentStart) {
-                  onContentStart();
-                }
-              })
-              .catch((error) => {
-                console.warn('Content resume failed, trying muted:', error);
-                if (videoRef.current) {
-                  videoRef.current.muted = true;
-                  setIsMuted(true);
-                  videoRef.current.play()
-                    .then(() => {
-                      setIsPlaying(true);
-                      if (onContentStart) {
-                        onContentStart();
-                      }
-                    })
-                    .catch(console.error);
-                }
-              });
-        }
-      }, 100);
+      videoRef.current.play().catch(() => {
+        // If autoplay is blocked, try muted
+        videoRef.current!.muted = true;
+        setIsMuted(true);
+        videoRef.current!.play().catch(console.error);
+      });
+      setIsPlaying(true);
     }
   };
 
   const requestAds = () => {
-    console.log('Requesting ads...');
     if (!adsLoader || !vastTagUrl || !adDisplayContainer) {
-      console.log('Missing ad requirements, starting content');
       startContentVideo();
       return;
     }
@@ -304,23 +264,30 @@ export const CFStreamIMAPlayer: React.FC<CFStreamIMAPlayerProps> = ({
 
       const adsRequest = new window.google.ima.AdsRequest();
       adsRequest.adTagUrl = vastTagUrl;
-      adsRequest.linearAdSlotWidth = videoRef.current?.clientWidth || 640;
-      adsRequest.linearAdSlotHeight = videoRef.current?.clientHeight || 480;
-      adsRequest.nonLinearAdSlotWidth = videoRef.current?.clientWidth || 640;
-      adsRequest.nonLinearAdSlotHeight = 150;
+
+      // Use current player size
+      const v = videoRef.current!;
+      const w = v?.clientWidth || 1280;
+      const h = v?.clientHeight || 720;
+      adsRequest.linearAdSlotWidth = w;
+      adsRequest.linearAdSlotHeight = h;
+      adsRequest.nonLinearAdSlotWidth = w;
+      adsRequest.nonLinearAdSlotHeight = Math.round(h / 3);
+
+      /* ---------- FIX 3: Guard timeout so ads can't stall ---------- */
+      const guard = setTimeout(() => {
+        console.warn('Ad load timeout, resuming content');
+        resumeContent();
+      }, 3000);
+
+      const onLoadedOnce = () => clearTimeout(guard);
+      adsLoader.addEventListener(
+        window.google.ima.AdsManagerLoadedEvent.Type.ADS_MANAGER_LOADED,
+        onLoadedOnce,
+        { once: true }
+      );
 
       adsLoader.requestAds(adsRequest);
-      
-      if (adsManager) {
-        setTimeout(() => {
-          try {
-            adsManager.start();
-          } catch (error) {
-            console.error('Failed to start ads manager:', error);
-            startContentVideo();
-          }
-        }, 100);
-      }
     } catch (error) {
       console.error('Ad request error:', error);
       setAdLoadError('Failed to request ads');
@@ -331,29 +298,21 @@ export const CFStreamIMAPlayer: React.FC<CFStreamIMAPlayerProps> = ({
   const handlePlayClick = () => {
     if (!videoRef.current) return;
 
-    if (isAdPlaying) {
-      return;
-    }
-
     if (isPlaying) {
       videoRef.current.pause();
       setIsPlaying(false);
     } else {
-      if (vastTagUrl && !contentStarted && videoRef.current.currentTime === 0) {
-        console.log('First play, requesting ads');
+      if (vastTagUrl && !isAdPlaying && videoRef.current.currentTime === 0) {
+        // First play - show ads
         requestAds();
       } else {
-        const playPromise = videoRef.current.play();
-        if (playPromise !== undefined) {
-          playPromise
-            .then(() => {
-              setIsPlaying(true);
-              if (onContentStart) {
-                onContentStart();
-              }
-            })
-            .catch(console.error);
-        }
+        // Resume content
+        videoRef.current.play().catch(() => {
+          videoRef.current!.muted = true;
+          setIsMuted(true);
+          videoRef.current!.play().catch(console.error);
+        });
+        setIsPlaying(true);
       }
     }
   };
@@ -368,7 +327,7 @@ export const CFStreamIMAPlayer: React.FC<CFStreamIMAPlayerProps> = ({
 
   const toggleFullscreen = async () => {
     if (!videoRef.current?.parentElement) return;
-    
+
     try {
       if (!document.fullscreenElement) {
         await videoRef.current.parentElement.requestFullscreen();
@@ -382,35 +341,29 @@ export const CFStreamIMAPlayer: React.FC<CFStreamIMAPlayerProps> = ({
 
   return (
     <div className="relative w-full aspect-video bg-black rounded-lg overflow-hidden">
+      {/* Video Element */}
       <video
         ref={videoRef}
         className="w-full h-full object-contain"
-        src={`https://videodelivery.net/${playbackId}/manifest/video.m3u8`}
+        // src is set by Hls.js effect (or native for Safari). Keeping this line is fine as a fallback:
+        src={hlsUrl}
         muted={isMuted}
         playsInline
-        preload="metadata"
         onPlay={() => setIsPlaying(true)}
         onPause={() => setIsPlaying(false)}
         onEnded={() => setIsPlaying(false)}
-        onLoadedData={() => console.log('Video loaded')}
-        onCanPlay={() => console.log('Video can play')}
-        controls={false}
-        style={{ 
-          display: 'block',
-          visibility: isAdPlaying ? 'hidden' : 'visible'
-        }}
+        controls={isAdPlaying ? false : true} // Hide controls during ads
+        style={{ display: isAdPlaying ? 'none' : 'block' }}
       />
 
+      {/* Ad Container (overlay) */}
       <div
         ref={adContainerRef}
-        className="absolute inset-0"
-        style={{ 
-          display: isAdPlaying ? 'block' : 'none',
-          zIndex: isAdPlaying ? 10 : -1,
-          pointerEvents: isAdPlaying ? 'auto' : 'none'
-        }}
+        className={`absolute inset-0 ${isAdPlaying ? 'block' : 'hidden'}`}
+        style={{ zIndex: isAdPlaying ? 10 : -1, pointerEvents: isAdPlaying ? 'auto' : 'none' }}
       />
 
+      {/* Custom Controls Overlay */}
       {!isAdPlaying && (
         <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 hover:opacity-100 transition-opacity duration-300">
           <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between">
@@ -448,29 +401,17 @@ export const CFStreamIMAPlayer: React.FC<CFStreamIMAPlayerProps> = ({
         </div>
       )}
 
+      {/* Ad Loading Indicator */}
       {isAdPlaying && (
-        <div className="absolute top-4 right-4 bg-black/70 text-white px-3 py-1 rounded text-sm flex items-center gap-2">
-          <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+        <div className="absolute top-4 right-4 bg-black/70 text-white px-3 py-1 rounded text-sm">
           Ad Playing...
         </div>
       )}
 
+      {/* Error Message */}
       {adLoadError && !isAdPlaying && (
         <div className="absolute top-4 left-4 bg-red-600/90 text-white px-3 py-1 rounded text-sm">
           {adLoadError} - Playing content
-        </div>
-      )}
-
-      {!isPlaying && !isAdPlaying && !contentStarted && (
-        <div className="absolute inset-0 flex items-center justify-center">
-          <Button
-            size="lg"
-            variant="ghost"
-            onClick={handlePlayClick}
-            className="w-20 h-20 rounded-full bg-black/50 backdrop-blur-sm text-white hover:bg-black/70 border border-white/20"
-          >
-            <Play className="h-8 w-8 ml-1" />
-          </Button>
         </div>
       )}
     </div>

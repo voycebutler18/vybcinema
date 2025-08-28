@@ -32,6 +32,7 @@ const Stories = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
+      console.log('Fetched stories:', data);
       setContent(data || []);
     } catch (error) {
       console.error('Error fetching stories:', error);
@@ -161,10 +162,17 @@ const Stories = () => {
           />
         )}
 
-        {content.length === 0 && (
+        {content.length === 0 && !loading && (
           <div className="text-center py-20">
             <h2 className="text-2xl font-bold text-foreground mb-4">No Stories Available</h2>
             <p className="text-muted-foreground">Be the first to upload a story!</p>
+          </div>
+        )}
+
+        {/* Debug info - remove after testing */}
+        {content.length > 0 && (
+          <div className="text-center py-4 text-sm text-muted-foreground">
+            Found {content.length} stories
           </div>
         )}
       </div>
@@ -196,6 +204,7 @@ const Stories = () => {
               streamStatus={playingContent.stream_status}
               streamId={playingContent.stream_id}
               streamThumbnailUrl={playingContent.stream_thumbnail_url}
+              playbackId={playingContent.playback_id}
               canDelete={false}
             />
           )}

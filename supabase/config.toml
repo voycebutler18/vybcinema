@@ -1,1 +1,4 @@
 project_id = "oofkawnofnkbpgphlkcm"
+
+[functions.cloudflare-stream-upload]
+verify_jwt = true

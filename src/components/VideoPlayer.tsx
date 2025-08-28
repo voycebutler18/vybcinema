@@ -17,6 +17,10 @@ interface VideoPlayerProps {
   contentType: string;
   onDelete?: () => void;
   canDelete?: boolean;
+  streamUrl?: string;
+  streamStatus?: string;
+  streamId?: string;
+  streamThumbnailUrl?: string;
 }
 
 export const VideoPlayer: React.FC<VideoPlayerProps> = ({
@@ -29,6 +33,10 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   contentType,
   onDelete,
   canDelete = false,
+  streamUrl,
+  streamStatus,
+  streamId,
+  streamThumbnailUrl,
 }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
@@ -213,23 +221,33 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   };
 
-  const currentVideoUrl = currentVideo === 'trailer' ? trailerUrl : videoUrl;
+  // Use Cloudflare Stream URL if available and ready, otherwise fallback to direct video URL
+  const getVideoUrl = () => {
+    if (streamUrl && streamStatus === 'ready') {
+      return streamUrl;
+    }
+    return videoUrl;
+  };
+
+  const currentVideoUrl = currentVideo === 'trailer' ? trailerUrl : getVideoUrl();
+  const displayThumbnail = streamThumbnailUrl || coverUrl;
+  const isProcessing = streamStatus === 'processing' || streamStatus === 'pending';
 
   return (
     <Card className="cinema-card overflow-hidden">
       {/* Cover/Thumbnail */}
       <div className="relative">
         <div className="aspect-video bg-secondary/20 rounded-t-lg relative overflow-hidden group cursor-pointer">
-          {coverUrl ? (
+          {displayThumbnail ? (
             <img 
-              src={coverUrl} 
+              src={displayThumbnail} 
               alt={`${title} cover`}
               className="w-full h-full object-cover"
             />
-          ) : videoUrl ? (
+          ) : getVideoUrl() ? (
             <video
               className="w-full h-full object-cover"
-              src={videoUrl}
+              src={getVideoUrl()}
               muted
               preload="metadata"
             />
@@ -239,33 +257,44 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             </div>
           )}
           
-          {/* Overlay */}
-          <div className="absolute inset-0 bg-gradient-overlay opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-            <div className="flex gap-2">
-              {videoUrl && (
-                <Button
-                  size="lg"
-                  variant="secondary"
-                  className="bg-white/10 backdrop-blur-sm border-white/20"
-                  onClick={() => playVideo('main')}
-                >
-                  <Play className="h-5 w-5 mr-2" />
-                  Play {contentType}
-                </Button>
-              )}
-              {trailerUrl && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="bg-white/10 backdrop-blur-sm border-white/20"
-                  onClick={() => playVideo('trailer')}
-                >
-                  <Play className="h-4 w-4 mr-1" />
-                  Trailer
-                </Button>
-              )}
+          {/* Processing Overlay */}
+          {isProcessing && (
+            <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-2"></div>
+              <p className="text-white text-sm">Processing video...</p>
+              <p className="text-white/60 text-xs">This may take a few minutes</p>
             </div>
-          </div>
+          )}
+          
+          {/* Overlay */}
+          {!isProcessing && (
+            <div className="absolute inset-0 bg-gradient-overlay opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+              <div className="flex gap-2">
+                {getVideoUrl() && (
+                  <Button
+                    size="lg"
+                    variant="secondary"
+                    className="bg-white/10 backdrop-blur-sm border-white/20"
+                    onClick={() => playVideo('main')}
+                  >
+                    <Play className="h-5 w-5 mr-2" />
+                    Play {contentType}
+                  </Button>
+                )}
+                {trailerUrl && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="bg-white/10 backdrop-blur-sm border-white/20"
+                    onClick={() => playVideo('trailer')}
+                  >
+                    <Play className="h-4 w-4 mr-1" />
+                    Trailer
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

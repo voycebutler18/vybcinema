@@ -165,23 +165,8 @@ const Upload = () => {
     setUploading(true);
     
     try {
-      // Upload video file
-      const videoUrl = await uploadFile(files.video, 'videos', 'video');
-      
-      // Upload cover image if provided
-      let coverUrl = null;
-      if (files.cover) {
-        coverUrl = await uploadFile(files.cover, 'covers', 'cover');
-      }
-      
-      // Upload thumbnail if provided
-      let thumbnailUrl = null;
-      if (files.thumbnail) {
-        thumbnailUrl = await uploadFile(files.thumbnail, 'thumbnails', 'thumbnail');
-      }
-
-      // Save to database
-      const { error: dbError } = await supabase
+      // First create the content record
+      const { data: contentData, error: dbError } = await supabase
         .from('content')
         .insert({
           title: formData.title.trim(),
@@ -190,17 +175,55 @@ const Upload = () => {
           content_type: formData.content_type,
           is_featured: formData.is_featured,
           trailer_url: formData.trailer_url.trim() || null,
-          file_url: videoUrl,
-          cover_url: coverUrl,
-          thumbnail_url: thumbnailUrl,
-          user_id: user!.id
-        });
+          user_id: user!.id,
+          stream_status: 'pending'
+        })
+        .select()
+        .single();
 
       if (dbError) throw dbError;
 
+      // Upload video to Cloudflare Stream
+      const streamFormData = new FormData();
+      streamFormData.append('video', files.video);
+      streamFormData.append('contentId', contentData.id);
+
+      const streamResponse = await supabase.functions.invoke('cloudflare-stream-upload', {
+        body: streamFormData
+      });
+
+      if (streamResponse.error) {
+        throw new Error(streamResponse.error.message);
+      }
+      
+      // Upload cover image if provided
+      let coverUrl = null;
+      if (files.cover) {
+        coverUrl = await uploadFile(files.cover, 'covers', 'cover');
+      }
+      
+      // Upload thumbnail if provided (fallback if Stream doesn't generate one)
+      let thumbnailUrl = null;
+      if (files.thumbnail) {
+        thumbnailUrl = await uploadFile(files.thumbnail, 'thumbnails', 'thumbnail');
+      }
+
+      // Update content record with additional files
+      if (coverUrl || thumbnailUrl) {
+        const { error: updateError } = await supabase
+          .from('content')
+          .update({
+            cover_url: coverUrl,
+            thumbnail_url: thumbnailUrl
+          })
+          .eq('id', contentData.id);
+
+        if (updateError) throw updateError;
+      }
+
       toast({
-        title: "Upload Successful!",
-        description: `Your ${contentTypes.find(t => t.value === formData.content_type)?.label.toLowerCase()} has been uploaded successfully.`
+        title: "Upload Started!",
+        description: `Your ${contentTypes.find(t => t.value === formData.content_type)?.label.toLowerCase()} is being processed and will be available shortly with improved streaming quality.`
       });
 
       // Reset form

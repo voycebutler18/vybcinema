@@ -191,7 +191,11 @@ const Podcasts = () => {
               title={playingContent.title}
               description={playingContent.description}
               genre={playingContent.genre}
-              contentType="Podcast"
+              contentType={playingContent.content_type}
+              streamUrl={playingContent.stream_url}
+              streamStatus={playingContent.stream_status}
+              streamId={playingContent.stream_id}
+              streamThumbnailUrl={playingContent.stream_thumbnail_url}
               canDelete={false}
             />
           )}

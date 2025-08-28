@@ -51,6 +51,10 @@ export type Database = {
           genre: string | null
           id: string
           is_featured: boolean | null
+          stream_id: string | null
+          stream_status: string | null
+          stream_thumbnail_url: string | null
+          stream_url: string | null
           thumbnail_url: string | null
           title: string
           trailer_url: string | null
@@ -66,6 +70,10 @@ export type Database = {
           genre?: string | null
           id?: string
           is_featured?: boolean | null
+          stream_id?: string | null
+          stream_status?: string | null
+          stream_thumbnail_url?: string | null
+          stream_url?: string | null
           thumbnail_url?: string | null
           title: string
           trailer_url?: string | null
@@ -81,6 +89,10 @@ export type Database = {
           genre?: string | null
           id?: string
           is_featured?: boolean | null
+          stream_id?: string | null
+          stream_status?: string | null
+          stream_thumbnail_url?: string | null
+          stream_url?: string | null
           thumbnail_url?: string | null
           title?: string
           trailer_url?: string | null

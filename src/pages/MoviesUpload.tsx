@@ -338,7 +338,11 @@ const Movies = () => {
                         title={movie.title}
                         description={movie.description}
                         genre={movie.genre}
-                        contentType="Movie"
+                        contentType={movie.content_type}
+                        streamUrl={movie.stream_url}
+                        streamStatus={movie.stream_status}
+                        streamId={movie.stream_id}
+                        streamThumbnailUrl={movie.stream_thumbnail_url}
                         canDelete={user?.id === movie.user_id}
                         onDelete={() => deleteContent(movie.id, movie.file_url)}
                       />

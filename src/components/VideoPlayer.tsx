@@ -248,7 +248,9 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     isProcessing,
     shouldUseAds,
     vastTagUrl,
-    adBreaks
+    adBreaks,
+    videoUrl,
+    showPlayButton: (hasStreamPlayback || videoUrl)
   });
 
   return (

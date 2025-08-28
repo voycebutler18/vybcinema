@@ -202,6 +202,7 @@ const Stories = () => {
               durationSeconds={playingContent.duration_seconds}
               monetizationEnabled={playingContent.monetization_enabled}
               contentId={playingContent.id}
+              canDelete={false}
             />
           )}
         </DialogContent>

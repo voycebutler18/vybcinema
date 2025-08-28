@@ -5,6 +5,8 @@ import { Play, Plus, Check, ThumbsUp, ChevronDown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
+/* ---------- Types ---------- */
+
 export interface Content {
   id: string;
   title: string;
@@ -20,23 +22,25 @@ interface ContentCardProps {
   content: Content;
   contentType: string;
   index: number;
-  onClick: () => void;   // “More” chevron
-  onPlay: () => void;    // Play
+  onClick: () => void;   // open details / “More”
+  onPlay: () => void;    // start playback
 }
+
+/* ---------- Component ---------- */
 
 export const ContentCard: React.FC<ContentCardProps> = ({
   content,
   contentType,
   index,
   onClick,
-  onPlay
+  onPlay,
 }) => {
   const [isHovered, setIsHovered] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
-  const [isFavorited, setIsFavorited] = useState<boolean>(false);
+  const [isFavorited, setIsFavorited] = useState(false);
   const { toast } = useToast();
 
-  // Check if this item is already in favorites for the current user
+  /* Initial favorite state (for current user + this content) */
   useEffect(() => {
     let mounted = true;
     (async () => {
@@ -51,19 +55,23 @@ export const ContentCard: React.FC<ContentCardProps> = ({
         .maybeSingle();
 
       if (!mounted) return;
+      // PGRST116 is “no rows found” for maybeSingle – not an error for us
       if (error && error.code !== "PGRST116") {
-        // PGRST116 = No rows found for maybeSingle()
         console.warn("Favorite check error:", error.message);
       }
       setIsFavorited(!!data);
     })();
-
-    return () => {
-      mounted = false;
-    };
+    return () => { mounted = false; };
   }, [content.id]);
 
-  // --- TOGGLE FAVORITE (add/remove) ---
+  /* ------- Toggle Favorite (race-safe) -------
+     1) Try to DELETE (if row existed -> it's removed)
+     2) If not removed, INSERT (ignore duplicates on conflict)
+     RLS needed:
+       - SELECT (to list favorites page)
+       - INSERT with check (user_id = auth.uid())
+       - DELETE using (user_id = auth.uid())
+  -------------------------------------------- */
   const toggleFavorite = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -74,40 +82,47 @@ export const ContentCard: React.FC<ContentCardProps> = ({
       return;
     }
 
-    const { data: existing, error: qErr } = await supabase
+    // 1) try to remove first (if it exists)
+    const { data: removed, error: delErr } = await supabase
       .from("favorites")
-      .select("id")
+      .delete()
       .eq("user_id", user.id)
       .eq("content_id", content.id)
-      .maybeSingle();
+      .select("id");
 
-    if (qErr && qErr.code !== "PGRST116") {
-      toast({ title: "Error", description: qErr.message, variant: "destructive" });
+    if (delErr) {
+      toast({ title: "Error", description: delErr.message, variant: "destructive" });
       return;
     }
 
-    if (existing) {
-      const { error } = await supabase.from("favorites").delete().eq("id", existing.id);
-      if (error) {
-        toast({ title: "Could not remove", description: error.message, variant: "destructive" });
-      } else {
-        setIsFavorited(false); // instant UI feedback
-        toast({ title: "Removed from Favorites" });
-      }
-    } else {
-      const { error } = await supabase
-        .from("favorites")
-        .insert({ user_id: user.id, content_id: content.id });
-      if (error) {
-        toast({ title: "Could not add", description: error.message, variant: "destructive" });
-      } else {
-        setIsFavorited(true); // instant UI feedback
-        toast({ title: "Added to Favorites", description: content.title });
-      }
+    if (removed && removed.length > 0) {
+      setIsFavorited(false);
+      toast({ title: "Removed from Favorites" });
+      return;
     }
+
+    // 2) wasn't removed -> add it (ignore duplicates to avoid unique error)
+    const { error: insErr } = await supabase
+      .from("favorites")
+      .insert(
+        { user_id: user.id, content_id: content.id },
+        { onConflict: "user_id,content_id", ignoreDuplicates: true }
+      );
+
+    if (insErr) {
+      toast({
+        title: "Could not add to favorites",
+        description: insErr.message,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsFavorited(true);
+    toast({ title: "Added to Favorites", description: content.title });
   };
 
-  // Optional like handler (only works if you’ve created a `likes` table)
+  /* Optional “like” handler — only works if you actually created a `likes` table */
   const handleLike = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -117,17 +132,16 @@ export const ContentCard: React.FC<ContentCardProps> = ({
         toast({ title: "Please log in to like." });
         return;
       }
-      const { error } = await supabase.from("likes").upsert({
-        user_id: user.id,
-        content_id: content.id,
-      });
+      const { error } = await supabase
+        .from("likes")
+        .upsert({ user_id: user.id, content_id: content.id });
       if (error) throw error;
       toast({ title: "Thanks for the like", description: content.title });
     } catch (err: any) {
       toast({
         title: "Could not like",
         description: err?.message ?? "Please try again.",
-        variant: "destructive"
+        variant: "destructive",
       });
     }
   };
@@ -141,11 +155,11 @@ export const ContentCard: React.FC<ContentCardProps> = ({
       onMouseLeave={() => setIsHovered(false)}
       style={{
         transformOrigin: index === 0 ? "left center" : "center",
-        marginRight: isHovered ? "2rem" : "0"
+        marginRight: isHovered ? "2rem" : "0",
       }}
     >
       <div className="relative overflow-hidden rounded-lg bg-secondary/20 border border-border/50">
-        {/* Main Image/Video */}
+        {/* Poster / Video */}
         <div className="aspect-video relative">
           {content.cover_url ? (
             <img
@@ -166,25 +180,25 @@ export const ContentCard: React.FC<ContentCardProps> = ({
               poster=""
               onLoadedMetadata={() => setImageLoaded(true)}
               onError={() => {
-                console.warn(`Video failed to load: ${content.file_url}`);
+                console.warn("Video failed to load:", content.file_url);
                 setImageLoaded(true);
               }}
               onMouseEnter={(e) => {
                 if (window.innerWidth >= 768) {
                   try {
-                    const video = e.currentTarget;
-                    video.currentTime = 2;
-                    video.muted = true;
-                    video.play().catch(() => {});
+                    const v = e.currentTarget;
+                    v.currentTime = 2;
+                    v.muted = true;
+                    v.play().catch(() => {});
                   } catch {}
                 }
               }}
               onMouseLeave={(e) => {
                 if (window.innerWidth >= 768) {
                   try {
-                    const video = e.currentTarget;
-                    video.pause();
-                    video.currentTime = 2;
+                    const v = e.currentTarget;
+                    v.pause();
+                    v.currentTime = 2;
                   } catch {}
                 }
               }}
@@ -219,7 +233,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
           )}
         </div>
 
-        {/* Expanded Info Panel */}
+        {/* Expanded panel on hover */}
         {isHovered && (
           <div className="bg-background/95 backdrop-blur-sm border-t border-border/50 p-4 space-y-3 relative z-20">
             <div className="flex items-center justify-between">
@@ -310,5 +324,5 @@ export const ContentCard: React.FC<ContentCardProps> = ({
   );
 };
 
-// alias if other files import NetflixCard
+/* Optional alias for legacy imports */
 export { ContentCard as NetflixCard };

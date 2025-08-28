@@ -1,7 +1,7 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Play, Plus, ThumbsUp, ChevronDown } from "lucide-react";
+import { Play, Plus, Check, ThumbsUp, ChevronDown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -33,80 +33,97 @@ export const ContentCard: React.FC<ContentCardProps> = ({
 }) => {
   const [isHovered, setIsHovered] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
+  const [isFavorited, setIsFavorited] = useState<boolean>(false);
   const { toast } = useToast();
 
-  /**
-   * ADD / UPSERT to favorites
-   * Requires:
-   *  - favorites.user_id UUID
-   *  - favorites.content_id UUID
-   *  - unique index on (user_id, content_id)
-   *    -> CREATE UNIQUE INDEX favorites_user_content_uniq ON public.favorites(user_id, content_id);
-   */
-  const handleAddFavorite = async (e: React.MouseEvent) => {
+  // Check if this item is already in favorites for the current user
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from("favorites")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("content_id", content.id)
+        .maybeSingle();
+
+      if (!mounted) return;
+      if (error && error.code !== "PGRST116") {
+        // PGRST116 = No rows found for maybeSingle()
+        console.warn("Favorite check error:", error.message);
+      }
+      setIsFavorited(!!data);
+    })();
+
+    return () => {
+      mounted = false;
+    };
+  }, [content.id]);
+
+  // --- TOGGLE FAVORITE (add/remove) ---
+  const toggleFavorite = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
 
-    try {
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      if (authError || !user) {
-        toast({ title: "Please log in to save favorites." });
-        return;
-      }
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      toast({ title: "Please log in to save favorites." });
+      return;
+    }
 
-      // Upsert ensures no duplicates; requires the unique index above
+    const { data: existing, error: qErr } = await supabase
+      .from("favorites")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("content_id", content.id)
+      .maybeSingle();
+
+    if (qErr && qErr.code !== "PGRST116") {
+      toast({ title: "Error", description: qErr.message, variant: "destructive" });
+      return;
+    }
+
+    if (existing) {
+      const { error } = await supabase.from("favorites").delete().eq("id", existing.id);
+      if (error) {
+        toast({ title: "Could not remove", description: error.message, variant: "destructive" });
+      } else {
+        setIsFavorited(false); // instant UI feedback
+        toast({ title: "Removed from Favorites" });
+      }
+    } else {
       const { error } = await supabase
         .from("favorites")
-        .upsert(
-          { user_id: user.id, content_id: content.id },
-          { onConflict: "user_id,content_id" }
-        );
-
-      if (error) throw error;
-
-      toast({ title: "Added to Favorites", description: content.title });
-    } catch (err: any) {
-      toast({
-        title: "Could not add to favorites",
-        description: err?.message ?? "Please try again.",
-        variant: "destructive"
-      });
+        .insert({ user_id: user.id, content_id: content.id });
+      if (error) {
+        toast({ title: "Could not add", description: error.message, variant: "destructive" });
+      } else {
+        setIsFavorited(true); // instant UI feedback
+        toast({ title: "Added to Favorites", description: content.title });
+      }
     }
   };
 
-  /**
-   * Optional LIKE handler
-   * If you haven't created a `likes` table yet,
-   * this will show a friendly error instead of crashing.
-   */
+  // Optional like handler (only works if you’ve created a `likes` table)
   const handleLike = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-
     try {
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      if (authError || !user) {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
         toast({ title: "Please log in to like." });
         return;
       }
-
-      const { error } = await supabase
-        .from("likes")
-        .upsert({ user_id: user.id, content_id: content.id });
-
+      const { error } = await supabase.from("likes").upsert({
+        user_id: user.id,
+        content_id: content.id,
+      });
       if (error) throw error;
-
       toast({ title: "Thanks for the like", description: content.title });
     } catch (err: any) {
-      // 42P01 = undefined_table in Postgres (likes table not created yet)
-      const msg = String(err?.message ?? "");
-      if (msg.includes("42P01") || msg.toLowerCase().includes("likes")) {
-        toast({
-          title: "Likes not enabled",
-          description: "Create a `likes` table or hide the thumbs-up button for now.",
-        });
-        return;
-      }
       toast({
         title: "Could not like",
         description: err?.message ?? "Please try again.",
@@ -222,11 +239,12 @@ export const ContentCard: React.FC<ContentCardProps> = ({
                 <Button
                   type="button"
                   size="sm"
-                  variant="outline"
+                  variant={isFavorited ? "default" : "outline"}
                   className="rounded-full p-2"
-                  onClick={handleAddFavorite}
+                  onClick={toggleFavorite}
+                  title={isFavorited ? "Remove from Favorites" : "Add to Favorites"}
                 >
-                  <Plus className="h-4 w-4" />
+                  {isFavorited ? <Check className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
                 </Button>
 
                 <Button
@@ -292,5 +310,5 @@ export const ContentCard: React.FC<ContentCardProps> = ({
   );
 };
 
-// optional alias for existing imports elsewhere
+// alias if other files import NetflixCard
 export { ContentCard as NetflixCard };

@@ -1,266 +1,236 @@
-// src/components/Navigation.tsx
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Search, Menu, User, LogOut } from "lucide-react";
-import { Link } from "react-router-dom";
-import { useState } from "react";
-import { useAuth } from "@/hooks/useAuth";
-import { useNavigate } from "react-router-dom";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { Badge } from "@/components/ui/badge";
+import { Play, ThumbsUp, ChevronDown } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
-export const Navigation = () => {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const { user, signOut } = useAuth();
-  const navigate = useNavigate();
+/* ---------- Types ---------- */
+
+export interface Content {
+  id: string;
+  title: string;
+  description?: string;
+  genre?: string;
+  cover_url?: string;
+  file_url?: string;
+  trailer_url?: string;
+  content_type?: string;
+}
+
+interface ContentCardProps {
+  content: Content;
+  contentType: string;
+  index: number;
+  onClick: () => void;   // open details / “More”
+  onPlay: () => void;    // start playback
+}
+
+/* ---------- Component ---------- */
+
+export const ContentCard: React.FC<ContentCardProps> = ({
+  content,
+  contentType,
+  index,
+  onClick,
+  onPlay,
+}) => {
+  const [isHovered, setIsHovered] = useState(false);
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const { toast } = useToast();
+
+  // Optional “like” handler — only works if you actually created a `likes` table
+  const handleLike = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        toast({ title: "Please log in to like." });
+        return;
+      }
+      const { error } = await supabase
+        .from("likes")
+        .upsert({ user_id: user.id, content_id: content.id });
+      if (error) throw error;
+      toast({ title: "Thanks for the like", description: content.title });
+    } catch (err: any) {
+      toast({
+        title: "Could not like",
+        description: err?.message ?? "Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
 
   return (
-    <nav
-      className="fixed top-0 z-50 w-full bg-gradient-glass backdrop-blur-2xl border-b border-border/20 shadow-glass"
-      style={{ pointerEvents: "auto" }}
+    <div
+      className={`flex-shrink-0 w-64 cursor-pointer transition-all duration-300 ${
+        isHovered ? "scale-110 z-20" : "scale-100 z-10"
+      }`}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      style={{
+        transformOrigin: index === 0 ? "left center" : "center",
+        marginRight: isHovered ? "2rem" : "0",
+      }}
     >
-      <div className="container mx-auto px-6" style={{ pointerEvents: "auto" }}>
-        <div
-          className="flex items-center justify-between h-20"
-          style={{ pointerEvents: "auto" }}
-        >
-          {/* Logo */}
-          <div className="flex items-center space-x-12">
-            <Link
-              to="/"
-              className="text-3xl font-display font-bold text-cinema-gradient hover:scale-105 transition-transform duration-300"
+      <div className="relative overflow-hidden rounded-lg bg-secondary/20 border border-border/50">
+        {/* Poster / Video */}
+        <div className="aspect-video relative">
+          {content.cover_url ? (
+            <img
+              src={content.cover_url}
+              alt={content.title}
+              className={`w-full h-full object-cover transition-opacity duration-300 ${
+                imageLoaded ? "opacity-100" : "opacity-0"
+              }`}
+              onLoad={() => setImageLoaded(true)}
+            />
+          ) : content.file_url ? (
+            <video
+              className="w-full h-full object-cover"
+              muted
+              playsInline
+              preload="metadata"
+              controls={false}
+              poster=""
+              onLoadedMetadata={() => setImageLoaded(true)}
+              onError={() => {
+                console.warn("Video failed to load:", content.file_url);
+                setImageLoaded(true);
+              }}
+              onMouseEnter={(e) => {
+                if (window.innerWidth >= 768) {
+                  try {
+                    const v = e.currentTarget;
+                    v.currentTime = 2;
+                    v.muted = true;
+                    v.play().catch(() => {});
+                  } catch {}
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (window.innerWidth >= 768) {
+                  try {
+                    const v = e.currentTarget;
+                    v.pause();
+                    v.currentTime = 2;
+                  } catch {}
+                }
+              }}
+              style={{ objectFit: "cover", width: "100%", height: "100%" }}
             >
-              VYB Cinema
-            </Link>
-
-            {/* Desktop Navigation */}
-            <div className="hidden lg:flex items-center space-x-8">
-              <Link
-                to="/movies"
-                className="nav-link text-foreground/80 hover:text-foreground font-medium transition-all duration-300 relative group"
-              >
-                Movies
-                <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-primary group-hover:w-full transition-all duration-300"></span>
-              </Link>
-
-              <Link
-                to="/tv-shows"
-                className="nav-link text-foreground/80 hover:text-foreground font-medium transition-all duration-300 relative group"
-              >
-                TV Shows
-                <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-primary group-hover:w-full transition-all duration-300"></span>
-              </Link>
-
-              <Link
-                to="/stories"
-                className="nav-link text-foreground/80 hover:text-foreground font-medium transition-all duration-300 relative group"
-              >
-                Short Stories
-                <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-primary group-hover:w-full transition-all duration-300"></span>
-              </Link>
-
-              <Link
-                to="/music-videos"
-                className="nav-link text-foreground/80 hover:text-foreground font-medium transition-all duration-300 relative group"
-              >
-                Music Videos
-                <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-primary group-hover:w-full transition-all duration-300"></span>
-              </Link>
-
-              {/* NEW: My Favorites */}
-              <Link
-                to="/favorites"
-                className="nav-link text-foreground/80 hover:text-foreground font-medium transition-all duration-300 relative group"
-              >
-                My Favorites
-                <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-primary group-hover:w-full transition-all duration-300"></span>
-              </Link>
-
-              <Link
-                to="/about"
-                className="nav-link text-foreground/80 hover:text-foreground font-medium transition-all duration-300 relative group"
-              >
-                About
-                <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-primary group-hover:w-full transition-all duration-300"></span>
-              </Link>
+              <source src={content.file_url} type="video/mp4" />
+              <source src={content.file_url} type="video/webm" />
+              <source src={content.file_url} type="video/ogg" />
+            </video>
+          ) : (
+            <div className="w-full h-full bg-gradient-to-br from-gray-700 to-gray-800 flex items-center justify-center">
+              <Play className="h-12 w-12 text-gray-400" />
             </div>
-          </div>
+          )}
 
-          {/* Search and Actions */}
-          <div className="flex items-center space-x-6">
-            {/* Search */}
-            <div className="hidden sm:flex items-center space-x-2">
-              <div className="relative group">
-                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground transition-colors group-focus-within:text-primary" />
-                <input
-                  type="text"
-                  placeholder="Search movies, shows, short stories..."
-                  className="w-80 pl-12 pr-6 py-3 bg-card/50 border border-border/30 rounded-2xl text-sm 
-                           focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 
-                           transition-all duration-300 backdrop-blur-sm hover:bg-card/70"
-                />
-              </div>
+          {!imageLoaded && (
+            <div className="absolute inset-0 bg-gray-700 animate-pulse flex items-center justify-center">
+              <div className="w-12 h-12 bg-gray-600 rounded" />
             </div>
+          )}
 
-            {/* Auth Buttons */}
-            <div className="hidden md:flex items-center space-x-4">
-              {user ? (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="lg"
-                      className="flex items-center space-x-3 px-4 py-3 rounded-2xl hover:bg-card/50 transition-all duration-300"
-                    >
-                      <User className="h-5 w-5" />
-                      <span className="font-medium">Dashboard</span>
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent
-                    align="end"
-                    className="w-56 bg-card/95 backdrop-blur-xl border-border/50 rounded-2xl shadow-ultra"
-                  >
-                    <DropdownMenuItem
-                      onClick={() => navigate("/dashboard")}
-                      className="rounded-xl"
-                    >
-                      <User className="mr-3 h-5 w-5" />
-                      Dashboard
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator className="bg-border/50" />
-                    <DropdownMenuItem
-                      onClick={signOut}
-                      className="text-destructive rounded-xl"
-                    >
-                      <LogOut className="mr-3 h-5 w-5" />
-                      Sign out
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              ) : (
-                <>
-                  <Link to="/login">
-                    <Button
-                      variant="ghost"
-                      size="lg"
-                      className="font-semibold px-6 py-3 rounded-2xl hover:bg-card/50 transition-all duration-300"
-                    >
-                      Log in
-                    </Button>
-                  </Link>
-                  <Link to="/signup">
-                    <Button className="btn-hero text-base px-8 py-3 font-semibold">
-                      Sign up
-                    </Button>
-                  </Link>
-                </>
-              )}
-            </div>
-
-            {/* Mobile Menu Button */}
-            <Button
-              variant="ghost"
-              size="lg"
-              className="lg:hidden p-3 rounded-2xl hover:bg-card/50 transition-all duration-300"
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
+          {isHovered && content.trailer_url && (
+            <video
+              className="absolute inset-0 w-full h-full object-cover z-10 pointer-events-none"
+              autoPlay
+              muted
+              loop
+              playsInline
             >
-              <Menu className="h-6 w-6" />
-            </Button>
-          </div>
+              <source src={content.trailer_url} type="video/mp4" />
+            </video>
+          )}
         </div>
 
-        {/* Mobile Menu */}
-        {isMenuOpen && (
-          <div className="lg:hidden border-t border-border/30 py-6 space-y-4 animate-fade-in bg-gradient-glass backdrop-blur-xl rounded-b-3xl mt-2">
-            <Link
-              to="/movies"
-              className="block text-foreground/80 hover:text-foreground transition-colors font-medium py-2 px-4 rounded-xl hover:bg-card/30"
-            >
-              Movies
-            </Link>
-            <Link
-              to="/tv-shows"
-              className="block text-foreground/80 hover:text-foreground transition-colors font-medium py-2 px-4 rounded-xl hover:bg-card/30"
-            >
-              TV Shows
-            </Link>
-            <Link
-              to="/stories"
-              className="block text-foreground/80 hover:text-foreground transition-colors font-medium py-2 px-4 rounded-xl hover:bg-card/30"
-            >
-              Short Stories
-            </Link>
-            <Link
-              to="/music-videos"
-              className="block text-foreground/80 hover:text-foreground transition-colors font-medium py-2 px-4 rounded-xl hover:bg-card/30"
-            >
-              Music Videos
-            </Link>
+        {/* Expanded panel on hover */}
+        {isHovered && (
+          <div className="bg-background/95 backdrop-blur-sm border-t border-border/50 p-4 space-y-3 relative z-20">
+            <div className="flex items-center justify-between">
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  className="rounded-full bg-primary text-primary-foreground hover:bg-primary/90 p-2"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onPlay();
+                  }}
+                >
+                  <Play className="h-4 w-4" />
+                </Button>
 
-            {/* NEW: My Favorites (mobile) */}
-            <Link
-              to="/favorites"
-              className="block text-foreground/80 hover:text-foreground transition-colors font-medium py-2 px-4 rounded-xl hover:bg-card/30"
-            >
-              My Favorites
-            </Link>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="rounded-full p-2"
+                  onClick={handleLike}
+                >
+                  <ThumbsUp className="h-4 w-4" />
+                </Button>
+              </div>
 
-            <Link
-              to="/about"
-              className="block text-foreground/80 hover:text-foreground transition-colors font-medium py-2 px-4 rounded-xl hover:bg-card/30"
-            >
-              About
-            </Link>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="rounded-full p-2"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onClick();
+                }}
+              >
+                <ChevronDown className="h-4 w-4" />
+              </Button>
+            </div>
 
-            <div className="flex flex-col space-y-3 pt-4 border-t border-border/30">
-              {user ? (
-                <>
-                  <Link to="/dashboard">
-                    <Button
-                      variant="ghost"
-                      size="lg"
-                      className="justify-start w-full py-3 px-4 rounded-xl font-medium hover:bg-card/30"
-                    >
-                      <User className="mr-3 h-5 w-5" />
-                      Dashboard
-                    </Button>
-                  </Link>
-                  <Button
-                    variant="ghost"
-                    size="lg"
-                    className="justify-start w-full text-destructive py-3 px-4 rounded-xl font-medium hover:bg-destructive/10"
-                    onClick={signOut}
-                  >
-                    <LogOut className="mr-3 h-5 w-5" />
-                    Sign out
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <Link to="/login">
-                    <Button
-                      variant="ghost"
-                      size="lg"
-                      className="justify-start w-full py-3 px-4 rounded-xl font-medium hover:bg-card/30"
-                    >
-                      Log in
-                    </Button>
-                  </Link>
-                  <Link to="/signup">
-                    <Button className="btn-hero w-full py-3 font-semibold">
-                      Sign up
-                    </Button>
-                  </Link>
-                </>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Badge variant="secondary" className="text-xs">
+                  {contentType}
+                </Badge>
+                {content.genre && (
+                  <Badge variant="outline" className="text-xs">
+                    {content.genre}
+                  </Badge>
+                )}
+              </div>
+
+              <h3 className="text-foreground font-semibold text-sm line-clamp-1">
+                {content.title}
+              </h3>
+
+              {content.description && (
+                <p className="text-muted-foreground text-xs line-clamp-2 leading-relaxed">
+                  {content.description}
+                </p>
               )}
             </div>
           </div>
         )}
+
+        {/* Title overlay when not hovered */}
+        {!isHovered && (
+          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-background/90 to-transparent p-3">
+            <h3 className="text-foreground font-semibold text-sm line-clamp-1">
+              {content.title}
+            </h3>
+          </div>
+        )}
       </div>
-    </nav>
+    </div>
   );
 };
+
+/* Optional alias for legacy imports */
+export { ContentCard as NetflixCard };

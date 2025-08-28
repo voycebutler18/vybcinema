@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Upload, Film, Tv, BookOpen, Plus, Music2 } from "lucide-react";
+import { Upload, Film, Tv, BookOpen, Plus } from "lucide-react";
 import { VideoPlayer } from "@/components/VideoPlayer";
 import { useToast } from "@/hooks/use-toast";
 
@@ -13,7 +13,7 @@ interface ContentItem {
   id: string;
   title: string;
   description: string;
-  content_type: string; // 'movie' | 'tv_show' | 'story' | 'music_video'
+  content_type: string; // 'movie' | 'tv_show' | 'story'
   genre?: string;
   is_featured: boolean;
   created_at: string;
@@ -88,8 +88,6 @@ const Dashboard = () => {
         return <Tv className="h-5 w-5" />;
       case "story":
         return <BookOpen className="h-5 w-5" />;
-      case "music_video":
-        return <Music2 className="h-5 w-5" />;
       default:
         return <Upload className="h-5 w-5" />;
     }
@@ -103,8 +101,6 @@ const Dashboard = () => {
         return "TV Show";
       case "story":
         return "Short Story";
-      case "music_video":
-        return "Music Video";
       default:
         return type;
     }
@@ -209,13 +205,7 @@ const Dashboard = () => {
                     <BookOpen className="h-6 w-6" />
                     <span className="text-sm">Upload Short Story</span>
                   </Button>
-                  <Button
-                    onClick={() => navigateToUpload("music_video")}
-                    className="btn-secondary h-20 flex-col space-y-2"
-                  >
-                    <Music2 className="h-6 w-6" />
-                    <span className="text-sm">Upload Music Video</span>
-                  </Button>
+                  {/* Music Video option removed */}
                 </div>
               </div>
 
@@ -244,8 +234,8 @@ const Dashboard = () => {
                       No Content Yet
                     </h3>
                     <p className="text-muted-foreground mb-8">
-                      Start uploading your movies, TV shows, short stories, and
-                      music videos to see them here.
+                      Start uploading your movies, TV shows, and short stories
+                      to see them here.
                     </p>
                     <Button onClick={() => navigate("/upload")} className="btn-hero">
                       <Plus className="h-5 w-5 mr-2" />

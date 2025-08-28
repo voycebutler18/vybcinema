@@ -39,56 +39,43 @@ export default function Favorites() {
       }
 
       try {
-        console.log('Fetching favorites for user ID:', user.id);
-
-        // Direct approach - get favorite content IDs
+        console.log('Auth user ID:', user.id);
+        
+        // First, let's see what user IDs are actually in the favorites table
+        const { data: allFavorites, error: allError } = await supabase
+          .from('favorites')
+          .select('user_id, content_id')
+          .limit(5);
+        
+        console.log('Sample favorites in table:', allFavorites);
+        
+        // Try the normal query
         const { data: favoriteRows, error: favError } = await supabase
           .from('favorites')
           .select('content_id')
           .eq('user_id', user.id);
 
-        console.log('Favorite rows result:', { favoriteRows, favError });
+        console.log('Query result for user:', { favoriteRows, favError });
 
-        if (favError) {
-          console.error('Error fetching favorites:', favError);
-          setFavorites([]);
-          setLoading(false);
-          return;
-        }
-
+        // If no results, try with string casting
         if (!favoriteRows || favoriteRows.length === 0) {
-          console.log('No favorites found');
-          setFavorites([]);
-          setLoading(false);
-          return;
+          console.log('Trying with string casting...');
+          const { data: stringRows, error: stringError } = await supabase
+            .from('favorites')
+            .select('content_id')
+            .eq('user_id', user.id.toString());
+          
+          console.log('String cast result:', { stringRows, stringError });
         }
 
-        // Get unique content IDs
-        const uniqueIds = [...new Set(favoriteRows.map(row => row.content_id))];
-        console.log('Looking for content with IDs:', uniqueIds);
-
-        // Fetch content for these IDs
-        const { data: contentData, error: contentError } = await supabase
-          .from('content')
-          .select('*')
-          .in('id', uniqueIds);
-
-        console.log('Content query result:', { contentData, contentError });
-
-        if (contentError) {
-          console.error('Error fetching content:', contentError);
-          setFavorites([]);
-        } else {
-          console.log('Successfully fetched', contentData?.length || 0, 'favorite items');
-          setFavorites(contentData || []);
-        }
+        setFavorites([]);
+        setLoading(false);
 
       } catch (error) {
-        console.error('Unexpected error:', error);
+        console.error('Error:', error);
         setFavorites([]);
+        setLoading(false);
       }
-
-      setLoading(false);
     };
 
     fetchFavorites();

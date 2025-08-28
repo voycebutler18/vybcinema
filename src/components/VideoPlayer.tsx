@@ -1,10 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Play, Pause, Volume2, VolumeX, Maximize, X, SkipBack, SkipForward, Settings, Minimize } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Slider } from '@/components/ui/slider';
+import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
 
 interface VideoPlayerProps {
   videoUrl?: string;
@@ -106,9 +107,9 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
   const handleSeek = (value: number[]) => {
     const newTime = value[0];
-    setCurrentTime(newTime);
-    if (videoRef.current) {
+    if (videoRef.current && !isNaN(newTime) && isFinite(newTime)) {
       videoRef.current.currentTime = newTime;
+      setCurrentTime(newTime);
     }
   };
 
@@ -135,20 +136,24 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   };
 
   const handleVideoTimeUpdate = () => {
-    if (videoRef.current) {
+    if (videoRef.current && !isNaN(videoRef.current.currentTime)) {
       setCurrentTime(videoRef.current.currentTime);
       
       // Calculate buffered percentage
       if (videoRef.current.buffered.length > 0) {
         const bufferedEnd = videoRef.current.buffered.end(videoRef.current.buffered.length - 1);
-        setBuffered((bufferedEnd / duration) * 100);
+        const duration = videoRef.current.duration;
+        if (!isNaN(duration) && duration > 0) {
+          setBuffered((bufferedEnd / duration) * 100);
+        }
       }
     }
   };
 
   const handleVideoLoadedMetadata = () => {
-    if (videoRef.current) {
+    if (videoRef.current && !isNaN(videoRef.current.duration)) {
       setDuration(videoRef.current.duration);
+      setCurrentTime(0);
     }
   };
 
@@ -164,6 +169,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   };
 
   const formatTime = (time: number) => {
+    if (isNaN(time) || !isFinite(time)) return '0:00';
     const minutes = Math.floor(time / 60);
     const seconds = Math.floor(time % 60);
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
@@ -252,6 +258,12 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       {/* Full Screen Video Player */}
       <Dialog open={showFullPlayer} onOpenChange={setShowFullPlayer}>
         <DialogContent className="max-w-full w-screen h-screen p-0 bg-black border-none video-player-dialog">
+          <VisuallyHidden>
+            <DialogTitle>Video Player - {title}</DialogTitle>
+            <DialogDescription>
+              Playing {contentType}: {title}. {description}
+            </DialogDescription>
+          </VisuallyHidden>
           <div 
             ref={playerRef}
             className={`relative w-full h-full bg-black ${isFullscreen ? 'video-player-fullscreen' : ''}`}
@@ -269,6 +281,8 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
               onClick={togglePlay}
               playsInline
               preload="metadata"
+              controls={false}
+              style={{ objectFit: 'contain' }}
             />
             
             {/* Custom Controls Overlay */}
@@ -345,11 +359,12 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
                   
                   {/* Playback Progress */}
                   <Slider
-                    value={[currentTime]}
-                    max={duration}
-                    step={1}
+                    value={[currentTime || 0]}
+                    max={duration || 100}
+                    step={0.1}
                     onValueChange={handleSeek}
                     className="w-full cursor-pointer video-slider"
+                    disabled={!duration || isNaN(duration)}
                   />
                 </div>
 
@@ -409,8 +424,8 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
                     </div>
 
                     {/* Time Display */}
-                    <span className="text-white text-sm font-mono">
-                      {formatTime(currentTime)} / {formatTime(duration)}
+                    <span className="text-white text-sm font-mono whitespace-nowrap">
+                      {formatTime(currentTime || 0)} / {formatTime(duration || 0)}
                     </span>
                   </div>
 

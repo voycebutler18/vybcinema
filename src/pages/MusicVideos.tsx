@@ -1,17 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
-import { NetflixRow } from '@/components/NetflixRow';
-import { NetflixDetailModal } from '@/components/NetflixDetailModal';
-import { VideoPlayer } from '@/components/VideoPlayer';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/useAuth';
-import { useToast } from '@/hooks/use-toast';
+import { NetflixRow } from "@/components/NetflixRow";
+import { NetflixDetailModal } from "@/components/NetflixDetailModal";
+import { VideoPlayer } from "@/components/VideoPlayer";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
 
-const MusicVideos = () => {
+const MusicVideos: React.FC = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+
   const [content, setContent] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedContent, setSelectedContent] = useState<any>(null);
@@ -26,15 +27,15 @@ const MusicVideos = () => {
   const fetchMusicVideos = async () => {
     try {
       const { data, error } = await supabase
-        .from('content')
-        .select('*')
-        .eq('content_type', 'music_video')
-        .order('created_at', { ascending: false });
+        .from("content")
+        .select("*")
+        .eq("content_type", "music_video")
+        .order("created_at", { ascending: false });
 
       if (error) throw error;
       setContent(data || []);
     } catch (error) {
-      console.error('Error fetching music videos:', error);
+      console.error("Error fetching music videos:", error);
     } finally {
       setLoading(false);
     }
@@ -53,54 +54,54 @@ const MusicVideos = () => {
 
   const deleteContent = async (id: string, fileUrl?: string) => {
     try {
-      const { error } = await supabase
-        .from('content')
-        .delete()
-        .eq('id', id);
-
+      const { error } = await supabase.from("content").delete().eq("id", id);
       if (error) throw error;
 
       if (fileUrl) {
-        // Extract the path from the full URL
-        const urlParts = fileUrl.split('/storage/v1/object/public/content-files/');
-        if (urlParts[1]) {
-          await supabase.storage
-            .from('content-files')
-            .remove([urlParts[1]]);
+        // Extract file path for storage delete
+        const parts = fileUrl.split("/storage/v1/object/public/content-files/");
+        if (parts[1]) {
+          await supabase.storage.from("content-files").remove([parts[1]]);
         }
       }
 
-      setContent(prev => prev.filter(item => item.id !== id));
+      setContent((prev) => prev.filter((item) => item.id !== id));
       setShowDetailModal(false);
-      
+
       toast({
         title: "Content deleted",
-        description: "Music video has been successfully deleted."
+        description: "Music video has been successfully deleted.",
       });
-    } catch (error: any) {
-      console.error('Error deleting content:', error);
+    } catch (err: any) {
+      console.error("Error deleting content:", err);
       toast({
         title: "Delete failed",
-        description: error.message,
-        variant: "destructive"
+        description: err.message,
+        variant: "destructive",
       });
     }
   };
 
-  // Organize content into categories
-  const featuredVideo = content.find(video => video.is_featured) || content[0];
+  // Buckets for rows
   const recentlyAdded = content.slice(0, 10);
-  const popVideos = content.filter(video => video.genre?.toLowerCase().includes('pop'));
-  const rockVideos = content.filter(video => video.genre?.toLowerCase().includes('rock'));
-  const hipHopVideos = content.filter(video => video.genre?.toLowerCase().includes('hip hop'));
-  const myVideos = user ? content.filter(video => video.user_id === user.id) : [];
+  const popVideos = content.filter((v) =>
+    (v.genre || "").toLowerCase().includes("pop")
+  );
+  const rockVideos = content.filter((v) =>
+    (v.genre || "").toLowerCase().includes("rock")
+  );
+  const hipHopVideos = content.filter((v) => {
+    const g = (v.genre || "").toLowerCase();
+    return g.includes("hip") || g.includes("hip-hop") || g.includes("hip hop");
+  });
+  const myVideos = user ? content.filter((v) => v.user_id === user.id) : [];
 
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
         <Navigation />
         <div className="pt-20 flex items-center justify-center h-screen">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-primary"></div>
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-primary" />
         </div>
       </div>
     );
@@ -109,7 +110,7 @@ const MusicVideos = () => {
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
-      
+
       <div className="pb-20 pt-20 relative z-10">
         {recentlyAdded.length > 0 && (
           <NetflixRow
@@ -163,8 +164,12 @@ const MusicVideos = () => {
 
         {content.length === 0 && (
           <div className="text-center py-20">
-            <h2 className="text-2xl font-bold text-foreground mb-4">No Music Videos Available</h2>
-            <p className="text-muted-foreground">Be the first to upload a music video!</p>
+            <h2 className="text-2xl font-bold text-foreground mb-4">
+              No Music Videos Available
+            </h2>
+            <p className="text-muted-foreground">
+              Be the first to upload a music video!
+            </p>
           </div>
         )}
       </div>
@@ -177,7 +182,10 @@ const MusicVideos = () => {
         isOpen={showDetailModal}
         onClose={() => setShowDetailModal(false)}
         onPlay={() => selectedContent && handlePlay(selectedContent)}
-        onDelete={() => selectedContent && deleteContent(selectedContent.id, selectedContent.file_url)}
+        onDelete={() =>
+          selectedContent &&
+          deleteContent(selectedContent.id, selectedContent.file_url)
+        }
         canDelete={user?.id === selectedContent?.user_id}
       />
 

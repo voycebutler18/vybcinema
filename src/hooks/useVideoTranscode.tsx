@@ -42,16 +42,38 @@ export const useVideoTranscode = () => {
     onTranscoded: (transcodedFile: File) => Promise<void>
   ): Promise<void> => {
     setIsProcessing(true);
-    const ffmpeg = ffmpegRef.current;
 
     try {
+      // Skip transcoding for small files (< 50MB) to speed up process
+      const fileSizeMB = file.size / (1024 * 1024);
+      if (fileSizeMB < 50) {
+        setProgress({
+          phase: 'uploading',
+          percentage: 50,
+          message: 'File is small, skipping transcoding for faster upload...'
+        });
+        
+        // Upload original file directly
+        await onTranscoded(file);
+        
+        setProgress({
+          phase: 'complete',
+          percentage: 100,
+          message: 'Upload completed successfully!'
+        });
+        
+        return;
+      }
+
+      const ffmpeg = ffmpegRef.current;
+
       // Load FFmpeg if not loaded
       await loadFFmpeg();
 
       setProgress({ 
         phase: 'transcoding', 
         percentage: 0, 
-        message: 'Starting video transcoding...' 
+        message: 'Starting ultra-fast transcoding...' 
       });
 
       // Set up progress tracking
@@ -62,7 +84,7 @@ export const useVideoTranscode = () => {
         setProgress({
           phase: 'transcoding',
           percentage,
-          message: `Transcoding video... ${percentage}%`,
+          message: `Ultra-fast transcoding... ${percentage}%`,
           speed,
           eta: percentage > 10 ? `${Math.round((100 - percentage) / (percentage / (Date.now() / 1000)))}s` : undefined
         });
@@ -72,19 +94,21 @@ export const useVideoTranscode = () => {
       const inputFileName = 'input.' + file.name.split('.').pop();
       await ffmpeg.writeFile(inputFileName, await fetchFile(file));
 
-      // Transcode to optimized format
+      // Transcode with ultra-fast settings optimized for speed
       const outputFileName = 'output.mp4';
       
-      // Fast preset for quicker processing, optimized for web
+      // Ultra-fast preset for maximum speed
       await ffmpeg.exec([
         '-i', inputFileName,
         '-c:v', 'libx264',           // H.264 codec
-        '-preset', 'fast',            // Fast encoding
-        '-crf', '23',                 // Good quality/size balance
-        '-c:a', 'aac',                // AAC audio
-        '-b:a', '128k',               // Audio bitrate
-        '-movflags', '+faststart',    // Web optimization
-        '-f', 'mp4',                  // MP4 format
+        '-preset', 'ultrafast',      // Fastest possible preset
+        '-crf', '30',                // Higher CRF for faster encoding
+        '-c:a', 'aac',               // AAC audio
+        '-b:a', '96k',               // Lower audio bitrate for speed
+        '-vf', 'scale=-2:720',       // Scale to 720p for faster processing
+        '-r', '24',                  // Limit to 24fps for speed
+        '-movflags', '+faststart',   // Web optimization
+        '-f', 'mp4',                 // MP4 format
         outputFileName
       ]);
 
@@ -98,7 +122,7 @@ export const useVideoTranscode = () => {
       setProgress({
         phase: 'transcoding',
         percentage: 100,
-        message: 'Transcoding complete! Starting upload...'
+        message: 'Ultra-fast transcoding complete! Starting upload...'
       });
 
       // Clean up FFmpeg files

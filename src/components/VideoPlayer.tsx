@@ -223,17 +223,19 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
   // Use Cloudflare Stream URL if available and ready, otherwise fallback to direct video URL
   const getVideoUrl = () => {
-    // Prioritize stream URL when ready and available
-    if (streamUrl && streamStatus === 'ready') {
+    // Always prioritize stream URL if available, even if processing (Cloudflare generates playback URLs immediately)
+    if (streamUrl) {
+      console.log('Using stream URL:', streamUrl, 'Status:', streamStatus);
       return streamUrl;
     }
     // Fallback to direct video URL
+    console.log('Using direct video URL:', videoUrl);
     return videoUrl;
   };
 
   const currentVideoUrl = currentVideo === 'trailer' ? trailerUrl : getVideoUrl();
   const displayThumbnail = streamThumbnailUrl || coverUrl;
-  const isProcessing = streamStatus === 'processing' || streamStatus === 'pending';
+  const isProcessing = streamStatus === 'pending' && !streamUrl; // Only show processing if no stream URL yet
 
   return (
     <Card className="cinema-card overflow-hidden">

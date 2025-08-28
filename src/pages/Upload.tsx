@@ -140,21 +140,41 @@ const Upload = () => {
     streamFormData.append('contentId', contentId);
 
     try {
+      console.log('Uploading to Cloudflare Stream...', transcodedFile.name, `${(transcodedFile.size / 1024 / 1024).toFixed(2)}MB`);
+      
       // Upload to stream
       const { data: uploadResponse, error: uploadError } = await supabase.functions.invoke('cloudflare-stream-upload', {
         body: streamFormData
       });
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        console.error('Upload error:', uploadError);
+        throw uploadError;
+      }
 
+      console.log('Stream upload response:', uploadResponse);
       const { streamId, playbackId } = uploadResponse;
       
-      // Poll for ready status using auth session
+      // Create immediate thumbnail URL for preview
+      const thumbnailUrl = `https://videodelivery.net/${playbackId || streamId}/thumbnails/thumbnail.jpg`;
+      
+      // Update with thumbnail immediately for preview
+      console.log('Updating content with immediate thumbnail for preview');
+      await supabase
+        .from('content')
+        .update({
+          stream_thumbnail_url: thumbnailUrl
+        })
+        .eq('id', contentId);
+      
+      // Poll for ready status - shorter intervals, more attempts
       let attempts = 0;
-      const maxAttempts = 60; // 2.5 minutes max
+      const maxAttempts = 40; // 2 minutes max
+      
+      console.log('Starting status polling for stream:', streamId);
       
       while (attempts < maxAttempts) {
-        await new Promise(resolve => setTimeout(resolve, 2500));
+        await new Promise(resolve => setTimeout(resolve, 3000)); // 3 second intervals
         
         try {
           const { data: session } = await supabase.auth.getSession();
@@ -172,10 +192,14 @@ const Upload = () => {
             
             if (statusResponse.ok) {
               const statusData = await statusResponse.json();
-              if (statusData?.ready) {
-                console.log('Stream is ready for playback');
+              console.log(`Status check ${attempts + 1}:`, statusData);
+              
+              if (statusData?.ready || statusData?.status === 'ready') {
+                console.log('Stream is ready for playback!');
                 break;
               }
+            } else {
+              console.log('Status response not ok:', statusResponse.status);
             }
           }
         } catch (statusError) {
@@ -183,10 +207,13 @@ const Upload = () => {
         }
         
         attempts++;
-        updateUploadProgress(Math.min(95, 70 + (attempts / maxAttempts) * 25));
+        const progressPercent = Math.min(95, 70 + (attempts / maxAttempts) * 25);
+        updateUploadProgress(progressPercent);
+        console.log(`Status check ${attempts}/${maxAttempts}, progress: ${progressPercent}%`);
       }
 
       updateUploadProgress(100);
+      console.log('Upload process completed');
       return { streamId, playbackId, ready: true };
       
     } catch (error) {

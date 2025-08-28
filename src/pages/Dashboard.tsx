@@ -85,23 +85,7 @@ const Dashboard = () => {
   };
 
   const navigateToUpload = (type: string) => {
-    switch (type) {
-      case 'movie': 
-        navigate('/movies');
-        break;
-      case 'tv_show':
-        navigate('/tv-shows');
-        break;
-      case 'music_video':
-        navigate('/music-videos');
-        break;
-      case 'story':
-        navigate('/stories');
-        break;
-      case 'podcast':
-        navigate('/podcasts');
-        break;
-    }
+    navigate(`/upload?type=${type}`);
   };
 
   const deleteContent = async (contentId: string, fileUrl?: string) => {
@@ -236,7 +220,7 @@ const Dashboard = () => {
                     <p className="text-muted-foreground mb-8">
                       Start uploading your movies, TV shows, music videos, and stories to see them here.
                     </p>
-                    <Button onClick={() => navigate('/movies')} className="btn-hero">
+                    <Button onClick={() => navigate('/upload')} className="btn-hero">
                       <Plus className="h-5 w-5 mr-2" />
                       Upload Your First Content
                     </Button>

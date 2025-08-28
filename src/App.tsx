@@ -10,6 +10,7 @@ import Movies from "./pages/Movies";
 import TVShows from "./pages/TVShows";
 import MusicVideos from "./pages/MusicVideos";
 import Stories from "./pages/Stories";
+import Upload from "./pages/Upload";
 import About from "./pages/About";
 import Genre from "./pages/Genre";
 import Login from "./pages/Login";
@@ -43,6 +44,7 @@ const App = () => (
           <Route path="/music-videos" element={<MusicVideos />} />
           <Route path="/stories" element={<Stories />} />
           <Route path="/podcasts" element={<Podcasts />} />
+          <Route path="/upload" element={<Upload />} />
           <Route path="/about" element={<About />} />
           <Route path="/genre/:genreName" element={<Genre />} />
           <Route path="/login" element={<Login />} />

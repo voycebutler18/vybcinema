@@ -25,9 +25,8 @@ import TermsOfService from "./pages/TermsOfService";
 import CookiePolicy from "./pages/CookiePolicy";
 import NotFound from "./pages/NotFound";
 import Dashboard from "./pages/Dashboard";
-import MusicVideos from "./pages/MusicVideos";
 
-// NEW: Favorites page
+// Favorites page
 import Favorites from "./pages/Favorites";
 
 const queryClient = new QueryClient();
@@ -45,9 +44,8 @@ const App = () => (
             <Route path="/movies" element={<Movies />} />
             <Route path="/tv-shows" element={<TVShows />} />
             <Route path="/stories" element={<Stories />} />
-            <Route path="/music-videos" element={<MusicVideos />} />
 
-            {/* NEW: My Favorites route */}
+            {/* My Favorites */}
             <Route path="/favorites" element={<Favorites />} />
 
             <Route path="/upload" element={<Upload />} />

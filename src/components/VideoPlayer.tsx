@@ -66,9 +66,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const [videoError, setVideoError] = useState<string | null>(null);
   const [isVideoLoaded, setIsVideoLoaded] = useState(false);
   const [adPlaying, setAdPlaying] = useState(false);
-  const [adCompleted, setAdCompleted] = useState(false);
-  const [showFallbackPlayer, setShowFallbackPlayer] = useState(false);
-  
+
   const videoRef = useRef<HTMLVideoElement>(null);
   const playerRef = useRef<HTMLDivElement>(null);
   const controlsTimeoutRef = useRef<NodeJS.Timeout>();
@@ -77,7 +75,6 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     const handleFullscreenChange = () => {
       setIsFullscreen(!!document.fullscreenElement);
     };
-
     document.addEventListener('fullscreenchange', handleFullscreenChange);
     return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
   }, []);
@@ -86,33 +83,23 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     if (showFullPlayer) {
       const handleMouseMove = () => {
         setShowControls(true);
-        if (controlsTimeoutRef.current) {
-          clearTimeout(controlsTimeoutRef.current);
-        }
+        if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
         controlsTimeoutRef.current = setTimeout(() => {
-          if (isPlaying && !adPlaying) {
-            setShowControls(false);
-          }
+          if (isPlaying && !adPlaying) setShowControls(false);
         }, 3000);
       };
-
       document.addEventListener('mousemove', handleMouseMove);
       return () => {
         document.removeEventListener('mousemove', handleMouseMove);
-        if (controlsTimeoutRef.current) {
-          clearTimeout(controlsTimeoutRef.current);
-        }
+        if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
       };
     }
   }, [showFullPlayer, isPlaying, adPlaying]);
 
   const togglePlay = () => {
     if (videoRef.current) {
-      if (isPlaying) {
-        videoRef.current.pause();
-      } else {
-        videoRef.current.play();
-      }
+      if (isPlaying) videoRef.current.pause();
+      else videoRef.current.play();
       setIsPlaying(!isPlaying);
     }
   };
@@ -152,61 +139,21 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
   const toggleFullscreen = async () => {
     if (!playerRef.current) return;
-
     try {
-      if (!document.fullscreenElement) {
-        await playerRef.current.requestFullscreen();
-      } else {
-        await document.exitFullscreen();
-      }
+      if (!document.fullscreenElement) await playerRef.current.requestFullscreen();
+      else await document.exitFullscreen();
     } catch (err) {
       console.error('Fullscreen error:', err);
     }
   };
 
-  // Ad event handlers
-  const handleAdStart = () => {
-    console.log('Ad started');
-    setAdPlaying(true);
-    setShowControls(false);
-  };
-
-  const handleAdComplete = () => {
-    console.log('Ad completed');
-    setAdPlaying(false);
-    setAdCompleted(true);
-    setShowControls(true);
-  };
-
-  const handleAdError = (error: any) => {
-    console.error('Ad error:', error);
-    setAdPlaying(false);
-    setShowFallbackPlayer(true);
-    // Fallback to regular Cloudflare Stream iframe or video element
-  };
-
-  const handleContentStart = () => {
-    console.log('Content started playing');
-    setIsPlaying(true);
-    setAdPlaying(false);
-  };
-
-  const handleContentPause = () => {
-    console.log('Content paused');
-    setIsPlaying(false);
-  };
-
   const handleVideoTimeUpdate = () => {
     if (videoRef.current && !isNaN(videoRef.current.currentTime)) {
       setCurrentTime(videoRef.current.currentTime);
-      
-      // Calculate buffered percentage
       if (videoRef.current.buffered.length > 0) {
         const bufferedEnd = videoRef.current.buffered.end(videoRef.current.buffered.length - 1);
-        const duration = videoRef.current.duration;
-        if (!isNaN(duration) && duration > 0) {
-          setBuffered((bufferedEnd / duration) * 100);
-        }
+        const d = videoRef.current.duration;
+        if (!isNaN(d) && d > 0) setBuffered((bufferedEnd / d) * 100);
       }
     }
   };
@@ -228,28 +175,17 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const handleVideoError = (e: React.SyntheticEvent<HTMLVideoElement>) => {
     const video = e.currentTarget;
     const error = video.error;
-    
-    let errorMessage = "Video playback failed";
+    let msg = 'Video playback failed';
     if (error) {
       switch (error.code) {
-        case MediaError.MEDIA_ERR_ABORTED:
-          errorMessage = "Video loading was aborted";
-          break;
-        case MediaError.MEDIA_ERR_NETWORK:
-          errorMessage = "Network error occurred while loading video";
-          break;
-        case MediaError.MEDIA_ERR_DECODE:
-          errorMessage = "Video codec not supported. Please re-encode using H.264 + AAC, yuv420p format for better compatibility.";
-          break;
-        case MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED:
-          errorMessage = "Video format not supported. Please use MP4 with H.264 video codec and AAC audio codec.";
-          break;
-        default:
-          errorMessage = "Unknown video error occurred";
+        case MediaError.MEDIA_ERR_ABORTED: msg = 'Video loading was aborted'; break;
+        case MediaError.MEDIA_ERR_NETWORK: msg = 'Network error occurred while loading video'; break;
+        case MediaError.MEDIA_ERR_DECODE: msg = 'Codec not supported. Use H.264 + AAC (yuv420p) for best compatibility.'; break;
+        case MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED: msg = 'Format not supported. Use MP4 (H.264 video + AAC audio).'; break;
+        default: msg = 'Unknown video error occurred';
       }
     }
-    
-    setVideoError(errorMessage);
+    setVideoError(msg);
     setIsVideoLoaded(false);
     setIsPlaying(false);
   };
@@ -259,14 +195,32 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     setCurrentTime(0);
   };
 
+  /* --------- Mobile fullscreen helper ---------- */
+  const enterMobileFullscreen = async () => {
+    const el = playerRef.current || videoRef.current?.parentElement || document.documentElement;
+    if (!el) return;
+    if (!document.fullscreenElement) {
+      try {
+        if ((el as any).requestFullscreen) await (el as any).requestFullscreen();
+        // Safari
+        // @ts-ignore
+        else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+      } catch {}
+    }
+    try {
+      // @ts-ignore
+      await screen.orientation?.lock?.('landscape');
+    } catch {}
+  };
+
   const playVideo = (type: 'main' | 'trailer') => {
     setCurrentVideo(type);
     setShowFullPlayer(true);
     setShowControls(true);
-    // Reset ad states when playing new video
-    setAdPlaying(false);
-    setAdCompleted(false);
-    setShowFallbackPlayer(false);
+    // Auto-enter fullscreen on phones
+    if (window.innerWidth < 768) {
+      setTimeout(() => enterMobileFullscreen(), 0);
+    }
   };
 
   const formatTime = (time: number) => {
@@ -279,22 +233,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const hasStreamPlayback = streamStatus === 'ready' && playbackId;
   const isProcessing = streamStatus === 'pending' || (streamStatus === 'processing' && !playbackId);
   const displayThumbnail = streamThumbnailUrl || coverUrl;
-  const shouldUseAds = false;
-  
-  console.log('Video player state:', { 
-    streamStatus, 
-    playbackId, 
-    hasStreamPlayback, 
-    isProcessing,
-    shouldUseAds,
-    vastTagUrl,
-    adBreaks,
-    videoUrl,
-    showPlayButton: (hasStreamPlayback || videoUrl),
-    adPlaying,
-    adCompleted,
-    showFallbackPlayer
-  });
+  const shouldUseAds = monetizationEnabled && vastTagUrl && hasStreamPlayback;
 
   return (
     <Card className="cinema-card overflow-hidden">
@@ -302,8 +241,8 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       <div className="relative">
         <div className="aspect-video bg-secondary/20 rounded-t-lg relative overflow-hidden group cursor-pointer">
           {displayThumbnail ? (
-            <img 
-              src={displayThumbnail} 
+            <img
+              src={displayThumbnail}
               alt={`${title} cover`}
               className="w-full h-full object-cover"
             />
@@ -319,7 +258,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
               <Play className="h-12 w-12 text-primary" />
             </div>
           )}
-          
+
           {/* Processing Overlay */}
           {isProcessing && (
             <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center">
@@ -328,37 +267,37 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
               <p className="text-white/60 text-xs">This may take a few minutes</p>
             </div>
           )}
-          
-              {/* Overlay */}
-              {!isProcessing && (
-                <div className="absolute inset-0 bg-gradient-overlay opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-                  <div className="flex gap-2">
-                     {(hasStreamPlayback || videoUrl) && (
-                       <Button
-                         size="lg"
-                         variant="secondary"
-                         className="bg-white/10 backdrop-blur-sm border-white/20"
-                         onClick={() => playVideo('main')}
-                       >
-                         <Play className="h-5 w-5 mr-2" />
-                         Play {contentType}
-                         {shouldUseAds && <span className="ml-1 text-xs">(Ad)</span>}
-                       </Button>
-                     )}
-                    {trailerUrl && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="bg-white/10 backdrop-blur-sm border-white/20"
-                        onClick={() => playVideo('trailer')}
-                      >
-                        <Play className="h-4 w-4 mr-1" />
-                        Trailer
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              )}
+
+          {/* Overlay */}
+          {!isProcessing && (
+            <div className="absolute inset-0 bg-gradient-overlay opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+              <div className="flex gap-2">
+                {(hasStreamPlayback || videoUrl) && (
+                  <Button
+                    size="lg"
+                    variant="secondary"
+                    className="bg-white/10 backdrop-blur-sm border-white/20"
+                    onClick={() => playVideo('main')}
+                  >
+                    <Play className="h-5 w-5 mr-2" />
+                    Play {contentType}
+                    {shouldUseAds && <span className="ml-1 text-xs">(Ad)</span>}
+                  </Button>
+                )}
+                {trailerUrl && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="bg-white/10 backdrop-blur-sm border-white/20"
+                    onClick={() => playVideo('trailer')}
+                  >
+                    <Play className="h-4 w-4 mr-1" />
+                    Trailer
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -367,9 +306,9 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
           <Badge variant="secondary">{contentType}</Badge>
           {genre && <Badge variant="outline">{genre}</Badge>}
         </div>
-        
+
         <h3 className="text-lg font-semibold mb-2 line-clamp-1">{title}</h3>
-        
+
         {description && (
           <p className="text-muted-foreground text-sm mb-4 line-clamp-3">
             {description}
@@ -388,6 +327,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
       {/* Full Screen Video Player */}
       <Dialog open={showFullPlayer} onOpenChange={setShowFullPlayer}>
+        {/* Use 100dvh so phones truly fill the screen */}
         <DialogContent className="fixed inset-0 max-w-none w-screen h-[100dvh] p-0 bg-black border-none video-player-dialog">
           <VisuallyHidden>
             <DialogTitle>Video Player - {title}</DialogTitle>
@@ -395,11 +335,11 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
               Playing {contentType}: {title}. {description}
             </DialogDescription>
           </VisuallyHidden>
-          <div 
+          <div
             ref={playerRef}
             className={`relative w-full h-full bg-black ${isFullscreen ? 'video-player-fullscreen' : ''}`}
           >
-            {/* Use IMA Player for monetized Cloudflare Stream content */}
+            {/* IMA ads path (Cloudflare Stream) */}
             {shouldUseAds && currentVideo === 'main' ? (
               <CFStreamIMAPlayer
                 playbackId={playbackId!}
@@ -409,11 +349,11 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
                 adBreaks={adBreaks}
                 vastTagUrl={vastTagUrl}
                 title={title}
-                onError={handleAdError}
-                onAdStart={handleAdStart}
-                onAdComplete={handleAdComplete}
-                onContentStart={handleContentStart}
-                onContentPause={handleContentPause}
+                onError={(e) => console.error('IMA Player error:', e)}
+                onAdStart={() => setAdPlaying(true)}
+                onAdComplete={() => setAdPlaying(false)}
+                onContentStart={() => setIsPlaying(true)}
+                onContentPause={() => setIsPlaying(false)}
               />
             ) : hasStreamPlayback && currentVideo === 'main' ? (
               <iframe
@@ -426,7 +366,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             ) : (
               <video
                 ref={videoRef}
-                className="w-full h-full object-contain bg-black"
+                className="w-full h-full md:object-contain object-cover bg-black"
                 autoPlay
                 onEnded={handleVideoEnd}
                 onPlay={() => setIsPlaying(true)}
@@ -441,11 +381,11 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
                 controls={false}
                 muted={isMuted}
                 crossOrigin="anonymous"
-                style={{ 
-                  objectFit: 'contain',
+                style={{
+                  objectFit: window.innerWidth < 768 ? 'cover' : 'contain',
                   width: '100%',
                   height: '100%',
-                  backgroundColor: 'black'
+                  backgroundColor: 'black',
                 }}
               >
                 <source src={currentVideo === 'trailer' ? trailerUrl : videoUrl} type="video/mp4" />
@@ -483,10 +423,10 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
                 </div>
               </div>
             )}
-            
+
             {/* Custom Controls Overlay - Hide during ads */}
             {!(hasStreamPlayback && currentVideo === 'main') && !adPlaying && (
-              <div 
+              <div
                 className={`absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/30 transition-opacity duration-300 ${
                   showControls ? 'opacity-100' : 'opacity-0'
                 }`}
@@ -507,8 +447,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
                       {title} {currentVideo === 'trailer' && '(Trailer)'}
                     </h2>
                   </div>
-                  
-                  {/* Switch Video Buttons */}
+
                   {(hasStreamPlayback || videoUrl) && trailerUrl && (
                     <div className="flex gap-2">
                       <Button
@@ -549,15 +488,13 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
                 <div className="absolute bottom-0 left-0 right-0 p-4 md:p-6 space-y-2 video-controls-mobile md:video-controls-desktop">
                   {/* Progress Bar */}
                   <div className="relative">
-                    {/* Buffered Progress */}
                     <div className="absolute top-1/2 -translate-y-1/2 w-full h-1 bg-white/20 rounded-full">
-                      <div 
+                      <div
                         className="h-full bg-white/40 rounded-full transition-all duration-300"
                         style={{ width: `${buffered}%` }}
                       />
                     </div>
-                    
-                    {/* Playback Progress */}
+
                     <Slider
                       value={[currentTime || 0]}
                       max={duration || 100}
@@ -571,47 +508,23 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
                   {/* Control Buttons */}
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                      {/* Play/Pause */}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={togglePlay}
-                        className="text-white hover:bg-white/20"
-                      >
+                      <Button variant="ghost" size="sm" onClick={togglePlay} className="text-white hover:bg-white/20">
                         {isPlaying ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
                       </Button>
 
-                      {/* Skip Backward */}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => skipTime(-10)}
-                        className="text-white hover:bg-white/20"
-                      >
+                      <Button variant="ghost" size="sm" onClick={() => skipTime(-10)} className="text-white hover:bg-white/20">
                         <SkipBack className="h-5 w-5" />
                       </Button>
 
-                      {/* Skip Forward */}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => skipTime(10)}
-                        className="text-white hover:bg-white/20"
-                      >
+                      <Button variant="ghost" size="sm" onClick={() => skipTime(10)} className="text-white hover:bg-white/20">
                         <SkipForward className="h-5 w-5" />
                       </Button>
 
-                      {/* Volume Controls */}
                       <div className="flex items-center gap-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={toggleMute}
-                          className="text-white hover:bg-white/20"
-                        >
+                        <Button variant="ghost" size="sm" onClick={toggleMute} className="text-white hover:bg-white/20">
                           {isMuted || volume === 0 ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
                         </Button>
-                        
+
                         <div className="w-20 hidden md:block">
                           <Slider
                             value={[isMuted ? 0 : volume]}
@@ -623,35 +536,22 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
                         </div>
                       </div>
 
-                      {/* Time Display */}
                       <span className="text-white text-sm font-mono whitespace-nowrap">
                         {formatTime(currentTime || 0)} / {formatTime(duration || 0)}
                       </span>
                     </div>
 
                     <div className="flex items-center gap-2">
-                      {/* Settings Button */}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-white hover:bg-white/20"
-                      >
+                      <Button variant="ghost" size="sm" className="text-white hover:bg-white/20">
                         <Settings className="h-5 w-5" />
                       </Button>
 
-                      {/* Fullscreen Toggle */}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={toggleFullscreen}
-                        className="text-white hover:bg-white/20"
-                      >
+                      <Button variant="ghost" size="sm" onClick={toggleFullscreen} className="text-white hover:bg-white/20">
                         {isFullscreen ? <Minimize className="h-5 w-5" /> : <Maximize className="h-5 w-5" />}
                       </Button>
                     </div>
                   </div>
 
-                  {/* Video Description */}
                   {description && (
                     <div className="pt-2">
                       <p className="text-white/80 text-sm max-w-2xl">{description}</p>

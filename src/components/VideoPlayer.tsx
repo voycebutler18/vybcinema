@@ -21,6 +21,7 @@ interface VideoPlayerProps {
   streamStatus?: string;
   streamId?: string;
   streamThumbnailUrl?: string;
+  playbackId?: string;
 }
 
 export const VideoPlayer: React.FC<VideoPlayerProps> = ({
@@ -37,6 +38,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   streamStatus,
   streamId,
   streamThumbnailUrl,
+  playbackId,
 }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
@@ -221,21 +223,16 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   };
 
-  // Use Cloudflare Stream URL if available and ready, otherwise fallback to direct video URL
-  const getVideoUrl = () => {
-    // Always prioritize stream URL if available, even if processing (Cloudflare generates playback URLs immediately)
-    if (streamUrl) {
-      console.log('Using stream URL:', streamUrl, 'Status:', streamStatus);
-      return streamUrl;
-    }
-    // Fallback to direct video URL
-    console.log('Using direct video URL:', videoUrl);
-    return videoUrl;
-  };
-
-  const currentVideoUrl = currentVideo === 'trailer' ? trailerUrl : getVideoUrl();
+  const hasStreamPlayback = streamStatus === 'ready' && playbackId;
+  const isProcessing = streamStatus === 'pending' || (streamStatus === 'processing' && !playbackId);
   const displayThumbnail = streamThumbnailUrl || coverUrl;
-  const isProcessing = streamStatus === 'pending' && !streamUrl; // Only show processing if no stream URL yet
+  
+  console.log('Video player state:', { 
+    streamStatus, 
+    playbackId, 
+    hasStreamPlayback, 
+    isProcessing 
+  });
 
   return (
     <Card className="cinema-card overflow-hidden">
@@ -248,10 +245,10 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
               alt={`${title} cover`}
               className="w-full h-full object-cover"
             />
-          ) : getVideoUrl() ? (
+          ) : (hasStreamPlayback || videoUrl) ? (
             <video
               className="w-full h-full object-cover"
-              src={getVideoUrl()}
+              src={hasStreamPlayback ? `https://videodelivery.net/${playbackId}/manifest/video.m3u8` : videoUrl}
               muted
               preload="metadata"
             />
@@ -270,35 +267,35 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             </div>
           )}
           
-          {/* Overlay */}
-          {!isProcessing && (
-            <div className="absolute inset-0 bg-gradient-overlay opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-              <div className="flex gap-2">
-                {getVideoUrl() && (
-                  <Button
-                    size="lg"
-                    variant="secondary"
-                    className="bg-white/10 backdrop-blur-sm border-white/20"
-                    onClick={() => playVideo('main')}
-                  >
-                    <Play className="h-5 w-5 mr-2" />
-                    Play {contentType}
-                  </Button>
-                )}
-                {trailerUrl && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="bg-white/10 backdrop-blur-sm border-white/20"
-                    onClick={() => playVideo('trailer')}
-                  >
-                    <Play className="h-4 w-4 mr-1" />
-                    Trailer
-                  </Button>
-                )}
-              </div>
-            </div>
-          )}
+              {/* Overlay */}
+              {!isProcessing && (
+                <div className="absolute inset-0 bg-gradient-overlay opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+                  <div className="flex gap-2">
+                    {(hasStreamPlayback || videoUrl) && (
+                      <Button
+                        size="lg"
+                        variant="secondary"
+                        className="bg-white/10 backdrop-blur-sm border-white/20"
+                        onClick={() => playVideo('main')}
+                      >
+                        <Play className="h-5 w-5 mr-2" />
+                        Play {contentType}
+                      </Button>
+                    )}
+                    {trailerUrl && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="bg-white/10 backdrop-blur-sm border-white/20"
+                        onClick={() => playVideo('trailer')}
+                      >
+                        <Play className="h-4 w-4 mr-1" />
+                        Trailer
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              )}
         </div>
       </div>
 
@@ -339,37 +336,48 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             ref={playerRef}
             className={`relative w-full h-full bg-black ${isFullscreen ? 'video-player-fullscreen' : ''}`}
           >
-            <video
-              ref={videoRef}
-              className="w-full h-full object-contain bg-black"
-              autoPlay
-              onEnded={handleVideoEnd}
-              onPlay={() => setIsPlaying(true)}
-              onPause={() => setIsPlaying(false)}
-              onTimeUpdate={handleVideoTimeUpdate}
-              onLoadedMetadata={handleVideoLoadedMetadata}
-              onLoadedData={handleVideoLoadedData}
-              onError={handleVideoError}
-              onClick={togglePlay}
-              playsInline
-              preload="metadata"
-              controls={false}
-              muted={isMuted}
-              crossOrigin="anonymous"
-              style={{ 
-                objectFit: 'contain',
-                width: '100%',
-                height: '100%',
-                backgroundColor: 'black'
-              }}
-            >
-              <source src={currentVideoUrl} type="video/mp4" />
-              <source src={currentVideoUrl} type="video/webm" />
-              <source src={currentVideoUrl} type="video/ogg" />
-              <p className="text-white text-center p-4">
-                Your browser does not support the video tag. Please try a different browser or update your current browser.
-              </p>
-            </video>
+            {/* Use Cloudflare Stream iframe for stream content, fallback to HTML5 for others */}
+            {hasStreamPlayback && currentVideo === 'main' ? (
+              <iframe
+                src={`https://iframe.cloudflarestream.com/${playbackId}?controls=false&autoplay=true`}
+                className="w-full h-full border-0"
+                allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;"
+                allowFullScreen
+                style={{ backgroundColor: 'black' }}
+              />
+            ) : (
+              <video
+                ref={videoRef}
+                className="w-full h-full object-contain bg-black"
+                autoPlay
+                onEnded={handleVideoEnd}
+                onPlay={() => setIsPlaying(true)}
+                onPause={() => setIsPlaying(false)}
+                onTimeUpdate={handleVideoTimeUpdate}
+                onLoadedMetadata={handleVideoLoadedMetadata}
+                onLoadedData={handleVideoLoadedData}
+                onError={handleVideoError}
+                onClick={togglePlay}
+                playsInline
+                preload="metadata"
+                controls={false}
+                muted={isMuted}
+                crossOrigin="anonymous"
+                style={{ 
+                  objectFit: 'contain',
+                  width: '100%',
+                  height: '100%',
+                  backgroundColor: 'black'
+                }}
+              >
+                <source src={currentVideo === 'trailer' ? trailerUrl : videoUrl} type="video/mp4" />
+                <source src={currentVideo === 'trailer' ? trailerUrl : videoUrl} type="video/webm" />
+                <source src={currentVideo === 'trailer' ? trailerUrl : videoUrl} type="video/ogg" />
+                <p className="text-white text-center p-4">
+                  Your browser does not support the video tag. Please try a different browser or update your current browser.
+                </p>
+              </video>
+            )}
 
             {/* Video Error Overlay */}
             {videoError && (
@@ -391,180 +399,182 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
               </div>
             )}
             
-            {/* Custom Controls Overlay */}
-            <div 
-              className={`absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/30 transition-opacity duration-300 ${
-                showControls ? 'opacity-100' : 'opacity-0'
-              }`}
-              onMouseEnter={() => setShowControls(true)}
-            >
-              {/* Top Controls */}
-              <div className="absolute top-0 left-0 right-0 p-4 flex justify-between items-center">
-                <div className="flex items-center gap-4">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setShowFullPlayer(false)}
-                    className="text-white hover:bg-white/20"
-                  >
-                    <X className="h-5 w-5" />
-                  </Button>
-                  <h2 className="text-white text-lg font-semibold">
-                    {title} {currentVideo === 'trailer' && '(Trailer)'}
-                  </h2>
-                </div>
-                
-                {/* Switch Video Buttons */}
-                {videoUrl && trailerUrl && (
-                  <div className="flex gap-2">
+            {/* Custom Controls Overlay - Only show for non-stream content */}
+            {!(hasStreamPlayback && currentVideo === 'main') && (
+              <div 
+                className={`absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/30 transition-opacity duration-300 ${
+                  showControls ? 'opacity-100' : 'opacity-0'
+                }`}
+                onMouseEnter={() => setShowControls(true)}
+              >
+                {/* Top Controls */}
+                <div className="absolute top-0 left-0 right-0 p-4 flex justify-between items-center">
+                  <div className="flex items-center gap-4">
                     <Button
+                      variant="ghost"
                       size="sm"
-                      variant={currentVideo === 'main' ? 'default' : 'secondary'}
-                      onClick={() => setCurrentVideo('main')}
-                      className="bg-black/50 backdrop-blur-sm text-white border-white/20"
+                      onClick={() => setShowFullPlayer(false)}
+                      className="text-white hover:bg-white/20"
                     >
-                      Full {contentType}
+                      <X className="h-5 w-5" />
                     </Button>
+                    <h2 className="text-white text-lg font-semibold">
+                      {title} {currentVideo === 'trailer' && '(Trailer)'}
+                    </h2>
+                  </div>
+                  
+                  {/* Switch Video Buttons */}
+                  {(hasStreamPlayback || videoUrl) && trailerUrl && (
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant={currentVideo === 'main' ? 'default' : 'secondary'}
+                        onClick={() => setCurrentVideo('main')}
+                        className="bg-black/50 backdrop-blur-sm text-white border-white/20"
+                      >
+                        Full {contentType}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant={currentVideo === 'trailer' ? 'default' : 'secondary'}
+                        onClick={() => setCurrentVideo('trailer')}
+                        className="bg-black/50 backdrop-blur-sm text-white border-white/20"
+                      >
+                        Trailer
+                      </Button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Center Play Button */}
+                {!isPlaying && (
+                  <div className="absolute inset-0 flex items-center justify-center">
                     <Button
-                      size="sm"
-                      variant={currentVideo === 'trailer' ? 'default' : 'secondary'}
-                      onClick={() => setCurrentVideo('trailer')}
-                      className="bg-black/50 backdrop-blur-sm text-white border-white/20"
+                      size="lg"
+                      variant="ghost"
+                      onClick={togglePlay}
+                      className="w-20 h-20 rounded-full bg-black/50 backdrop-blur-sm text-white hover:bg-black/70 border border-white/20"
                     >
-                      Trailer
+                      <Play className="h-8 w-8 ml-1" />
                     </Button>
                   </div>
                 )}
-              </div>
 
-              {/* Center Play Button */}
-              {!isPlaying && (
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <Button
-                    size="lg"
-                    variant="ghost"
-                    onClick={togglePlay}
-                    className="w-20 h-20 rounded-full bg-black/50 backdrop-blur-sm text-white hover:bg-black/70 border border-white/20"
-                  >
-                    <Play className="h-8 w-8 ml-1" />
-                  </Button>
-                </div>
-              )}
-
-              {/* Bottom Controls */}
-              <div className="absolute bottom-0 left-0 right-0 p-4 md:p-6 space-y-2 video-controls-mobile md:video-controls-desktop">
-                {/* Progress Bar */}
-                <div className="relative">
-                  {/* Buffered Progress */}
-                  <div className="absolute top-1/2 -translate-y-1/2 w-full h-1 bg-white/20 rounded-full">
-                    <div 
-                      className="h-full bg-white/40 rounded-full transition-all duration-300"
-                      style={{ width: `${buffered}%` }}
+                {/* Bottom Controls */}
+                <div className="absolute bottom-0 left-0 right-0 p-4 md:p-6 space-y-2 video-controls-mobile md:video-controls-desktop">
+                  {/* Progress Bar */}
+                  <div className="relative">
+                    {/* Buffered Progress */}
+                    <div className="absolute top-1/2 -translate-y-1/2 w-full h-1 bg-white/20 rounded-full">
+                      <div 
+                        className="h-full bg-white/40 rounded-full transition-all duration-300"
+                        style={{ width: `${buffered}%` }}
+                      />
+                    </div>
+                    
+                    {/* Playback Progress */}
+                    <Slider
+                      value={[currentTime || 0]}
+                      max={duration || 100}
+                      step={0.1}
+                      onValueChange={handleSeek}
+                      className="w-full cursor-pointer video-slider"
+                      disabled={!duration || isNaN(duration)}
                     />
                   </div>
-                  
-                  {/* Playback Progress */}
-                  <Slider
-                    value={[currentTime || 0]}
-                    max={duration || 100}
-                    step={0.1}
-                    onValueChange={handleSeek}
-                    className="w-full cursor-pointer video-slider"
-                    disabled={!duration || isNaN(duration)}
-                  />
-                </div>
 
-                {/* Control Buttons */}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    {/* Play/Pause */}
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={togglePlay}
-                      className="text-white hover:bg-white/20"
-                    >
-                      {isPlaying ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
-                    </Button>
-
-                    {/* Skip Backward */}
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => skipTime(-10)}
-                      className="text-white hover:bg-white/20"
-                    >
-                      <SkipBack className="h-5 w-5" />
-                    </Button>
-
-                    {/* Skip Forward */}
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => skipTime(10)}
-                      className="text-white hover:bg-white/20"
-                    >
-                      <SkipForward className="h-5 w-5" />
-                    </Button>
-
-                    {/* Volume Controls */}
-                    <div className="flex items-center gap-2">
+                  {/* Control Buttons */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      {/* Play/Pause */}
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={toggleMute}
+                        onClick={togglePlay}
                         className="text-white hover:bg-white/20"
                       >
-                        {isMuted || volume === 0 ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
+                        {isPlaying ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
                       </Button>
-                      
-                      <div className="w-20 hidden md:block">
-                        <Slider
-                          value={[isMuted ? 0 : volume]}
-                          max={1}
-                          step={0.1}
-                          onValueChange={handleVolumeChange}
-                          className="cursor-pointer volume-slider"
-                        />
+
+                      {/* Skip Backward */}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => skipTime(-10)}
+                        className="text-white hover:bg-white/20"
+                      >
+                        <SkipBack className="h-5 w-5" />
+                      </Button>
+
+                      {/* Skip Forward */}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => skipTime(10)}
+                        className="text-white hover:bg-white/20"
+                      >
+                        <SkipForward className="h-5 w-5" />
+                      </Button>
+
+                      {/* Volume Controls */}
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={toggleMute}
+                          className="text-white hover:bg-white/20"
+                        >
+                          {isMuted || volume === 0 ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
+                        </Button>
+                        
+                        <div className="w-20 hidden md:block">
+                          <Slider
+                            value={[isMuted ? 0 : volume]}
+                            max={1}
+                            step={0.1}
+                            onValueChange={handleVolumeChange}
+                            className="cursor-pointer volume-slider"
+                          />
+                        </div>
                       </div>
+
+                      {/* Time Display */}
+                      <span className="text-white text-sm font-mono whitespace-nowrap">
+                        {formatTime(currentTime || 0)} / {formatTime(duration || 0)}
+                      </span>
                     </div>
 
-                    {/* Time Display */}
-                    <span className="text-white text-sm font-mono whitespace-nowrap">
-                      {formatTime(currentTime || 0)} / {formatTime(duration || 0)}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      {/* Settings Button */}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-white hover:bg-white/20"
+                      >
+                        <Settings className="h-5 w-5" />
+                      </Button>
+
+                      {/* Fullscreen Toggle */}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={toggleFullscreen}
+                        className="text-white hover:bg-white/20"
+                      >
+                        {isFullscreen ? <Minimize className="h-5 w-5" /> : <Maximize className="h-5 w-5" />}
+                      </Button>
+                    </div>
                   </div>
 
-                  <div className="flex items-center gap-2">
-                    {/* Settings Button */}
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-white hover:bg-white/20"
-                    >
-                      <Settings className="h-5 w-5" />
-                    </Button>
-
-                    {/* Fullscreen Toggle */}
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={toggleFullscreen}
-                      className="text-white hover:bg-white/20"
-                    >
-                      {isFullscreen ? <Minimize className="h-5 w-5" /> : <Maximize className="h-5 w-5" />}
-                    </Button>
-                  </div>
+                  {/* Video Description */}
+                  {description && (
+                    <div className="pt-2">
+                      <p className="text-white/80 text-sm max-w-2xl">{description}</p>
+                    </div>
+                  )}
                 </div>
-
-                {/* Video Description */}
-                {description && (
-                  <div className="pt-2">
-                    <p className="text-white/80 text-sm max-w-2xl">{description}</p>
-                  </div>
-                )}
               </div>
-            </div>
+            )}
           </div>
         </DialogContent>
       </Dialog>

@@ -134,94 +134,6 @@ const Upload = () => {
     }
   };
 
-  const uploadVideoToStream = async (transcodedFile: File, contentId: string) => {
-    const streamFormData = new FormData();
-    streamFormData.append('video', transcodedFile);
-    streamFormData.append('contentId', contentId);
-
-    try {
-      console.log('Uploading to Cloudflare Stream...', transcodedFile.name, `${(transcodedFile.size / 1024 / 1024).toFixed(2)}MB`);
-      
-      // Upload to stream
-      const { data: uploadResponse, error: uploadError } = await supabase.functions.invoke('cloudflare-stream-upload', {
-        body: streamFormData
-      });
-
-      if (uploadError) {
-        console.error('Upload error:', uploadError);
-        throw uploadError;
-      }
-
-      console.log('Stream upload response:', uploadResponse);
-      const { streamId, playbackId } = uploadResponse;
-      
-      // Create immediate thumbnail URL for preview
-      const thumbnailUrl = `https://videodelivery.net/${playbackId || streamId}/thumbnails/thumbnail.jpg`;
-      
-      // Update with thumbnail immediately for preview
-      console.log('Updating content with immediate thumbnail for preview');
-      await supabase
-        .from('content')
-        .update({
-          stream_thumbnail_url: thumbnailUrl
-        })
-        .eq('id', contentId);
-      
-      // Poll for ready status - shorter intervals, more attempts
-      let attempts = 0;
-      const maxAttempts = 40; // 2 minutes max
-      
-      console.log('Starting status polling for stream:', streamId);
-      
-      while (attempts < maxAttempts) {
-        await new Promise(resolve => setTimeout(resolve, 3000)); // 3 second intervals
-        
-        try {
-          const { data: session } = await supabase.auth.getSession();
-          const token = session?.session?.access_token;
-          
-          if (token) {
-            const statusUrl = `https://oofkawnofnkbpgphlkcm.supabase.co/functions/v1/cloudflare-stream-upload?streamId=${streamId}`;
-            const statusResponse = await fetch(statusUrl, {
-              method: 'GET',
-              headers: {
-                'Authorization': `Bearer ${token}`,
-                'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9vZmthd25vZm5rYnBncGhsa2NtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYzMjkyNzMsImV4cCI6MjA3MTkwNTI3M30.ur9174FkwNioTkuJzeo1A-W9tnzH3J9T8MGdVgsuGt4'
-              }
-            });
-            
-            if (statusResponse.ok) {
-              const statusData = await statusResponse.json();
-              console.log(`Status check ${attempts + 1}:`, statusData);
-              
-              if (statusData?.ready || statusData?.status === 'ready') {
-                console.log('Stream is ready for playback!');
-                break;
-              }
-            } else {
-              console.log('Status response not ok:', statusResponse.status);
-            }
-          }
-        } catch (statusError) {
-          console.log('Status check error:', statusError);
-        }
-        
-        attempts++;
-        const progressPercent = Math.min(95, 70 + (attempts / maxAttempts) * 25);
-        updateUploadProgress(progressPercent);
-        console.log(`Status check ${attempts}/${maxAttempts}, progress: ${progressPercent}%`);
-      }
-
-      updateUploadProgress(100);
-      console.log('Upload process completed');
-      return { streamId, playbackId, ready: true };
-      
-    } catch (error) {
-      console.error('Stream upload error:', error);
-      throw error;
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -246,36 +158,43 @@ const Upload = () => {
     setUploading(true);
     
     try {
-      // First create the content record
-      const { data: contentData, error: dbError } = await supabase
-        .from('content')
-        .insert({
-          title: formData.title.trim(),
-          description: formData.description.trim() || null,
-          genre: formData.genre || null,
-          content_type: formData.content_type,
-          is_featured: formData.is_featured,
-          trailer_url: formData.trailer_url.trim() || null,
-          user_id: user!.id,
-          stream_status: 'pending'
-        })
-        .select()
-        .single();
+      // Get direct upload URL from Cloudflare Stream
+      const { data: uploadData, error: uploadError } = await supabase.functions.invoke(
+        'cloudflare-stream-upload',
+        {
+          body: JSON.stringify({ 
+            action: 'get_upload_url',
+            title: formData.title.trim(),
+            description: formData.description.trim(),
+            content_type: formData.content_type,
+            genre: formData.genre,
+            user_id: user?.id
+          }),
+        }
+      );
 
-      if (dbError) throw dbError;
+      if (uploadError) throw uploadError;
 
-      // Start transcoding and upload process
-      await transcodeVideo(files.video, async (transcodedFile: File) => {
-        await uploadVideoToStream(transcodedFile, contentData.id);
-      });
+      // Upload directly to Cloudflare Stream
+      const formDataStream = new FormData();
+      formDataStream.append('file', files.video);
       
-      // Upload cover image if provided (in parallel)
+      const uploadResponse = await fetch(uploadData.uploadURL, {
+        method: 'POST',
+        body: formDataStream,
+      });
+
+      if (!uploadResponse.ok) {
+        throw new Error('Failed to upload to Cloudflare Stream');
+      }
+      
+      // Upload cover image if provided
       let coverUrl = null;
       if (files.cover) {
         coverUrl = await uploadFile(files.cover, 'covers', 'cover');
       }
       
-      // Upload thumbnail if provided (in parallel)
+      // Upload thumbnail if provided  
       let thumbnailUrl = null;
       if (files.thumbnail) {
         thumbnailUrl = await uploadFile(files.thumbnail, 'thumbnails', 'thumbnail');
@@ -287,16 +206,52 @@ const Upload = () => {
           .from('content')
           .update({
             cover_url: coverUrl,
-            thumbnail_url: thumbnailUrl
+            thumbnail_url: thumbnailUrl,
+            trailer_url: formData.trailer_url.trim() || null,
+            is_featured: formData.is_featured
           })
-          .eq('id', contentData.id);
+          .eq('id', uploadData.contentId);
 
-        if (updateError) throw updateError;
+        if (updateError) console.error('Update error:', updateError);
       }
-
+      
+      // Poll for stream status
+      let attempts = 0;
+      const maxAttempts = 60; // 5 minutes max
+      
+      const pollStatus = async () => {
+        if (attempts >= maxAttempts) {
+          console.log('Max polling attempts reached');
+          return;
+        }
+        
+        attempts++;
+        
+        const { data: statusData } = await supabase.functions.invoke(
+          'cloudflare-stream-upload',
+          {
+            body: JSON.stringify({ 
+              action: 'check_status',
+              streamId: uploadData.streamId 
+            }),
+          }
+        );
+        
+        if (statusData?.ready) {
+          console.log('Stream is ready!');
+          return;
+        }
+        
+        // Continue polling every 3 seconds
+        setTimeout(pollStatus, 3000);
+      };
+      
+      // Start polling after 2 seconds
+      setTimeout(pollStatus, 2000);
+      
       toast({
-        title: "Upload Complete!",
-        description: `Your ${contentTypes.find(t => t.value === formData.content_type)?.label.toLowerCase()} has been processed and uploaded successfully!`
+        title: "Upload Complete",
+        description: "Your video is being processed and will be available shortly.",
       });
 
       // Reset form
@@ -309,17 +264,16 @@ const Upload = () => {
         trailer_url: ""
       });
       setFiles({ video: null, cover: null, thumbnail: null });
-      setUploadProgress({ video: 0, cover: 0, thumbnail: 0 });
       
       // Navigate to dashboard
       setTimeout(() => navigate('/dashboard'), 2000);
-
+      
     } catch (error: any) {
       console.error('Upload error:', error);
       toast({
         title: "Upload Failed",
-        description: error.message || "An error occurred during upload. Please try again.",
-        variant: "destructive"
+        description: error.message || "An error occurred during upload.",
+        variant: "destructive",
       });
     } finally {
       setUploading(false);
@@ -361,9 +315,9 @@ const Upload = () => {
               </div>
 
               {/* Show progress tracker when processing */}
-              {(isProcessing || uploading) && (
+              {uploading && (
                 <VideoProgressTracker 
-                  progress={progress} 
+                  progress={{ phase: 'uploading', percentage: 50, message: 'Uploading to Cloudflare Stream...' }} 
                   fileName={files.video?.name}
                 />
               )}
@@ -541,14 +495,13 @@ const Upload = () => {
                   <div className="pt-4">
                     <Button 
                       type="submit" 
-                      disabled={uploading || isProcessing || !files.video || !formData.title.trim()}
+                      disabled={uploading || !files.video || !formData.title.trim()}
                       className="btn-hero w-full text-lg py-4"
                     >
-                      {uploading || isProcessing ? (
+                      {uploading ? (
                         <>
                           <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                          {progress.phase === 'transcoding' ? 'Transcoding...' : 
-                           progress.phase === 'uploading' ? 'Uploading...' : 'Processing...'}
+                          Processing...
                         </>
                       ) : (
                         <>

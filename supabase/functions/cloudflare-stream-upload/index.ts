@@ -19,81 +19,65 @@ serve(async (req) => {
 
   try {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const body = await req.text();
+    const data = JSON.parse(body);
     
-    if (req.method === 'POST') {
-      const formData = await req.formData();
-      const videoFile = formData.get('video') as File;
-      const contentId = formData.get('contentId') as string;
-      
-      if (!videoFile || !contentId) {
-        return new Response(JSON.stringify({ error: 'Missing video file or content ID' }), {
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
-
-      console.log(`Starting Cloudflare Stream upload for content ${contentId}`);
-
-      // Upload to Cloudflare Stream
-      const uploadFormData = new FormData();
-      uploadFormData.append('file', videoFile);
-      
+    if (data.action === 'get_upload_url') {
+      // Create direct upload URL
       const uploadResponse = await fetch(
-        `https://api.cloudflare.com/client/v4/accounts/${cloudflareAccountId}/stream`,
+        `https://api.cloudflare.com/client/v4/accounts/${cloudflareAccountId}/stream/direct_upload`,
         {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${cloudflareApiToken}`,
+            'Content-Type': 'application/json',
           },
-          body: uploadFormData,
+          body: JSON.stringify({
+            maxDurationSeconds: 3600,
+            requireSignedURLs: false,
+          }),
         }
       );
 
       const uploadResult = await uploadResponse.json();
-      console.log('Cloudflare Stream upload result:', uploadResult);
+      console.log('Cloudflare Stream direct upload result:', uploadResult);
 
       if (!uploadResult.success) {
-        throw new Error(`Upload failed: ${uploadResult.errors?.[0]?.message || 'Unknown error'}`);
+        throw new Error(`Upload URL creation failed: ${uploadResult.errors?.[0]?.message || 'Unknown error'}`);
       }
 
       const streamId = uploadResult.result.uid;
-      const playbackId = uploadResult.result.playback?.id || streamId;
-      const streamUrl = `https://videodelivery.net/${playbackId}/manifest/video.m3u8`;
-      const thumbnailUrl = uploadResult.result.thumbnail;
+      const uploadURL = uploadResult.result.uploadURL;
 
-      // Update content record with stream info
-      const { error: updateError } = await supabase
+      // Create content record
+      const { data: content, error: contentError } = await supabase
         .from('content')
-        .update({
+        .insert({
+          title: data.title,
+          description: data.description,
+          content_type: data.content_type,
+          genre: data.genre,
+          user_id: data.user_id,
           stream_id: streamId,
-          playback_id: playbackId,
-          stream_status: 'processing',
-          stream_url: streamUrl,
-          stream_thumbnail_url: thumbnailUrl,
+          stream_status: 'pending'
         })
-        .eq('id', contentId);
+        .select()
+        .single();
 
-      if (updateError) {
-        console.error('Error updating content:', updateError);
-        throw new Error('Failed to update content record');
-      }
+      if (contentError) throw contentError;
 
       return new Response(JSON.stringify({
         success: true,
         streamId,
-        playbackId,
-        streamUrl,
-        thumbnailUrl,
-        status: 'processing'
+        uploadURL,
+        contentId: content.id
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    // GET method - check stream status
-    if (req.method === 'GET') {
-      const url = new URL(req.url);
-      const streamId = url.searchParams.get('streamId');
+    if (data.action === 'check_status') {
+      const streamId = data.streamId;
       
       if (!streamId) {
         return new Response(JSON.stringify({ error: 'Missing stream ID' }), {
@@ -112,21 +96,20 @@ serve(async (req) => {
       );
 
       const statusResult = await statusResponse.json();
+      console.log('Stream status check:', statusResult);
       
       if (statusResult.success) {
-        const status = statusResult.result.status?.state || 'processing';
+        const status = statusResult.result.status?.state || 'pending';
         const playbackId = statusResult.result.playback?.id;
         
-        // Update database if stream is ready
+        // Update database when stream is ready
         if (status === 'ready' && playbackId) {
-          const streamUrl = `https://videodelivery.net/${playbackId}/manifest/video.m3u8`;
-          
           const { error: updateError } = await supabase
             .from('content')
             .update({ 
               stream_status: 'ready',
               playback_id: playbackId,
-              stream_url: streamUrl
+              stream_thumbnail_url: `https://videodelivery.net/${playbackId}/thumbnails/thumbnail.jpg`
             })
             .eq('stream_id', streamId);
             

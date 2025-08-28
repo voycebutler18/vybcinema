@@ -14,6 +14,16 @@ interface Content {
   file_url?: string;
   trailer_url?: string;
   content_type?: string;
+  thumbnail_url?: string;
+  stream_url?: string;
+  stream_status?: string;
+  stream_id?: string;
+  stream_thumbnail_url?: string;
+  playback_id?: string;
+  vast_tag_url?: string;
+  ad_breaks?: number[];
+  duration_seconds?: number;
+  monetization_enabled?: boolean;
 }
 
 export default function Favorites() {
@@ -29,60 +39,52 @@ export default function Favorites() {
       }
 
       try {
-        // First try: Use relation query if foreign key exists
-        const { data: relationData, error: relationError } = await supabase
-          .from('favorites')
-          .select('content:content_id(*)')
-          .eq('user_id', user.id);
+        console.log('Fetching favorites for user ID:', user.id);
 
-        if (!relationError && relationData && relationData.length > 0) {
-          const contents = relationData
-            .map((item: any) => item.content)
-            .filter(Boolean) as Content[];
-          
-          if (contents.length > 0) {
-            setFavorites(contents);
-            setLoading(false);
-            return;
-          }
-        }
-
-        // Second try: Manual join approach
-        const { data: favoriteIds, error: favError } = await supabase
+        // Direct approach - get favorite content IDs
+        const { data: favoriteRows, error: favError } = await supabase
           .from('favorites')
           .select('content_id')
           .eq('user_id', user.id);
 
+        console.log('Favorite rows result:', { favoriteRows, favError });
+
         if (favError) {
-          console.error('Error fetching favorite IDs:', favError);
+          console.error('Error fetching favorites:', favError);
           setFavorites([]);
           setLoading(false);
           return;
         }
 
-        if (!favoriteIds || favoriteIds.length === 0) {
+        if (!favoriteRows || favoriteRows.length === 0) {
+          console.log('No favorites found');
           setFavorites([]);
           setLoading(false);
           return;
         }
 
-        // Get unique content IDs to avoid duplicates
-        const uniqueIds = [...new Set(favoriteIds.map(fav => fav.content_id))];
+        // Get unique content IDs
+        const uniqueIds = [...new Set(favoriteRows.map(row => row.content_id))];
+        console.log('Looking for content with IDs:', uniqueIds);
 
-        const { data: contents, error: contentError } = await supabase
+        // Fetch content for these IDs
+        const { data: contentData, error: contentError } = await supabase
           .from('content')
           .select('*')
           .in('id', uniqueIds);
+
+        console.log('Content query result:', { contentData, contentError });
 
         if (contentError) {
           console.error('Error fetching content:', contentError);
           setFavorites([]);
         } else {
-          setFavorites(contents || []);
+          console.log('Successfully fetched', contentData?.length || 0, 'favorite items');
+          setFavorites(contentData || []);
         }
 
       } catch (error) {
-        console.error('Unexpected error fetching favorites:', error);
+        console.error('Unexpected error:', error);
         setFavorites([]);
       }
 

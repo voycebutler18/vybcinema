@@ -5,9 +5,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Upload, Film, Tv, BookOpen, Edit, Trash2, Plus } from "lucide-react";
+import { Upload, Film, Tv, BookOpen, Plus, Music2 } from "lucide-react";
 import { VideoPlayer } from "@/components/VideoPlayer";
 import { useToast } from "@/hooks/use-toast";
 
@@ -15,7 +13,7 @@ interface ContentItem {
   id: string;
   title: string;
   description: string;
-  content_type: string;
+  content_type: string; // 'movie' | 'tv_show' | 'story' | 'music_video'
   genre?: string;
   is_featured: boolean;
   created_at: string;
@@ -43,10 +41,9 @@ const Dashboard = () => {
 
   useEffect(() => {
     if (!loading && !user) {
-      navigate('/login');
+      navigate("/login");
       return;
     }
-
     if (user) {
       fetchUserContent();
     }
@@ -55,20 +52,19 @@ const Dashboard = () => {
   const fetchUserContent = async () => {
     try {
       const { data, error } = await supabase
-        .from('content')
-        .select('*')
-        .eq('user_id', user?.id)
-        .order('created_at', { ascending: false });
+        .from("content")
+        .select("*")
+        .eq("user_id", user?.id)
+        .order("created_at", { ascending: false });
 
       if (error) throw error;
 
-      console.log('Fetched content:', data);
       setContent(data || []);
     } catch (error: any) {
       toast({
         title: "Error",
         description: "Failed to load your content",
-        variant: "destructive"
+        variant: "destructive",
       });
     } finally {
       setLoadingContent(false);
@@ -78,29 +74,39 @@ const Dashboard = () => {
   // Auto-refresh content every 10 seconds to check for ready videos
   useEffect(() => {
     if (!user) return;
-    
     const interval = setInterval(() => {
       fetchUserContent();
     }, 10000);
-    
     return () => clearInterval(interval);
   }, [user]);
 
   const getContentIcon = (type: string) => {
     switch (type) {
-      case 'movie': return <Film className="h-5 w-5" />;
-      case 'tv_show': return <Tv className="h-5 w-5" />;
-      case 'story': return <BookOpen className="h-5 w-5" />;
-      default: return <Upload className="h-5 w-5" />;
+      case "movie":
+        return <Film className="h-5 w-5" />;
+      case "tv_show":
+        return <Tv className="h-5 w-5" />;
+      case "story":
+        return <BookOpen className="h-5 w-5" />;
+      case "music_video":
+        return <Music2 className="h-5 w-5" />;
+      default:
+        return <Upload className="h-5 w-5" />;
     }
   };
 
   const getContentTypeLabel = (type: string) => {
     switch (type) {
-      case 'movie': return 'Movie';
-      case 'tv_show': return 'TV Show';
-      case 'story': return 'Short Story';
-      default: return type;
+      case "movie":
+        return "Movie";
+      case "tv_show":
+        return "TV Show";
+      case "story":
+        return "Short Story";
+      case "music_video":
+        return "Music Video";
+      default:
+        return type;
     }
   };
 
@@ -112,34 +118,34 @@ const Dashboard = () => {
     try {
       // Delete from database
       const { error: dbError } = await supabase
-        .from('content')
+        .from("content")
         .delete()
-        .eq('id', contentId);
+        .eq("id", contentId);
 
       if (dbError) throw dbError;
 
       // Delete file from storage if exists
       if (fileUrl) {
-        const fileName = fileUrl.split('/').pop();
+        const fileName = fileUrl.split("/").pop();
         if (fileName) {
           await supabase.storage
-            .from('content-files')
+            .from("content-files")
             .remove([`content/${fileName}`]);
         }
       }
 
       // Update local state
-      setContent(prev => prev.filter(item => item.id !== contentId));
-      
+      setContent((prev) => prev.filter((item) => item.id !== contentId));
+
       toast({
         title: "Content Deleted",
-        description: "Your content has been permanently removed."
+        description: "Your content has been permanently removed.",
       });
     } catch (error: any) {
       toast({
         title: "Delete Failed",
         description: error.message,
-        variant: "destructive"
+        variant: "destructive",
       });
     }
   };
@@ -158,7 +164,7 @@ const Dashboard = () => {
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
-      
+
       <main className="pt-8">
         <section className="py-16 bg-gradient-hero">
           <div className="container mx-auto px-4">
@@ -176,31 +182,39 @@ const Dashboard = () => {
         <section className="py-16">
           <div className="container mx-auto px-4">
             <div className="max-w-6xl mx-auto space-y-12">
-              
               {/* Quick Upload Section */}
               <div className="cinema-card p-8">
-                <h2 className="text-3xl font-bold text-foreground mb-6 text-center">Quick Upload</h2>
-                <div className="grid md:grid-cols-3 gap-4 max-w-2xl mx-auto">
-                  <Button 
-                    onClick={() => navigateToUpload('movie')}
+                <h2 className="text-3xl font-bold text-foreground mb-6 text-center">
+                  Quick Upload
+                </h2>
+                <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 max-w-3xl mx-auto">
+                  <Button
+                    onClick={() => navigateToUpload("movie")}
                     className="btn-secondary h-20 flex-col space-y-2"
                   >
                     <Film className="h-6 w-6" />
                     <span className="text-sm">Upload Movie</span>
                   </Button>
-                  <Button 
-                    onClick={() => navigateToUpload('tv_show')}
+                  <Button
+                    onClick={() => navigateToUpload("tv_show")}
                     className="btn-secondary h-20 flex-col space-y-2"
                   >
                     <Tv className="h-6 w-6" />
                     <span className="text-sm">Upload TV Show</span>
                   </Button>
-                  <Button 
-                    onClick={() => navigateToUpload('story')}
+                  <Button
+                    onClick={() => navigateToUpload("story")}
                     className="btn-secondary h-20 flex-col space-y-2"
                   >
                     <BookOpen className="h-6 w-6" />
                     <span className="text-sm">Upload Short Story</span>
+                  </Button>
+                  <Button
+                    onClick={() => navigateToUpload("music_video")}
+                    className="btn-secondary h-20 flex-col space-y-2"
+                  >
+                    <Music2 className="h-6 w-6" />
+                    <span className="text-sm">Upload Music Video</span>
                   </Button>
                 </div>
               </div>
@@ -208,25 +222,32 @@ const Dashboard = () => {
               {/* Your Content Section */}
               <div>
                 <div className="flex items-center justify-between mb-8">
-                  <h2 className="text-3xl font-bold text-foreground">Your Content</h2>
+                  <h2 className="text-3xl font-bold text-foreground">
+                    Your Content
+                  </h2>
                   <div className="text-sm text-muted-foreground">
-                    {content.length} {content.length === 1 ? 'item' : 'items'}
+                    {content.length} {content.length === 1 ? "item" : "items"}
                   </div>
                 </div>
 
                 {loadingContent ? (
                   <div className="cinema-card p-12 text-center">
                     <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-primary mx-auto mb-4"></div>
-                    <p className="text-muted-foreground">Loading your content...</p>
+                    <p className="text-muted-foreground">
+                      Loading your content...
+                    </p>
                   </div>
                 ) : content.length === 0 ? (
                   <div className="cinema-card p-12 text-center">
                     <Upload className="h-24 w-24 mx-auto text-primary/50 mb-6" />
-                    <h3 className="text-2xl font-bold text-foreground mb-4">No Content Yet</h3>
+                    <h3 className="text-2xl font-bold text-foreground mb-4">
+                      No Content Yet
+                    </h3>
                     <p className="text-muted-foreground mb-8">
-                      Start uploading your movies, TV shows, and short stories to see them here.
+                      Start uploading your movies, TV shows, short stories, and
+                      music videos to see them here.
                     </p>
-                    <Button onClick={() => navigate('/upload')} className="btn-hero">
+                    <Button onClick={() => navigate("/upload")} className="btn-hero">
                       <Plus className="h-5 w-5 mr-2" />
                       Upload Your First Content
                     </Button>
@@ -246,12 +267,12 @@ const Dashboard = () => {
                         streamStatus={item.stream_status}
                         streamId={item.stream_id}
                         streamThumbnailUrl={item.stream_thumbnail_url}
-                    playbackId={item.playback_id}
-                    vastTagUrl={item.vast_tag_url}
-                    adBreaks={item.ad_breaks || [0]}
-                    durationSeconds={item.duration_seconds}
-                    monetizationEnabled={item.monetization_enabled}
-                    contentId={item.id}
+                        playbackId={item.playback_id}
+                        vastTagUrl={item.vast_tag_url}
+                        adBreaks={item.ad_breaks || [0]}
+                        durationSeconds={item.duration_seconds}
+                        monetizationEnabled={item.monetization_enabled}
+                        contentId={item.id}
                         canDelete={true}
                         onDelete={() => deleteContent(item.id, item.file_url)}
                       />
@@ -259,12 +280,11 @@ const Dashboard = () => {
                   </div>
                 )}
               </div>
-
             </div>
           </div>
         </section>
       </main>
-      
+
       <Footer />
     </div>
   );

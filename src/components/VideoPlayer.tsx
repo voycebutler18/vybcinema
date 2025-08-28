@@ -65,6 +65,10 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const [buffered, setBuffered] = useState(0);
   const [videoError, setVideoError] = useState<string | null>(null);
   const [isVideoLoaded, setIsVideoLoaded] = useState(false);
+  const [adPlaying, setAdPlaying] = useState(false);
+  const [adCompleted, setAdCompleted] = useState(false);
+  const [showFallbackPlayer, setShowFallbackPlayer] = useState(false);
+  
   const videoRef = useRef<HTMLVideoElement>(null);
   const playerRef = useRef<HTMLDivElement>(null);
   const controlsTimeoutRef = useRef<NodeJS.Timeout>();
@@ -86,7 +90,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
           clearTimeout(controlsTimeoutRef.current);
         }
         controlsTimeoutRef.current = setTimeout(() => {
-          if (isPlaying) {
+          if (isPlaying && !adPlaying) {
             setShowControls(false);
           }
         }, 3000);
@@ -100,7 +104,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         }
       };
     }
-  }, [showFullPlayer, isPlaying]);
+  }, [showFullPlayer, isPlaying, adPlaying]);
 
   const togglePlay = () => {
     if (videoRef.current) {
@@ -158,6 +162,38 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     } catch (err) {
       console.error('Fullscreen error:', err);
     }
+  };
+
+  // Ad event handlers
+  const handleAdStart = () => {
+    console.log('Ad started');
+    setAdPlaying(true);
+    setShowControls(false);
+  };
+
+  const handleAdComplete = () => {
+    console.log('Ad completed');
+    setAdPlaying(false);
+    setAdCompleted(true);
+    setShowControls(true);
+  };
+
+  const handleAdError = (error: any) => {
+    console.error('Ad error:', error);
+    setAdPlaying(false);
+    setShowFallbackPlayer(true);
+    // Fallback to regular Cloudflare Stream iframe or video element
+  };
+
+  const handleContentStart = () => {
+    console.log('Content started playing');
+    setIsPlaying(true);
+    setAdPlaying(false);
+  };
+
+  const handleContentPause = () => {
+    console.log('Content paused');
+    setIsPlaying(false);
   };
 
   const handleVideoTimeUpdate = () => {
@@ -227,6 +263,10 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     setCurrentVideo(type);
     setShowFullPlayer(true);
     setShowControls(true);
+    // Reset ad states when playing new video
+    setAdPlaying(false);
+    setAdCompleted(false);
+    setShowFallbackPlayer(false);
   };
 
   const formatTime = (time: number) => {
@@ -239,7 +279,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const hasStreamPlayback = streamStatus === 'ready' && playbackId;
   const isProcessing = streamStatus === 'pending' || (streamStatus === 'processing' && !playbackId);
   const displayThumbnail = streamThumbnailUrl || coverUrl;
-  const shouldUseAds = monetizationEnabled && vastTagUrl && hasStreamPlayback;
+  const shouldUseAds = monetizationEnabled && vastTagUrl && hasStreamPlayback && !showFallbackPlayer;
   
   console.log('Video player state:', { 
     streamStatus, 
@@ -250,7 +290,10 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     vastTagUrl,
     adBreaks,
     videoUrl,
-    showPlayButton: (hasStreamPlayback || videoUrl)
+    showPlayButton: (hasStreamPlayback || videoUrl),
+    adPlaying,
+    adCompleted,
+    showFallbackPlayer
   });
 
   return (
@@ -366,7 +409,11 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
                 adBreaks={adBreaks}
                 vastTagUrl={vastTagUrl}
                 title={title}
-                onError={(error) => console.error('IMA Player error:', error)}
+                onError={handleAdError}
+                onAdStart={handleAdStart}
+                onAdComplete={handleAdComplete}
+                onContentStart={handleContentStart}
+                onContentPause={handleContentPause}
               />
             ) : hasStreamPlayback && currentVideo === 'main' ? (
               <iframe
@@ -410,6 +457,13 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
               </video>
             )}
 
+            {/* Ad Playing Indicator */}
+            {adPlaying && (
+              <div className="absolute top-4 right-4 bg-black/70 px-3 py-1 rounded-full">
+                <span className="text-white text-sm">Ad Playing...</span>
+              </div>
+            )}
+
             {/* Video Error Overlay */}
             {videoError && (
               <div className="absolute inset-0 bg-black/90 flex flex-col items-center justify-center p-6 text-center">
@@ -430,8 +484,8 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
               </div>
             )}
             
-            {/* Custom Controls Overlay - Only show for non-stream content */}
-            {!(hasStreamPlayback && currentVideo === 'main') && (
+            {/* Custom Controls Overlay - Hide during ads */}
+            {!(hasStreamPlayback && currentVideo === 'main') && !adPlaying && (
               <div 
                 className={`absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/30 transition-opacity duration-300 ${
                   showControls ? 'opacity-100' : 'opacity-0'
@@ -478,7 +532,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
                 </div>
 
                 {/* Center Play Button */}
-                {!isPlaying && (
+                {!isPlaying && !adPlaying && (
                   <div className="absolute inset-0 flex items-center justify-center">
                     <Button
                       size="lg"

@@ -2,56 +2,68 @@
 @tailwind components;
 @tailwind utilities;
 
-/* VYB Cinema Design System - Premium Cinematic Experience */
+/* VYB Cinema Design System - Ultra Premium Streaming Experience */
 
 @layer base {
   :root {
-    /* Core Cinema Colors */
-    --background: 240 10% 3.9%;
+    /* Ultra Premium Color Palette */
+    --background: 218 25% 6%;
+    --background-elevated: 220 28% 8%;
+    --background-glass: 220 30% 10%;
     --foreground: 0 0% 98%;
 
-    --card: 240 10% 5.9%;
+    --card: 220 28% 8%;
+    --card-elevated: 220 30% 10%;
     --card-foreground: 0 0% 98%;
 
-    --popover: 240 10% 5.9%;
+    --popover: 220 30% 10%;
     --popover-foreground: 0 0% 98%;
 
-    /* VYB Brand Colors */
-    --primary: 320 85% 60%;
+    /* VYB Premium Brand Colors */
+    --primary: 280 85% 65%;
     --primary-foreground: 0 0% 98%;
-    --primary-glow: 320 85% 70%;
+    --primary-glow: 285 90% 75%;
+    --primary-soft: 280 40% 25%;
 
-    --secondary: 240 10% 12%;
-    --secondary-foreground: 0 0% 98%;
+    --secondary: 220 20% 15%;
+    --secondary-foreground: 0 0% 95%;
 
-    --muted: 240 5% 10%;
-    --muted-foreground: 240 5% 64.9%;
+    --muted: 220 15% 12%;
+    --muted-foreground: 220 8% 65%;
 
-    --accent: 260 80% 55%;
+    --accent: 195 85% 60%;
     --accent-foreground: 0 0% 98%;
+    --accent-glow: 195 90% 70%;
 
-    --destructive: 0 84.2% 60.2%;
+    --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 240 10% 12%;
-    --input: 240 10% 12%;
-    --ring: 320 85% 60%;
+    --border: 220 20% 15%;
+    --input: 220 25% 12%;
+    --ring: 280 85% 65%;
 
-    /* Cinema Specific Colors */
-    --cinema-gold: 45 100% 70%;
-    --cinema-silver: 0 0% 75%;
-    --cinema-red: 0 85% 60%;
+    /* Premium Cinema Colors */
+    --cinema-gold: 45 95% 68%;
+    --cinema-platinum: 0 0% 85%;
+    --cinema-ruby: 350 85% 60%;
+    --cinema-emerald: 160 75% 55%;
     
-    /* Gradients */
+    /* Ultra Premium Gradients */
     --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-glow)));
-    --gradient-hero: linear-gradient(135deg, hsl(var(--primary) / 0.1), hsl(var(--accent) / 0.1));
-    --gradient-card: linear-gradient(135deg, hsl(var(--card)), hsl(var(--card) / 0.8));
-    --gradient-overlay: linear-gradient(180deg, transparent, hsl(var(--background) / 0.9));
+    --gradient-hero: linear-gradient(135deg, hsl(var(--background)) 0%, hsl(var(--primary) / 0.15) 50%, hsl(var(--accent) / 0.1) 100%);
+    --gradient-card: linear-gradient(135deg, hsl(var(--card)) 0%, hsl(var(--card-elevated)) 100%);
+    --gradient-glass: linear-gradient(135deg, hsl(var(--background-glass) / 0.8) 0%, hsl(var(--background-glass) / 0.4) 100%);
+    --gradient-overlay: linear-gradient(180deg, transparent 0%, hsl(var(--background) / 0.6) 40%, hsl(var(--background)) 100%);
+    --gradient-mesh: radial-gradient(circle at 20% 80%, hsl(var(--primary) / 0.15) 0%, transparent 50%),
+                     radial-gradient(circle at 80% 20%, hsl(var(--accent) / 0.15) 0%, transparent 50%),
+                     radial-gradient(circle at 40% 40%, hsl(var(--cinema-gold) / 0.1) 0%, transparent 50%);
     
-    /* Shadows */
-    --shadow-cinema: 0 25px 50px -12px hsl(var(--primary) / 0.25);
-    --shadow-card: 0 10px 30px -10px hsl(var(--background) / 0.5);
-    --shadow-glow: 0 0 40px hsl(var(--primary-glow) / 0.3);
+    /* Premium Shadows & Effects */
+    --shadow-ultra: 0 32px 64px -12px hsl(var(--background) / 0.8), 0 8px 32px -8px hsl(var(--primary) / 0.3);
+    --shadow-cinema: 0 25px 50px -12px hsl(var(--primary) / 0.4);
+    --shadow-glass: 0 8px 32px -8px hsl(var(--background) / 0.6), 0 0 0 1px hsl(var(--border) / 0.5);
+    --shadow-glow: 0 0 60px hsl(var(--primary-glow) / 0.4), 0 0 100px hsl(var(--accent-glow) / 0.2);
+    --shadow-text: 0 2px 4px hsl(var(--background) / 0.8);
 
     --radius: 0.75rem;
 
@@ -117,14 +129,43 @@
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-sans;
     font-feature-settings: "rlig" 1, "calt" 1;
+    background-image: var(--gradient-mesh);
+    background-attachment: fixed;
   }
 
-  /* Cinema Animations */
-  @keyframes glow-pulse {
-    0%, 100% { box-shadow: 0 0 20px hsl(var(--primary-glow) / 0.3); }
-    50% { box-shadow: 0 0 40px hsl(var(--primary-glow) / 0.6); }
+  /* Ultra Premium Animations */
+  @keyframes ultra-glow {
+    0%, 100% { 
+      box-shadow: 0 0 30px hsl(var(--primary-glow) / 0.4), 0 0 60px hsl(var(--accent-glow) / 0.2); 
+    }
+    50% { 
+      box-shadow: 0 0 60px hsl(var(--primary-glow) / 0.8), 0 0 120px hsl(var(--accent-glow) / 0.4); 
+    }
+  }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+  }
+
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+
+  @keyframes reveal {
+    from {
+      opacity: 0;
+      transform: translateY(40px) scale(0.95);
+      filter: blur(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+      filter: blur(0);
+    }
   }
 
   @keyframes slide-up {
@@ -156,35 +197,79 @@
 }
 
 @layer components {
-  /* Cinema Button Variants */
+  /* Ultra Premium Button Variants */
   .btn-hero {
-    @apply bg-gradient-to-r from-primary to-primary-glow text-primary-foreground;
-    @apply px-8 py-4 rounded-xl font-semibold text-lg;
-    @apply shadow-cinema transition-all duration-300;
+    @apply relative overflow-hidden;
+    @apply bg-gradient-to-r from-primary via-primary-glow to-accent text-primary-foreground;
+    @apply px-10 py-5 rounded-2xl font-bold text-lg tracking-wide;
+    @apply shadow-ultra transition-all duration-500 ease-out;
     @apply hover:scale-105 hover:shadow-glow;
-    animation: glow-pulse 3s ease-in-out infinite;
+    @apply before:absolute before:inset-0 before:bg-gradient-to-r before:from-transparent before:via-white/20 before:to-transparent;
+    @apply before:translate-x-[-200%] hover:before:translate-x-[200%] before:transition-transform before:duration-700;
+    animation: ultra-glow 4s ease-in-out infinite;
+  }
+
+  .btn-glass {
+    @apply bg-gradient-to-r from-background-glass/80 to-background-glass/40 backdrop-blur-xl;
+    @apply border border-border/30 text-foreground font-semibold;
+    @apply px-8 py-4 rounded-2xl transition-all duration-300;
+    @apply hover:bg-gradient-to-r hover:from-background-glass hover:to-background-glass/60;
+    @apply hover:border-border/50 hover:shadow-glass;
   }
 
   .btn-secondary {
-    @apply bg-secondary/50 backdrop-blur-sm border border-border text-secondary-foreground;
-    @apply px-6 py-3 rounded-xl font-medium;
-    @apply transition-all duration-300 hover:bg-secondary/80;
+    @apply bg-secondary/80 backdrop-blur-sm border border-border/50 text-secondary-foreground;
+    @apply px-8 py-4 rounded-xl font-semibold tracking-wide;
+    @apply transition-all duration-300 hover:bg-secondary hover:shadow-glass;
   }
 
-  /* Cinema Cards */
+  /* Ultra Premium Cards */
   .cinema-card {
-    @apply bg-gradient-to-br from-card to-card/80 backdrop-blur-sm;
-    @apply border border-border/50 rounded-2xl overflow-hidden;
-    @apply shadow-card transition-all duration-300;
-    @apply hover:scale-[1.02] hover:shadow-cinema;
+    @apply relative overflow-hidden;
+    @apply bg-gradient-to-br from-card via-card-elevated to-card/90 backdrop-blur-xl;
+    @apply border border-border/30 rounded-3xl;
+    @apply shadow-glass transition-all duration-500 ease-out;
+    @apply hover:scale-[1.02] hover:shadow-ultra hover:border-border/50;
+    @apply before:absolute before:inset-0 before:bg-gradient-to-br before:from-white/5 before:to-transparent before:opacity-0;
+    @apply hover:before:opacity-100 before:transition-opacity before:duration-300;
   }
 
-  /* Cinema Text Styles */
+  .glass-card {
+    @apply bg-gradient-glass backdrop-blur-2xl border border-border/20 rounded-3xl;
+    @apply shadow-glass transition-all duration-300;
+    @apply hover:shadow-ultra hover:border-border/40;
+  }
+
+  /* Premium Text Styles */
   .text-cinema-gradient {
-    @apply bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent;
+    @apply bg-gradient-to-r from-primary via-primary-glow to-accent bg-clip-text text-transparent;
+    @apply font-display font-bold tracking-tight;
+    text-shadow: var(--shadow-text);
+  }
+
+  .text-premium-gradient {
+    @apply bg-gradient-to-r from-cinema-gold via-cinema-platinum to-cinema-ruby bg-clip-text text-transparent;
+    @apply font-display font-bold tracking-tight;
   }
 
   .text-cinema-glow {
-    text-shadow: 0 0 20px hsl(var(--primary-glow) / 0.5);
+    text-shadow: 0 0 30px hsl(var(--primary-glow) / 0.6), 0 0 60px hsl(var(--accent-glow) / 0.4);
+  }
+
+  /* Premium Animations */
+  .animate-float {
+    animation: float 6s ease-in-out infinite;
+  }
+
+  .animate-reveal {
+    animation: reveal 0.8s ease-out forwards;
+  }
+
+  .shimmer-text {
+    background: linear-gradient(90deg, transparent, hsl(var(--primary-glow) / 0.6), transparent);
+    background-size: 200% 100%;
+    background-clip: text;
+    -webkit-background-clip: text;
+    animation: shimmer 2s infinite;
   }
 }

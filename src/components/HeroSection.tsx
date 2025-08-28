@@ -85,7 +85,7 @@ export const HeroSection = () => {
             </div>
             <div className="text-sm font-medium">No Ads • No Limits • No Commitment</div>
             <div className="text-sm border border-border/30 px-4 py-2 rounded-full bg-card/30 backdrop-blur-sm">
-              30-Day Free Trial
+              100% Free Forever
             </div>
           </div>
         </div>

@@ -11,7 +11,7 @@ interface NetflixRowProps {
   onContentPlay: (content: any) => void;
 }
 
-export const NetflixRow: React.FC<NetflixRowProps> = ({
+export const ContentRow: React.FC<NetflixRowProps> = ({
   title,
   content,
   contentType,
@@ -52,7 +52,7 @@ export const NetflixRow: React.FC<NetflixRowProps> = ({
   return (
     <div className="relative group mb-12">
       {/* Row Title */}
-      <h2 className="text-xl md:text-2xl font-semibold text-white mb-4 px-8">
+      <h2 className="text-xl md:text-2xl font-semibold text-foreground mb-4 px-8">
         {title}
       </h2>
 
@@ -61,7 +61,7 @@ export const NetflixRow: React.FC<NetflixRowProps> = ({
         <Button
           variant="ghost"
           size="lg"
-          className="absolute left-2 top-1/2 -translate-y-1/2 z-10 bg-black/50 hover:bg-black/70 text-white rounded-full p-2 opacity-0 group-hover:opacity-100 transition-opacity"
+          className="absolute left-2 top-1/2 -translate-y-1/2 z-10 bg-background/80 hover:bg-background/90 backdrop-blur-sm border border-border rounded-full p-2 opacity-0 group-hover:opacity-100 transition-opacity"
           onClick={() => scroll('left')}
         >
           <ChevronLeft className="h-6 w-6" />
@@ -72,7 +72,7 @@ export const NetflixRow: React.FC<NetflixRowProps> = ({
         <Button
           variant="ghost"
           size="lg"
-          className="absolute right-2 top-1/2 -translate-y-1/2 z-10 bg-black/50 hover:bg-black/70 text-white rounded-full p-2 opacity-0 group-hover:opacity-100 transition-opacity"
+          className="absolute right-2 top-1/2 -translate-y-1/2 z-10 bg-background/80 hover:bg-background/90 backdrop-blur-sm border border-border rounded-full p-2 opacity-0 group-hover:opacity-100 transition-opacity"
           onClick={() => scroll('right')}
         >
           <ChevronRight className="h-6 w-6" />
@@ -100,3 +100,5 @@ export const NetflixRow: React.FC<NetflixRowProps> = ({
     </div>
   );
 };
+
+export { ContentRow as NetflixRow };

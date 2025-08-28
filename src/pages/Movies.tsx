@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { NetflixNavigation } from '@/components/NetflixNavigation';
-import { NetflixHero } from '@/components/NetflixHero';
-import { NetflixRow } from '@/components/NetflixRow';
+import { Navigation } from "@/components/Navigation";
+import { Footer } from "@/components/Footer";
+import { ContentRow } from '@/components/NetflixRow';
 import { NetflixDetailModal } from '@/components/NetflixDetailModal';
 import { VideoPlayer } from '@/components/VideoPlayer';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
@@ -9,7 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 
-const NetflixMovies = () => {
+const Movies = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [content, setContent] = useState<any[]>([]);
@@ -99,31 +99,22 @@ const NetflixMovies = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-black">
-        <NetflixNavigation />
+      <div className="min-h-screen bg-background">
+        <Navigation />
         <div className="pt-20 flex items-center justify-center h-screen">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-red-600"></div>
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-primary"></div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-black">
-      <NetflixNavigation />
+    <div className="min-h-screen bg-background">
+      <Navigation />
       
-      {/* Hero Section */}
-      <NetflixHero
-        content={featuredMovie}
-        contentType="Movie"
-        onPlay={() => featuredMovie && handlePlay(featuredMovie)}
-        onMoreInfo={() => featuredMovie && handleContentClick(featuredMovie)}
-      />
-
-      {/* Content Rows */}
-      <div className="pb-20 -mt-32 relative z-10">
+      <div className="pb-20 pt-20 relative z-10">
         {recentlyAdded.length > 0 && (
-          <NetflixRow
+          <ContentRow
             title="Recently Added Movies"
             content={recentlyAdded}
             contentType="Movie"
@@ -133,7 +124,7 @@ const NetflixMovies = () => {
         )}
 
         {actionMovies.length > 0 && (
-          <NetflixRow
+          <ContentRow
             title="Action Movies"
             content={actionMovies}
             contentType="Movie"
@@ -143,7 +134,7 @@ const NetflixMovies = () => {
         )}
 
         {dramaMovies.length > 0 && (
-          <NetflixRow
+          <ContentRow
             title="Drama Movies"
             content={dramaMovies}
             contentType="Movie"
@@ -153,7 +144,7 @@ const NetflixMovies = () => {
         )}
 
         {comedyMovies.length > 0 && (
-          <NetflixRow
+          <ContentRow
             title="Comedy Movies"
             content={comedyMovies}
             contentType="Movie"
@@ -163,7 +154,7 @@ const NetflixMovies = () => {
         )}
 
         {myMovies.length > 0 && (
-          <NetflixRow
+          <ContentRow
             title="My Movies"
             content={myMovies}
             contentType="Movie"
@@ -174,11 +165,13 @@ const NetflixMovies = () => {
 
         {content.length === 0 && (
           <div className="text-center py-20">
-            <h2 className="text-2xl font-bold text-white mb-4">No Movies Available</h2>
-            <p className="text-gray-400">Be the first to upload a movie!</p>
+            <h2 className="text-2xl font-bold text-foreground mb-4">No Movies Available</h2>
+            <p className="text-muted-foreground">Be the first to upload a movie!</p>
           </div>
         )}
       </div>
+
+      <Footer />
 
       {/* Detail Modal */}
       <NetflixDetailModal
@@ -212,4 +205,4 @@ const NetflixMovies = () => {
   );
 };
 
-export default NetflixMovies;
+export default Movies;

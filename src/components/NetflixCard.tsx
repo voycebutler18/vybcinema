@@ -11,7 +11,7 @@ interface NetflixCardProps {
   onPlay: () => void;
 }
 
-export const NetflixCard: React.FC<NetflixCardProps> = ({
+export const ContentCard: React.FC<NetflixCardProps> = ({
   content,
   contentType,
   index,
@@ -33,7 +33,7 @@ export const NetflixCard: React.FC<NetflixCardProps> = ({
         marginRight: isHovered ? '2rem' : '0'
       }}
     >
-      <div className="relative overflow-hidden rounded-lg bg-gray-800">
+      <div className="relative overflow-hidden rounded-lg bg-secondary/20 border border-border/50">
         {/* Main Image/Video */}
         <div className="aspect-video relative">
           {content.cover_url ? (
@@ -84,13 +84,13 @@ export const NetflixCard: React.FC<NetflixCardProps> = ({
 
         {/* Expanded Info Panel (appears on hover) */}
         {isHovered && (
-          <div className="bg-gray-900 p-4 space-y-3">
+          <div className="bg-background/95 backdrop-blur-sm border-t border-border/50 p-4 space-y-3">
             {/* Action Buttons */}
             <div className="flex items-center justify-between">
               <div className="flex gap-2">
                 <Button
                   size="sm"
-                  className="rounded-full bg-white text-black hover:bg-gray-200 p-2"
+                  className="rounded-full bg-primary text-primary-foreground hover:bg-primary/90 p-2"
                   onClick={(e) => {
                     e.stopPropagation();
                     onPlay();
@@ -101,8 +101,8 @@ export const NetflixCard: React.FC<NetflixCardProps> = ({
                 
                 <Button
                   size="sm"
-                  variant="ghost"
-                  className="rounded-full border border-gray-500 text-white hover:border-white p-2"
+                  variant="outline"
+                  className="rounded-full p-2"
                   onClick={(e) => e.stopPropagation()}
                 >
                   <Plus className="h-4 w-4" />
@@ -110,8 +110,8 @@ export const NetflixCard: React.FC<NetflixCardProps> = ({
                 
                 <Button
                   size="sm"
-                  variant="ghost"
-                  className="rounded-full border border-gray-500 text-white hover:border-white p-2"
+                  variant="outline"
+                  className="rounded-full p-2"
                   onClick={(e) => e.stopPropagation()}
                 >
                   <ThumbsUp className="h-4 w-4" />
@@ -120,8 +120,8 @@ export const NetflixCard: React.FC<NetflixCardProps> = ({
 
               <Button
                 size="sm"
-                variant="ghost"
-                className="rounded-full border border-gray-500 text-white hover:border-white p-2"
+                variant="outline"
+                className="rounded-full p-2"
                 onClick={(e) => {
                   e.stopPropagation();
                   onClick();
@@ -134,22 +134,22 @@ export const NetflixCard: React.FC<NetflixCardProps> = ({
             {/* Content Info */}
             <div className="space-y-2">
               <div className="flex items-center gap-2">
-                <Badge variant="secondary" className="bg-red-600 text-white text-xs">
+                <Badge variant="secondary" className="text-xs">
                   {contentType}
                 </Badge>
                 {content.genre && (
-                  <Badge variant="outline" className="border-gray-500 text-gray-300 text-xs">
+                  <Badge variant="outline" className="text-xs">
                     {content.genre}
                   </Badge>
                 )}
               </div>
               
-              <h3 className="text-white font-semibold text-sm line-clamp-1">
+              <h3 className="text-foreground font-semibold text-sm line-clamp-1">
                 {content.title}
               </h3>
               
               {content.description && (
-                <p className="text-gray-300 text-xs line-clamp-2 leading-relaxed">
+                <p className="text-muted-foreground text-xs line-clamp-2 leading-relaxed">
                   {content.description}
                 </p>
               )}
@@ -159,8 +159,8 @@ export const NetflixCard: React.FC<NetflixCardProps> = ({
 
         {/* Simple title overlay when not hovered */}
         {!isHovered && (
-          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-3">
-            <h3 className="text-white font-semibold text-sm line-clamp-1">
+          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-background/90 to-transparent p-3">
+            <h3 className="text-foreground font-semibold text-sm line-clamp-1">
               {content.title}
             </h3>
           </div>
@@ -169,3 +169,5 @@ export const NetflixCard: React.FC<NetflixCardProps> = ({
     </div>
   );
 };
+
+export { ContentCard as NetflixCard };

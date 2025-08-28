@@ -139,46 +139,60 @@ const Upload = () => {
     streamFormData.append('video', transcodedFile);
     streamFormData.append('contentId', contentId);
 
-    // Simulate upload progress tracking
-    const xhr = new XMLHttpRequest();
-    
-    return new Promise((resolve, reject) => {
-      xhr.upload.addEventListener('progress', (event) => {
-        if (event.lengthComputable) {
-          const percentage = Math.round((event.loaded / event.total) * 100);
-          updateUploadProgress(percentage);
-        }
-      });
-
-      xhr.addEventListener('load', () => {
-        if (xhr.status === 200) {
-          try {
-            const response = JSON.parse(xhr.responseText);
-            resolve(response);
-          } catch (error) {
-            reject(new Error('Invalid response format'));
-          }
-        } else {
-          reject(new Error(`Upload failed with status ${xhr.status}`));
-        }
-      });
-
-      xhr.addEventListener('error', () => {
-        reject(new Error('Upload failed due to network error'));
-      });
-
-      // Use Supabase functions invoke but track progress
-      supabase.functions.invoke('cloudflare-stream-upload', {
+    try {
+      // Upload to stream
+      const { data: uploadResponse, error: uploadError } = await supabase.functions.invoke('cloudflare-stream-upload', {
         body: streamFormData
-      }).then(response => {
-        if (response.error) {
-          reject(new Error(response.error.message));
-        } else {
-          updateUploadProgress(100);
-          resolve(response);
+      });
+
+      if (uploadError) throw uploadError;
+
+      const { streamId, playbackId } = uploadResponse;
+      
+      // Poll for ready status using auth session
+      let attempts = 0;
+      const maxAttempts = 60; // 2.5 minutes max
+      
+      while (attempts < maxAttempts) {
+        await new Promise(resolve => setTimeout(resolve, 2500));
+        
+        try {
+          const { data: session } = await supabase.auth.getSession();
+          const token = session?.session?.access_token;
+          
+          if (token) {
+            const statusUrl = `https://oofkawnofnkbpgphlkcm.supabase.co/functions/v1/cloudflare-stream-upload?streamId=${streamId}`;
+            const statusResponse = await fetch(statusUrl, {
+              method: 'GET',
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9vZmthd25vZm5rYnBncGhsa2NtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYzMjkyNzMsImV4cCI6MjA3MTkwNTI3M30.ur9174FkwNioTkuJzeo1A-W9tnzH3J9T8MGdVgsuGt4'
+              }
+            });
+            
+            if (statusResponse.ok) {
+              const statusData = await statusResponse.json();
+              if (statusData?.ready) {
+                console.log('Stream is ready for playback');
+                break;
+              }
+            }
+          }
+        } catch (statusError) {
+          console.log('Status check error:', statusError);
         }
-      }).catch(reject);
-    });
+        
+        attempts++;
+        updateUploadProgress(Math.min(95, 70 + (attempts / maxAttempts) * 25));
+      }
+
+      updateUploadProgress(100);
+      return { streamId, playbackId, ready: true };
+      
+    } catch (error) {
+      console.error('Stream upload error:', error);
+      throw error;
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {

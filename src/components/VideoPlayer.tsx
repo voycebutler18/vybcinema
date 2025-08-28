@@ -223,9 +223,11 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
   // Use Cloudflare Stream URL if available and ready, otherwise fallback to direct video URL
   const getVideoUrl = () => {
+    // Prioritize stream URL when ready and available
     if (streamUrl && streamStatus === 'ready') {
       return streamUrl;
     }
+    // Fallback to direct video URL
     return videoUrl;
   };
 

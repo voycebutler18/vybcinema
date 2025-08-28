@@ -57,14 +57,16 @@ serve(async (req) => {
       }
 
       const streamId = uploadResult.result.uid;
-      const streamUrl = `https://customer-${cloudflareAccountId.split('-')[0]}.cloudflarestream.com/${streamId}/manifest/video.m3u8`;
-      const thumbnailUrl = `https://customer-${cloudflareAccountId.split('-')[0]}.cloudflarestream.com/${streamId}/thumbnails/thumbnail.jpg`;
+      const playbackId = uploadResult.result.playback?.id || streamId;
+      const streamUrl = `https://videodelivery.net/${playbackId}/manifest/video.m3u8`;
+      const thumbnailUrl = uploadResult.result.thumbnail;
 
       // Update content record with stream info
       const { error: updateError } = await supabase
         .from('content')
         .update({
           stream_id: streamId,
+          playback_id: playbackId,
           stream_status: 'processing',
           stream_url: streamUrl,
           stream_thumbnail_url: thumbnailUrl,
@@ -79,6 +81,7 @@ serve(async (req) => {
       return new Response(JSON.stringify({
         success: true,
         streamId,
+        playbackId,
         streamUrl,
         thumbnailUrl,
         status: 'processing'
@@ -112,12 +115,19 @@ serve(async (req) => {
       
       if (statusResult.success) {
         const status = statusResult.result.status?.state || 'processing';
+        const playbackId = statusResult.result.playback?.id;
         
         // Update database if stream is ready
-        if (status === 'ready') {
+        if (status === 'ready' && playbackId) {
+          const streamUrl = `https://videodelivery.net/${playbackId}/manifest/video.m3u8`;
+          
           const { error: updateError } = await supabase
             .from('content')
-            .update({ stream_status: 'ready' })
+            .update({ 
+              stream_status: 'ready',
+              playback_id: playbackId,
+              stream_url: streamUrl
+            })
             .eq('stream_id', streamId);
             
           if (updateError) {
@@ -128,7 +138,9 @@ serve(async (req) => {
         return new Response(JSON.stringify({
           success: true,
           status,
-          streamId
+          streamId,
+          playbackId,
+          ready: status === 'ready'
         }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });

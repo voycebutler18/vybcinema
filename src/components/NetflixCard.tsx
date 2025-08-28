@@ -45,15 +45,16 @@ export const ContentCard: React.FC<NetflixCardProps> = ({
               }`}
               onLoad={() => setImageLoaded(true)}
             />
-          ) : content.file_url && content.file_url.includes('video') ? (
+          ) : content.file_url ? (
             <video
               className="w-full h-full object-cover"
               muted
               loop
               playsInline
+              preload="metadata"
               onLoadedData={() => setImageLoaded(true)}
             >
-              <source src={content.file_url} type="video/mp4" />
+              <source src={content.file_url} />
             </video>
           ) : (
             <div className="w-full h-full bg-gradient-to-br from-gray-700 to-gray-800 flex items-center justify-center">

@@ -61,11 +61,12 @@ const MusicVideos = () => {
       if (error) throw error;
 
       if (fileUrl) {
-        const fileName = fileUrl.split('/').pop();
-        if (fileName) {
+        // Extract the path from the full URL
+        const urlParts = fileUrl.split('/storage/v1/object/public/content-files/');
+        if (urlParts[1]) {
           await supabase.storage
             .from('content-files')
-            .remove([`main/${fileName}`]);
+            .remove([urlParts[1]]);
         }
       }
 

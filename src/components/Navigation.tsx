@@ -1,236 +1,151 @@
 import React, { useState } from "react";
+import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Play, ThumbsUp, ChevronDown } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { Input } from "@/components/ui/input";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Search, Bell, User, ChevronDown, Heart } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { useAuth } from "@/hooks/useAuth";
 
-/* ---------- Types ---------- */
+export const NetflixNavigation: React.FC = () => {
+  const { user, signOut } = useAuth();
+  const location = useLocation();
+  const [showSearch, setShowSearch] = useState(false);
 
-export interface Content {
-  id: string;
-  title: string;
-  description?: string;
-  genre?: string;
-  cover_url?: string;
-  file_url?: string;
-  trailer_url?: string;
-  content_type?: string;
-}
+  // Top nav items (Music Videos removed)
+  const navItems = [
+    { path: "/", label: "Home" },
+    { path: "/movies", label: "Movies" },
+    { path: "/tv-shows", label: "TV Shows" },
+    { path: "/stories", label: "Short Stories" },
+    { path: "/favorites", label: "My Favorites" }, // keep if you have /favorites page
+  ];
 
-interface ContentCardProps {
-  content: Content;
-  contentType: string;
-  index: number;
-  onClick: () => void;   // open details / “More”
-  onPlay: () => void;    // start playback
-}
-
-/* ---------- Component ---------- */
-
-export const ContentCard: React.FC<ContentCardProps> = ({
-  content,
-  contentType,
-  index,
-  onClick,
-  onPlay,
-}) => {
-  const [isHovered, setIsHovered] = useState(false);
-  const [imageLoaded, setImageLoaded] = useState(false);
-  const { toast } = useToast();
-
-  // Optional “like” handler — only works if you actually created a `likes` table
-  const handleLike = async (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) {
-        toast({ title: "Please log in to like." });
-        return;
-      }
-      const { error } = await supabase
-        .from("likes")
-        .upsert({ user_id: user.id, content_id: content.id });
-      if (error) throw error;
-      toast({ title: "Thanks for the like", description: content.title });
-    } catch (err: any) {
-      toast({
-        title: "Could not like",
-        description: err?.message ?? "Please try again.",
-        variant: "destructive",
-      });
-    }
+  const isActive = (path: string) => {
+    if (path === "/" && location.pathname === "/") return true;
+    if (path !== "/" && location.pathname.startsWith(path)) return true;
+    return false;
   };
 
   return (
-    <div
-      className={`flex-shrink-0 w-64 cursor-pointer transition-all duration-300 ${
-        isHovered ? "scale-110 z-20" : "scale-100 z-10"
-      }`}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-      style={{
-        transformOrigin: index === 0 ? "left center" : "center",
-        marginRight: isHovered ? "2rem" : "0",
-      }}
-    >
-      <div className="relative overflow-hidden rounded-lg bg-secondary/20 border border-border/50">
-        {/* Poster / Video */}
-        <div className="aspect-video relative">
-          {content.cover_url ? (
-            <img
-              src={content.cover_url}
-              alt={content.title}
-              className={`w-full h-full object-cover transition-opacity duration-300 ${
-                imageLoaded ? "opacity-100" : "opacity-0"
-              }`}
-              onLoad={() => setImageLoaded(true)}
-            />
-          ) : content.file_url ? (
-            <video
-              className="w-full h-full object-cover"
-              muted
-              playsInline
-              preload="metadata"
-              controls={false}
-              poster=""
-              onLoadedMetadata={() => setImageLoaded(true)}
-              onError={() => {
-                console.warn("Video failed to load:", content.file_url);
-                setImageLoaded(true);
-              }}
-              onMouseEnter={(e) => {
-                if (window.innerWidth >= 768) {
-                  try {
-                    const v = e.currentTarget;
-                    v.currentTime = 2;
-                    v.muted = true;
-                    v.play().catch(() => {});
-                  } catch {}
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (window.innerWidth >= 768) {
-                  try {
-                    const v = e.currentTarget;
-                    v.pause();
-                    v.currentTime = 2;
-                  } catch {}
-                }
-              }}
-              style={{ objectFit: "cover", width: "100%", height: "100%" }}
-            >
-              <source src={content.file_url} type="video/mp4" />
-              <source src={content.file_url} type="video/webm" />
-              <source src={content.file_url} type="video/ogg" />
-            </video>
-          ) : (
-            <div className="w-full h-full bg-gradient-to-br from-gray-700 to-gray-800 flex items-center justify-center">
-              <Play className="h-12 w-12 text-gray-400" />
-            </div>
-          )}
+    <nav className="fixed top-0 left-0 right-0 z-50 bg-black/90 backdrop-blur-sm transition-all duration-300">
+      <div className="container mx-auto px-8 py-4">
+        <div className="flex items-center justify-between">
+          {/* Left: Logo + Nav */}
+          <div className="flex items-center gap-8">
+            <Link to="/" className="flex items-center gap-2">
+              <div className="text-red-600 text-2xl font-bold">STREAMFLIX</div>
+            </Link>
 
-          {!imageLoaded && (
-            <div className="absolute inset-0 bg-gray-700 animate-pulse flex items-center justify-center">
-              <div className="w-12 h-12 bg-gray-600 rounded" />
-            </div>
-          )}
-
-          {isHovered && content.trailer_url && (
-            <video
-              className="absolute inset-0 w-full h-full object-cover z-10 pointer-events-none"
-              autoPlay
-              muted
-              loop
-              playsInline
-            >
-              <source src={content.trailer_url} type="video/mp4" />
-            </video>
-          )}
-        </div>
-
-        {/* Expanded panel on hover */}
-        {isHovered && (
-          <div className="bg-background/95 backdrop-blur-sm border-t border-border/50 p-4 space-y-3 relative z-20">
-            <div className="flex items-center justify-between">
-              <div className="flex gap-2">
-                <Button
-                  type="button"
-                  size="sm"
-                  className="rounded-full bg-primary text-primary-foreground hover:bg-primary/90 p-2"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onPlay();
-                  }}
+            <div className="hidden md:flex items-center gap-6">
+              {navItems.map((item) => (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  className={`text-sm font-medium transition-colors duration-200 hover:text-gray-300 ${
+                    isActive(item.path) ? "text-white" : "text-gray-400"
+                  }`}
                 >
-                  <Play className="h-4 w-4" />
-                </Button>
-
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  className="rounded-full p-2"
-                  onClick={handleLike}
-                >
-                  <ThumbsUp className="h-4 w-4" />
-                </Button>
-              </div>
-
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                className="rounded-full p-2"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onClick();
-                }}
-              >
-                <ChevronDown className="h-4 w-4" />
-              </Button>
+                  {item.label}
+                </Link>
+              ))}
             </div>
+          </div>
 
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <Badge variant="secondary" className="text-xs">
-                  {contentType}
-                </Badge>
-                {content.genre && (
-                  <Badge variant="outline" className="text-xs">
-                    {content.genre}
-                  </Badge>
-                )}
-              </div>
-
-              <h3 className="text-foreground font-semibold text-sm line-clamp-1">
-                {content.title}
-              </h3>
-
-              {content.description && (
-                <p className="text-muted-foreground text-xs line-clamp-2 leading-relaxed">
-                  {content.description}
-                </p>
+          {/* Right: Search + Notifications + User */}
+          <div className="flex items-center gap-4">
+            {/* Search */}
+            <div className="relative">
+              {showSearch ? (
+                <Input
+                  type="text"
+                  placeholder="Search titles..."
+                  className="w-64 bg-black/50 border-gray-600 text-white placeholder:text-gray-400"
+                  autoFocus
+                  onBlur={() => setShowSearch(false)}
+                />
+              ) : (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-white hover:text-gray-300"
+                  onClick={() => setShowSearch(true)}
+                >
+                  <Search className="h-5 w-5" />
+                </Button>
               )}
             </div>
-          </div>
-        )}
 
-        {/* Title overlay when not hovered */}
-        {!isHovered && (
-          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-background/90 to-transparent p-3">
-            <h3 className="text-foreground font-semibold text-sm line-clamp-1">
-              {content.title}
-            </h3>
+            {/* Notifications */}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-white hover:text-gray-300"
+            >
+              <Bell className="h-5 w-5" />
+            </Button>
+
+            {/* User menu */}
+            {user ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    className="flex items-center gap-2 text-white hover:text-gray-300"
+                  >
+                    <Avatar className="h-8 w-8">
+                      <AvatarFallback className="bg-red-600 text-white">
+                        {user.email?.charAt(0).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <ChevronDown className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  align="end"
+                  className="bg-black/90 border-gray-700"
+                >
+                  <DropdownMenuItem asChild className="text-white hover:bg-gray-800 cursor-pointer">
+                    <Link to="/favorites" className="flex items-center">
+                      <Heart className="h-4 w-4 mr-2" />
+                      My Favorites
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem className="text-white hover:bg-gray-800">
+                    <User className="h-4 w-4 mr-2" />
+                    Profile
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator className="bg-gray-700" />
+                  <DropdownMenuItem
+                    className="text-white hover:bg-gray-800"
+                    onClick={() => signOut()}
+                  >
+                    Sign Out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <div className="flex gap-2">
+                <Button asChild variant="ghost" className="text-white hover:text-gray-300">
+                  <Link to="/login">Sign In</Link>
+                </Button>
+                <Button asChild className="bg-red-600 hover:bg-red-700">
+                  <Link to="/signup">Sign Up</Link>
+                </Button>
+              </div>
+            )}
           </div>
-        )}
+        </div>
       </div>
-    </div>
+    </nav>
   );
 };
 
-/* Optional alias for legacy imports */
-export { ContentCard as NetflixCard };
+/** Re-export so pages can `import { Navigation } from "@/components/Navigation"` */
+export { NetflixNavigation as Navigation };

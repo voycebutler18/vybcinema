@@ -5,7 +5,7 @@ import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
 import { ContentCard } from "@/components/ContentCard";
 
-interface Content {
+export interface Content {
   id: string;
   title: string;
   description?: string;
@@ -26,6 +26,15 @@ interface Content {
   monetization_enabled?: boolean;
 }
 
+type FavoriteRow = {
+  id?: number;
+  user_id: string;
+  content_id: string;
+  created_at?: string;
+  // joined object from content table
+  content: Content | null;
+};
+
 export default function Favorites() {
   const { user } = useAuth();
   const [favorites, setFavorites] = useState<Content[]>([]);
@@ -39,41 +48,30 @@ export default function Favorites() {
       }
 
       try {
-        console.log('Auth user ID:', user.id);
-        
-        // First, let's see what user IDs are actually in the favorites table
-        const { data: allFavorites, error: allError } = await supabase
-          .from('favorites')
-          .select('user_id, content_id')
-          .limit(5);
-        
-        console.log('Sample favorites in table:', allFavorites);
-        
-        // Try the normal query
-        const { data: favoriteRows, error: favError } = await supabase
-          .from('favorites')
-          .select('content_id')
-          .eq('user_id', user.id);
+        // Join favorites → content via content_id
+        const { data, error } = await supabase
+          .from("favorites")
+          .select("id, created_at, content:content_id(*)")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false });
 
-        console.log('Query result for user:', { favoriteRows, favError });
-
-        // If no results, try with string casting
-        if (!favoriteRows || favoriteRows.length === 0) {
-          console.log('Trying with string casting...');
-          const { data: stringRows, error: stringError } = await supabase
-            .from('favorites')
-            .select('content_id')
-            .eq('user_id', user.id.toString());
-          
-          console.log('String cast result:', { stringRows, stringError });
+        if (error) {
+          console.error("Favorites query error:", error);
+          setFavorites([]);
+          setLoading(false);
+          return;
         }
 
-        setFavorites([]);
-        setLoading(false);
+        const rows = (data as FavoriteRow[]) || [];
+        const joinedContent = rows
+          .map((r) => r.content)
+          .filter((c): c is Content => !!c);
 
-      } catch (error) {
-        console.error('Error:', error);
+        setFavorites(joinedContent);
+      } catch (err) {
+        console.error("Favorites fetch failed:", err);
         setFavorites([]);
+      } finally {
         setLoading(false);
       }
     };
@@ -83,20 +81,17 @@ export default function Favorites() {
 
   const removeFavorite = async (contentId: string) => {
     if (!user) return;
+    const { error } = await supabase
+      .from("favorites")
+      .delete()
+      .eq("user_id", user.id)
+      .eq("content_id", contentId);
 
-    try {
-      const { error } = await supabase
-        .from('favorites')
-        .delete()
-        .eq('user_id', user.id)
-        .eq('content_id', contentId);
-
-      if (!error) {
-        setFavorites(prev => prev.filter(item => item.id !== contentId));
-      }
-    } catch (error) {
-      console.error('Error removing favorite:', error);
+    if (error) {
+      console.error("Remove favorite error:", error);
+      return;
     }
+    setFavorites((prev) => prev.filter((c) => c.id !== contentId));
   };
 
   if (!user) {
@@ -105,7 +100,9 @@ export default function Favorites() {
         <Navigation />
         <main className="container mx-auto px-6 pt-28 pb-16">
           <div className="text-center">
-            <p className="text-lg text-muted-foreground">Please log in to view your favorites.</p>
+            <p className="text-lg text-muted-foreground">
+              Please log in to view your favorites.
+            </p>
           </div>
         </main>
         <Footer />
@@ -118,7 +115,7 @@ export default function Favorites() {
       <Navigation />
       <main className="container mx-auto px-6 pt-28 pb-16">
         <h1 className="text-3xl font-bold mb-6">My Favorites</h1>
-        
+
         {loading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {Array.from({ length: 8 }).map((_, i) => (
@@ -142,16 +139,9 @@ export default function Favorites() {
                   content={content}
                   contentType={content.content_type || "Content"}
                   index={0}
-                  onClick={() => {
-                    // Handle more info/details
-                    console.log('More info clicked for:', content.title);
-                  }}
-                  onPlay={() => {
-                    // Handle play action
-                    console.log('Play clicked for:', content.title);
-                  }}
+                  onClick={() => {}}
+                  onPlay={() => {}}
                 />
-                {/* Remove from favorites button */}
                 <button
                   onClick={() => removeFavorite(content.id)}
                   className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-red-600 hover:bg-red-700 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold z-20"

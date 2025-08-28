@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Upload, Film, Tv, Music, BookOpen, Edit, Trash2, Plus, Mic } from "lucide-react";
+import { Upload, Film, Tv, BookOpen, Edit, Trash2, Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface ContentItem {
@@ -66,9 +66,7 @@ const Dashboard = () => {
     switch (type) {
       case 'movie': return <Film className="h-5 w-5" />;
       case 'tv_show': return <Tv className="h-5 w-5" />;
-      case 'music_video': return <Music className="h-5 w-5" />;
       case 'story': return <BookOpen className="h-5 w-5" />;
-      case 'podcast': return <Mic className="h-5 w-5" />;
       default: return <Upload className="h-5 w-5" />;
     }
   };
@@ -77,9 +75,7 @@ const Dashboard = () => {
     switch (type) {
       case 'movie': return 'Movie';
       case 'tv_show': return 'TV Show';
-      case 'music_video': return 'Music Video';
-      case 'story': return 'Story';
-      case 'podcast': return 'Podcast';
+      case 'story': return 'Short Story';
       default: return type;
     }
   };
@@ -160,7 +156,7 @@ const Dashboard = () => {
               {/* Quick Upload Section */}
               <div className="cinema-card p-8">
                 <h2 className="text-3xl font-bold text-foreground mb-6 text-center">Quick Upload</h2>
-                <div className="grid md:grid-cols-5 gap-4">
+                <div className="grid md:grid-cols-3 gap-4 max-w-2xl mx-auto">
                   <Button 
                     onClick={() => navigateToUpload('movie')}
                     className="btn-secondary h-20 flex-col space-y-2"
@@ -176,25 +172,11 @@ const Dashboard = () => {
                     <span className="text-sm">Upload TV Show</span>
                   </Button>
                   <Button 
-                    onClick={() => navigateToUpload('music_video')}
-                    className="btn-secondary h-20 flex-col space-y-2"
-                  >
-                    <Music className="h-6 w-6" />
-                    <span className="text-sm">Upload Music Video</span>
-                  </Button>
-                  <Button 
                     onClick={() => navigateToUpload('story')}
                     className="btn-secondary h-20 flex-col space-y-2"
                   >
                     <BookOpen className="h-6 w-6" />
-                    <span className="text-sm">Upload Story</span>
-                  </Button>
-                  <Button 
-                    onClick={() => navigateToUpload('podcast')}
-                    className="btn-secondary h-20 flex-col space-y-2"
-                  >
-                    <Mic className="h-6 w-6" />
-                    <span className="text-sm">Upload Podcast</span>
+                    <span className="text-sm">Upload Short Story</span>
                   </Button>
                 </div>
               </div>
@@ -218,7 +200,7 @@ const Dashboard = () => {
                     <Upload className="h-24 w-24 mx-auto text-primary/50 mb-6" />
                     <h3 className="text-2xl font-bold text-foreground mb-4">No Content Yet</h3>
                     <p className="text-muted-foreground mb-8">
-                      Start uploading your movies, TV shows, music videos, and stories to see them here.
+                      Start uploading your movies, TV shows, and short stories to see them here.
                     </p>
                     <Button onClick={() => navigate('/upload')} className="btn-hero">
                       <Plus className="h-5 w-5 mr-2" />

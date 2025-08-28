@@ -1,17 +1,29 @@
-import React, { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Play, Plus, ThumbsUp, ChevronDown } from 'lucide-react';
+import React, { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Play, Plus, ThumbsUp, ChevronDown } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
-interface NetflixCardProps {
-  content: any;
-  contentType: string;
-  index: number;
-  onClick: () => void;
-  onPlay: () => void;
+interface Content {
+  id: string;
+  title: string;
+  description?: string;
+  genre?: string;
+  cover_url?: string;
+  file_url?: string;
+  trailer_url?: string;
 }
 
-export const ContentCard: React.FC<NetflixCardProps> = ({
+interface ContentCardProps {
+  content: Content;
+  contentType: string;
+  index: number;
+  onClick: () => void;   // for “More” chevron
+  onPlay: () => void;    // for Play
+}
+
+export const ContentCard: React.FC<ContentCardProps> = ({
   content,
   contentType,
   index,
@@ -20,17 +32,56 @@ export const ContentCard: React.FC<NetflixCardProps> = ({
 }) => {
   const [isHovered, setIsHovered] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
+  const { toast } = useToast();
+
+  // --- NEW: real handlers for + and 👍 ---
+  const handleAdd = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    try {
+      // upsert to a watchlist table (adjust table/columns to yours)
+      await supabase.from("watchlist").upsert({
+        content_id: content.id
+      });
+      toast({ title: "Added to My List", description: content.title });
+    } catch (err: any) {
+      toast({
+        title: "Could not add to list",
+        description: err?.message ?? "Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleLike = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    try {
+      // toggle like (use your schema/RPC here)
+      await supabase.from("likes").upsert({
+        content_id: content.id
+      });
+      toast({ title: "Thanks for the like", description: content.title });
+    } catch (err: any) {
+      toast({
+        title: "Could not like",
+        description: err?.message ?? "Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+  // --------------------------------------
 
   return (
-    <div 
+    <div
       className={`flex-shrink-0 w-64 cursor-pointer transition-all duration-300 ${
-        isHovered ? 'scale-110 z-20' : 'scale-100 z-10'
+        isHovered ? "scale-110 z-20" : "scale-100 z-10"
       }`}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      style={{ 
-        transformOrigin: index === 0 ? 'left center' : 'center',
-        marginRight: isHovered ? '2rem' : '0'
+      style={{
+        transformOrigin: index === 0 ? "left center" : "center",
+        marginRight: isHovered ? "2rem" : "0"
       }}
     >
       <div className="relative overflow-hidden rounded-lg bg-secondary/20 border border-border/50">
@@ -41,7 +92,7 @@ export const ContentCard: React.FC<NetflixCardProps> = ({
               src={content.cover_url}
               alt={content.title}
               className={`w-full h-full object-cover transition-opacity duration-300 ${
-                imageLoaded ? 'opacity-100' : 'opacity-0'
+                imageLoaded ? "opacity-100" : "opacity-0"
               }`}
               onLoad={() => setImageLoaded(true)}
             />
@@ -56,46 +107,36 @@ export const ContentCard: React.FC<NetflixCardProps> = ({
               onLoadedMetadata={() => setImageLoaded(true)}
               onError={() => {
                 console.warn(`Video failed to load: ${content.file_url}`);
-                setImageLoaded(true); // Show fallback
+                setImageLoaded(true);
               }}
               onMouseEnter={(e) => {
-                if (window.innerWidth >= 768) { // Only on desktop
+                if (window.innerWidth >= 768) {
                   try {
                     const video = e.currentTarget;
-                    video.currentTime = 2; // Start preview at 2 seconds
-                    video.muted = true; // Ensure muted for autoplay
-                    video.play().catch(() => {
-                      // Ignore autoplay errors on mobile
-                    });
-                  } catch (err) {
-                    console.warn('Video hover play failed:', err);
-                  }
+                    video.currentTime = 2;
+                    video.muted = true;
+                    video.play().catch(() => {});
+                  } catch {}
                 }
               }}
               onMouseLeave={(e) => {
-                if (window.innerWidth >= 768) { // Only on desktop
+                if (window.innerWidth >= 768) {
                   try {
                     const video = e.currentTarget;
                     video.pause();
-                    video.currentTime = 2; // Reset to preview frame
-                  } catch (err) {
-                    console.warn('Video hover pause failed:', err);
-                  }
+                    video.currentTime = 2;
+                  } catch {}
                 }
               }}
-              style={{ 
-                objectFit: 'cover',
-                width: '100%',
-                height: '100%'
+              style={{
+                objectFit: "cover",
+                width: "100%",
+                height: "100%"
               }}
             >
               <source src={content.file_url} type="video/mp4" />
               <source src={content.file_url} type="video/webm" />
               <source src={content.file_url} type="video/ogg" />
-              {/* Fallback content */}
-              <div className="w-full h-full bg-gradient-to-br from-gray-700 to-gray-800 flex items-center justify-center">
-                <Play className="h-8 w-8 text-white/70" />
-              </div>
             </video>
           ) : (
             <div className="w-full h-full bg-gradient-to-br from-gray-700 to-gray-800 flex items-center justify-center">
@@ -103,17 +144,15 @@ export const ContentCard: React.FC<NetflixCardProps> = ({
             </div>
           )}
 
-          {/* Loading placeholder */}
           {!imageLoaded && (
             <div className="absolute inset-0 bg-gray-700 animate-pulse flex items-center justify-center">
-              <div className="w-12 h-12 bg-gray-600 rounded"></div>
+              <div className="w-12 h-12 bg-gray-600 rounded" />
             </div>
           )}
 
-          {/* Hover overlay with trailer */}
           {isHovered && content.trailer_url && (
             <video
-              className="absolute inset-0 w-full h-full object-cover"
+              className="absolute inset-0 w-full h-full object-cover z-10 pointer-events-none"
               autoPlay
               muted
               loop
@@ -124,13 +163,14 @@ export const ContentCard: React.FC<NetflixCardProps> = ({
           )}
         </div>
 
-        {/* Expanded Info Panel (appears on hover) */}
+        {/* Expanded Info Panel */}
         {isHovered && (
-          <div className="bg-background/95 backdrop-blur-sm border-t border-border/50 p-4 space-y-3">
+          <div className="bg-background/95 backdrop-blur-sm border-t border-border/50 p-4 space-y-3 relative z-20">
             {/* Action Buttons */}
             <div className="flex items-center justify-between">
               <div className="flex gap-2">
                 <Button
+                  type="button"
                   size="sm"
                   className="rounded-full bg-primary text-primary-foreground hover:bg-primary/90 p-2"
                   onClick={(e) => {
@@ -140,27 +180,30 @@ export const ContentCard: React.FC<NetflixCardProps> = ({
                 >
                   <Play className="h-4 w-4" />
                 </Button>
-                
+
                 <Button
+                  type="button"
                   size="sm"
                   variant="outline"
                   className="rounded-full p-2"
-                  onClick={(e) => e.stopPropagation()}
+                  onClick={handleAdd}      // <-- wired
                 >
                   <Plus className="h-4 w-4" />
                 </Button>
-                
+
                 <Button
+                  type="button"
                   size="sm"
                   variant="outline"
                   className="rounded-full p-2"
-                  onClick={(e) => e.stopPropagation()}
+                  onClick={handleLike}     // <-- wired
                 >
                   <ThumbsUp className="h-4 w-4" />
                 </Button>
               </div>
 
               <Button
+                type="button"
                 size="sm"
                 variant="outline"
                 className="rounded-full p-2"
@@ -185,11 +228,11 @@ export const ContentCard: React.FC<NetflixCardProps> = ({
                   </Badge>
                 )}
               </div>
-              
+
               <h3 className="text-foreground font-semibold text-sm line-clamp-1">
                 {content.title}
               </h3>
-              
+
               {content.description && (
                 <p className="text-muted-foreground text-xs line-clamp-2 leading-relaxed">
                   {content.description}
@@ -199,7 +242,7 @@ export const ContentCard: React.FC<NetflixCardProps> = ({
           </div>
         )}
 
-        {/* Simple title overlay when not hovered */}
+        {/* Title overlay when not hovered */}
         {!isHovered && (
           <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-background/90 to-transparent p-3">
             <h3 className="text-foreground font-semibold text-sm line-clamp-1">

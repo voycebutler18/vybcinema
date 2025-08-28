@@ -251,7 +251,8 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
       {/* Full Screen Player */}
       <Dialog open={showFullPlayer} onOpenChange={setShowFullPlayer}>
-        <DialogContent className="max-w-full w-screen h-screen p-0 bg-black border-none video-player-dialog">
+        <DialogContent className="max-w-full w-screen h-[100dvh] p-0 bg-black border-none video-player-dialog">
+
           <VisuallyHidden>
             <DialogTitle>Video Player - {title}</DialogTitle>
             <DialogDescription>Playing {contentType}: {title}. {description}</DialogDescription>

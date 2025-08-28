@@ -55,9 +55,9 @@ const Login = () => {
                 </div>
 
                 {/* Login Form */}
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
+                <form onSubmit={handleSubmit} className="space-y-4" style={{ pointerEvents: 'auto', position: 'relative', zIndex: 100 }}>
+                  <div className="space-y-2" style={{ pointerEvents: 'auto' }}>
+                    <Label htmlFor="email" style={{ pointerEvents: 'auto' }}>Email</Label>
                     <Input
                       id="email"
                       type="email"
@@ -66,12 +66,13 @@ const Login = () => {
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       required
+                      style={{ pointerEvents: 'auto', zIndex: 101 }}
                     />
                   </div>
                   
-                  <div className="space-y-2">
-                    <Label htmlFor="password">Password</Label>
-                    <div className="relative">
+                  <div className="space-y-2" style={{ pointerEvents: 'auto' }}>
+                    <Label htmlFor="password" style={{ pointerEvents: 'auto' }}>Password</Label>
+                    <div className="relative" style={{ pointerEvents: 'auto' }}>
                       <Input
                         id="password"
                         type={showPassword ? "text" : "password"}
@@ -80,6 +81,7 @@ const Login = () => {
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         required
+                        style={{ pointerEvents: 'auto', zIndex: 101 }}
                       />
                       <Button
                         type="button"
@@ -87,6 +89,7 @@ const Login = () => {
                         size="sm"
                         className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
                         onClick={() => setShowPassword(!showPassword)}
+                        style={{ pointerEvents: 'auto', zIndex: 102 }}
                       >
                         {showPassword ? (
                           <EyeOff className="h-4 w-4" />
@@ -97,23 +100,29 @@ const Login = () => {
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
+                  <div className="flex items-center justify-between" style={{ pointerEvents: 'auto' }}>
+                    <div className="flex items-center space-x-2" style={{ pointerEvents: 'auto' }}>
                       <input
                         type="checkbox"
                         id="remember"
                         className="w-4 h-4 text-primary border-border rounded"
+                        style={{ pointerEvents: 'auto', zIndex: 101 }}
                       />
-                      <Label htmlFor="remember" className="text-sm">
+                      <Label htmlFor="remember" className="text-sm" style={{ pointerEvents: 'auto' }}>
                         Remember me
                       </Label>
                     </div>
-                    <a href="#" className="text-sm text-primary hover:underline">
+                    <a href="#" className="text-sm text-primary hover:underline" style={{ pointerEvents: 'auto', zIndex: 101 }}>
                       Forgot password?
                     </a>
                   </div>
 
-                  <Button type="submit" disabled={loading} className="btn-hero w-full">
+                  <Button 
+                    type="submit" 
+                    disabled={loading} 
+                    className="btn-hero w-full"
+                    style={{ pointerEvents: 'auto', zIndex: 101 }}
+                  >
                     {loading ? "Signing In..." : "Sign In"}
                   </Button>
                 </form>
@@ -131,11 +140,11 @@ const Login = () => {
                 </div>
 
                 {/* Social Login */}
-                <div className="space-y-3">
-                  <Button variant="secondary" className="w-full">
+                <div className="space-y-3" style={{ pointerEvents: 'auto', zIndex: 100 }}>
+                  <Button variant="secondary" className="w-full" style={{ pointerEvents: 'auto', zIndex: 101 }}>
                     Continue with Google
                   </Button>
-                  <Button variant="secondary" className="w-full">
+                  <Button variant="secondary" className="w-full" style={{ pointerEvents: 'auto', zIndex: 101 }}>
                     Continue with Apple
                   </Button>
                 </div>

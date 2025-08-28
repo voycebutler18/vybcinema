@@ -1,3 +1,4 @@
+// src/components/Navigation.tsx
 import { Button } from "@/components/ui/button";
 import { Search, Menu, User, LogOut } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -45,6 +46,7 @@ export const Navigation = () => {
                 Movies
                 <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-primary group-hover:w-full transition-all duration-300"></span>
               </Link>
+
               <Link
                 to="/tv-shows"
                 className="nav-link text-foreground/80 hover:text-foreground font-medium transition-all duration-300 relative group"
@@ -52,6 +54,7 @@ export const Navigation = () => {
                 TV Shows
                 <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-primary group-hover:w-full transition-all duration-300"></span>
               </Link>
+
               <Link
                 to="/stories"
                 className="nav-link text-foreground/80 hover:text-foreground font-medium transition-all duration-300 relative group"
@@ -60,12 +63,20 @@ export const Navigation = () => {
                 <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-primary group-hover:w-full transition-all duration-300"></span>
               </Link>
 
-              {/* NEW: Music Videos */}
               <Link
                 to="/music-videos"
                 className="nav-link text-foreground/80 hover:text-foreground font-medium transition-all duration-300 relative group"
               >
                 Music Videos
+                <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-primary group-hover:w-full transition-all duration-300"></span>
+              </Link>
+
+              {/* NEW: My Favorites */}
+              <Link
+                to="/favorites"
+                className="nav-link text-foreground/80 hover:text-foreground font-medium transition-all duration-300 relative group"
+              >
+                My Favorites
                 <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-primary group-hover:w-full transition-all duration-300"></span>
               </Link>
 
@@ -183,13 +194,19 @@ export const Navigation = () => {
             >
               Short Stories
             </Link>
-
-            {/* NEW: Music Videos (mobile) */}
             <Link
               to="/music-videos"
               className="block text-foreground/80 hover:text-foreground transition-colors font-medium py-2 px-4 rounded-xl hover:bg-card/30"
             >
               Music Videos
+            </Link>
+
+            {/* NEW: My Favorites (mobile) */}
+            <Link
+              to="/favorites"
+              className="block text-foreground/80 hover:text-foreground transition-colors font-medium py-2 px-4 rounded-xl hover:bg-card/30"
+            >
+              My Favorites
             </Link>
 
             <Link

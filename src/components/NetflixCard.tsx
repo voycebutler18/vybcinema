@@ -34,33 +34,60 @@ export const ContentCard: React.FC<ContentCardProps> = ({
   const [imageLoaded, setImageLoaded] = useState(false);
   const { toast } = useToast();
 
-  // --- NEW: real handlers for + and 👍 ---
-  const handleAdd = async (e: React.MouseEvent) => {
+  // --- ADD TO FAVORITES ---
+  const handleAddFavorite = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     try {
-      // upsert to a watchlist table (adjust table/columns to yours)
-      await supabase.from("watchlist").upsert({
-        content_id: content.id
+      const {
+        data: { user },
+        error: authError
+      } = await supabase.auth.getUser();
+
+      if (authError || !user) {
+        toast({ title: "Please log in to save favorites." });
+        return;
+      }
+
+      const { error } = await supabase.from("favorites").insert({
+        user_id: user.id,
+        content_id: content.id,
       });
-      toast({ title: "Added to My List", description: content.title });
+
+      if (error) throw error;
+
+      toast({ title: "Added to Favorites", description: content.title });
     } catch (err: any) {
       toast({
-        title: "Could not add to list",
+        title: "Could not add to favorites",
         description: err?.message ?? "Please try again.",
         variant: "destructive"
       });
     }
   };
 
+  // --- LIKE HANDLER ---
   const handleLike = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     try {
-      // toggle like (use your schema/RPC here)
-      await supabase.from("likes").upsert({
-        content_id: content.id
+      const {
+        data: { user },
+        error: authError
+      } = await supabase.auth.getUser();
+
+      if (authError || !user) {
+        toast({ title: "Please log in to like." });
+        return;
+      }
+
+      const { error } = await supabase.from("likes").upsert({
+        user_id: user.id,
+        content_id: content.id,
       });
+
+      if (error) throw error;
+
       toast({ title: "Thanks for the like", description: content.title });
     } catch (err: any) {
       toast({
@@ -70,7 +97,6 @@ export const ContentCard: React.FC<ContentCardProps> = ({
       });
     }
   };
-  // --------------------------------------
 
   return (
     <div
@@ -186,7 +212,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
                   size="sm"
                   variant="outline"
                   className="rounded-full p-2"
-                  onClick={handleAdd}      // <-- wired
+                  onClick={handleAddFavorite}   // <-- wired to favorites
                 >
                   <Plus className="h-4 w-4" />
                 </Button>
@@ -196,7 +222,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
                   size="sm"
                   variant="outline"
                   className="rounded-full p-2"
-                  onClick={handleLike}     // <-- wired
+                  onClick={handleLike}          // <-- wired to likes
                 >
                   <ThumbsUp className="h-4 w-4" />
                 </Button>

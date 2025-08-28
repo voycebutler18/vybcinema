@@ -1,34 +1,38 @@
-import React, { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Search, Bell, User, ChevronDown } from 'lucide-react';
+import React, { useState } from "react";
+import { Link, useLocation } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Search, Bell, User, ChevronDown, Heart } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { useAuth } from '@/hooks/useAuth';
+} from "@/components/ui/dropdown-menu";
+import { useAuth } from "@/hooks/useAuth";
 
 export const NetflixNavigation = () => {
   const { user, signOut } = useAuth();
   const location = useLocation();
   const [showSearch, setShowSearch] = useState(false);
 
+  // Added Music Videos + My Favorites here
   const navItems = [
-    { path: '/', label: 'Home' },
-    { path: '/movies', label: 'Movies' },
-    { path: '/tv-shows', label: 'TV Shows' },
-    { path: '/stories', label: 'Short Stories' },
+    { path: "/", label: "Home" },
+    { path: "/movies", label: "Movies" },
+    { path: "/tv-shows", label: "TV Shows" },
+    { path: "/stories", label: "Short Stories" },
+    { path: "/music-videos", label: "Music Videos" }, // NEW
+    { path: "/favorites", label: "My Favorites" },    // NEW
   ];
 
   const isActive = (path: string) => {
-    if (path === '/' && location.pathname === '/') return true;
-    if (path !== '/' && location.pathname.startsWith(path)) return true;
+    if (path === "/" && location.pathname === "/") return true;
+    if (path !== "/" && location.pathname.startsWith(path)) return true;
     return false;
+    // you can tighten this if needed (e.g., exact match for some paths)
   };
 
   return (
@@ -49,7 +53,7 @@ export const NetflixNavigation = () => {
                   key={item.path}
                   to={item.path}
                   className={`text-sm font-medium transition-colors duration-200 hover:text-gray-300 ${
-                    isActive(item.path) ? 'text-white' : 'text-gray-400'
+                    isActive(item.path) ? "text-white" : "text-gray-400"
                   }`}
                 >
                   {item.label}
@@ -105,12 +109,18 @@ export const NetflixNavigation = () => {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="bg-black/90 border-gray-700">
+                  <DropdownMenuItem asChild className="text-white hover:bg-gray-800 cursor-pointer">
+                    <Link to="/favorites" className="flex items-center">
+                      <Heart className="h-4 w-4 mr-2" />
+                      My Favorites
+                    </Link>
+                  </DropdownMenuItem>
                   <DropdownMenuItem className="text-white hover:bg-gray-800">
                     <User className="h-4 w-4 mr-2" />
                     Profile
                   </DropdownMenuItem>
                   <DropdownMenuSeparator className="bg-gray-700" />
-                  <DropdownMenuItem 
+                  <DropdownMenuItem
                     className="text-white hover:bg-gray-800"
                     onClick={() => signOut()}
                   >

@@ -51,9 +51,27 @@ export const ContentCard: React.FC<NetflixCardProps> = ({
               muted
               playsInline
               preload="metadata"
-              onLoadedData={() => setImageLoaded(true)}
+              controls={false}
+              poster=""
+              onLoadedMetadata={() => setImageLoaded(true)}
+              onMouseEnter={(e) => {
+                e.currentTarget.currentTime = 1; // Show frame at 1 second
+                e.currentTarget.play();
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.pause();
+                e.currentTarget.currentTime = 1; // Reset to frame at 1 second
+              }}
+              style={{ 
+                objectFit: 'cover',
+                width: '100%',
+                height: '100%'
+              }}
             >
-              <source src={content.file_url} />
+              <source src={content.file_url} type="video/mp4" />
+              <source src={content.file_url} type="video/webm" />
+              <source src={content.file_url} type="video/ogg" />
+              Your browser does not support the video tag.
             </video>
           ) : (
             <div className="w-full h-full bg-gradient-to-br from-gray-700 to-gray-800 flex items-center justify-center">

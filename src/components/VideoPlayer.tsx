@@ -271,7 +271,6 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             <video
               ref={videoRef}
               className="w-full h-full object-contain bg-black"
-              src={currentVideoUrl}
               autoPlay
               onEnded={handleVideoEnd}
               onPlay={() => setIsPlaying(true)}
@@ -282,8 +281,22 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
               playsInline
               preload="metadata"
               controls={false}
-              style={{ objectFit: 'contain' }}
-            />
+              muted={isMuted}
+              crossOrigin="anonymous"
+              style={{ 
+                objectFit: 'contain',
+                width: '100%',
+                height: '100%',
+                backgroundColor: 'black'
+              }}
+            >
+              <source src={currentVideoUrl} type="video/mp4" />
+              <source src={currentVideoUrl} type="video/webm" />
+              <source src={currentVideoUrl} type="video/ogg" />
+              <p className="text-white text-center p-4">
+                Your browser does not support the video tag. Please try a different browser or update your current browser.
+              </p>
+            </video>
             
             {/* Custom Controls Overlay */}
             <div 

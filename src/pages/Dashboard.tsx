@@ -244,6 +244,25 @@ const Dashboard = () => {
                           <CardTitle className="text-lg">{item.title}</CardTitle>
                         </CardHeader>
                         <CardContent>
+                          {/* Video Preview */}
+                          {item.file_url && (
+                            <div className="aspect-video mb-4 rounded-lg overflow-hidden bg-secondary/20">
+                              <video
+                                className="w-full h-full object-cover"
+                                preload="metadata"
+                                muted
+                                playsInline
+                                onMouseEnter={(e) => e.currentTarget.play()}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.pause();
+                                  e.currentTarget.currentTime = 0;
+                                }}
+                              >
+                                <source src={item.file_url} />
+                              </video>
+                            </div>
+                          )}
+                          
                           <p className="text-muted-foreground text-sm mb-4 line-clamp-2">
                             {item.description || 'No description provided'}
                           </p>

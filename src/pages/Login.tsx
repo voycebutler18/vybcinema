@@ -37,14 +37,14 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background relative z-0" style={{ pointerEvents: 'auto' }}>
       <Navigation />
       
-      <main className="pt-8">
-        <section className="py-16">
-          <div className="container mx-auto px-4">
-            <div className="max-w-md mx-auto">
-              <div className="cinema-card p-8 space-y-6">
+      <main className="pt-8 relative z-10" style={{ pointerEvents: 'auto' }}>
+        <section className="py-16 relative z-20" style={{ pointerEvents: 'auto' }}>
+          <div className="container mx-auto px-4" style={{ pointerEvents: 'auto' }}>
+            <div className="max-w-md mx-auto" style={{ pointerEvents: 'auto' }}>
+              <div className="cinema-card p-8 space-y-6" style={{ pointerEvents: 'auto', position: 'relative', zIndex: 30 }}>
                 <div className="text-center space-y-2">
                   <h1 className="text-3xl font-bold text-cinema-gradient">
                     Welcome Back

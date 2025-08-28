@@ -131,8 +131,18 @@
   body {
     @apply bg-background text-foreground font-sans;
     font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
     background-image: var(--gradient-mesh);
-    background-attachment: fixed;
+    pointer-events: none;
+    z-index: -1;
   }
 
   /* Ultra Premium Animations */
@@ -225,19 +235,21 @@
 
   /* Ultra Premium Cards */
   .cinema-card {
-    @apply relative overflow-hidden;
+    @apply relative overflow-hidden z-10;
     @apply bg-gradient-to-br from-card via-card-elevated to-card/90 backdrop-blur-xl;
     @apply border border-border/30 rounded-3xl;
     @apply shadow-glass transition-all duration-500 ease-out;
     @apply hover:scale-[1.02] hover:shadow-ultra hover:border-border/50;
     @apply before:absolute before:inset-0 before:bg-gradient-to-br before:from-white/5 before:to-transparent before:opacity-0;
     @apply hover:before:opacity-100 before:transition-opacity before:duration-300;
+    pointer-events: auto;
   }
 
   .glass-card {
-    @apply bg-gradient-glass backdrop-blur-2xl border border-border/20 rounded-3xl;
+    @apply bg-gradient-glass backdrop-blur-2xl border border-border/20 rounded-3xl z-10;
     @apply shadow-glass transition-all duration-300;
     @apply hover:shadow-ultra hover:border-border/40;
+    pointer-events: auto;
   }
 
   /* Premium Text Styles */

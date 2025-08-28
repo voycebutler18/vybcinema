@@ -18,9 +18,9 @@ export const Navigation = () => {
   const navigate = useNavigate();
 
   return (
-    <nav className="fixed top-0 z-50 w-full bg-gradient-glass backdrop-blur-2xl border-b border-border/20 shadow-glass">
-      <div className="container mx-auto px-6">
-        <div className="flex items-center justify-between h-20">
+    <nav className="fixed top-0 z-50 w-full bg-gradient-glass backdrop-blur-2xl border-b border-border/20 shadow-glass" style={{ pointerEvents: 'auto' }}>
+      <div className="container mx-auto px-6" style={{ pointerEvents: 'auto' }}>
+        <div className="flex items-center justify-between h-20" style={{ pointerEvents: 'auto' }}>
           {/* Logo */}
           <div className="flex items-center space-x-12">
             <Link to="/" className="text-3xl font-display font-bold text-cinema-gradient hover:scale-105 transition-transform duration-300">

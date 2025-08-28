@@ -40,11 +40,13 @@ export const ContentCard: React.FC<ContentCardProps> = ({
   const [isFavorited, setIsFavorited] = useState(false);
   const { toast } = useToast();
 
-  /* Initial favorite state (for current user + this content) */
+  // Load initial favorite state for current user + this content
   useEffect(() => {
     let mounted = true;
     (async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) return;
 
       const { data, error } = await supabase
@@ -55,34 +57,34 @@ export const ContentCard: React.FC<ContentCardProps> = ({
         .maybeSingle();
 
       if (!mounted) return;
-      // PGRST116 is “no rows found” for maybeSingle – not an error for us
+      // PGRST116 = no rows with maybeSingle -> not an error for us
       if (error && error.code !== "PGRST116") {
         console.warn("Favorite check error:", error.message);
       }
       setIsFavorited(!!data);
     })();
-    return () => { mounted = false; };
+    return () => {
+      mounted = false;
+    };
   }, [content.id]);
 
   /* ------- Toggle Favorite (race-safe) -------
      1) Try to DELETE (if row existed -> it's removed)
-     2) If not removed, INSERT (ignore duplicates on conflict)
-     RLS needed:
-       - SELECT (to list favorites page)
-       - INSERT with check (user_id = auth.uid())
-       - DELETE using (user_id = auth.uid())
-  -------------------------------------------- */
+     2) If not removed, UPSERT with onConflict to avoid duplicates
+     ------------------------------------------ */
   const toggleFavorite = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
 
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     if (!user) {
       toast({ title: "Please log in to save favorites." });
       return;
     }
 
-    // 1) try to remove first (if it exists)
+    // 1) Try to remove first (if it exists)
     const { data: removed, error: delErr } = await supabase
       .from("favorites")
       .delete()
@@ -91,7 +93,11 @@ export const ContentCard: React.FC<ContentCardProps> = ({
       .select("id");
 
     if (delErr) {
-      toast({ title: "Error", description: delErr.message, variant: "destructive" });
+      toast({
+        title: "Error",
+        description: delErr.message,
+        variant: "destructive",
+      });
       return;
     }
 
@@ -101,18 +107,24 @@ export const ContentCard: React.FC<ContentCardProps> = ({
       return;
     }
 
-    // 2) wasn't removed -> add it (ignore duplicates to avoid unique error)
-    const { error: insErr } = await supabase
+    // 2) Not removed -> add it (use UPSERT to ignore duplicates)
+    const { error: upErr } = await supabase
       .from("favorites")
-      .insert(
+      .upsert(
         { user_id: user.id, content_id: content.id },
-        { onConflict: "user_id,content_id", ignoreDuplicates: true }
+        { onConflict: "user_id,content_id" }
       );
 
-    if (insErr) {
+    // Treat unique/race conflicts as success (already favorited)
+    if (upErr) {
+      if (upErr.code === "23505" || upErr.code === "409") {
+        setIsFavorited(true);
+        toast({ title: "Already in Favorites" });
+        return;
+      }
       toast({
         title: "Could not add to favorites",
-        description: insErr.message,
+        description: upErr.message,
         variant: "destructive",
       });
       return;
@@ -122,12 +134,14 @@ export const ContentCard: React.FC<ContentCardProps> = ({
     toast({ title: "Added to Favorites", description: content.title });
   };
 
-  /* Optional “like” handler — only works if you actually created a `likes` table */
+  // Optional “like” handler — requires a `likes` table if you want to keep it
   const handleLike = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) {
         toast({ title: "Please log in to like." });
         return;

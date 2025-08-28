@@ -290,4 +290,108 @@
     -webkit-background-clip: text;
     animation: shimmer 2s infinite;
   }
+
+  /* Video Player Styles */
+  .video-player-fullscreen {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    z-index: 9999 !important;
+    background: black !important;
+  }
+
+  .video-controls-mobile {
+    padding: 1rem 0.5rem !important;
+  }
+
+  .video-progress-bar {
+    height: 4px;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 2px;
+    overflow: hidden;
+    cursor: pointer;
+  }
+
+  .video-progress-filled {
+    height: 100%;
+    background: #e50914;
+    transition: width 0.1s ease;
+  }
+
+  .video-progress-buffered {
+    height: 100%;
+    background: rgba(255, 255, 255, 0.4);
+    position: absolute;
+    top: 0;
+    left: 0;
+  }
+
+  /* Mobile Specific Styles */
+  @media (max-width: 768px) {
+    .video-controls-desktop {
+      display: none !important;
+    }
+    
+    .video-controls-mobile {
+      display: flex !important;
+    }
+
+    .video-player-dialog [data-radix-dialog-content] {
+      width: 100vw !important;
+      height: 100vh !important;
+      max-width: none !important;
+      max-height: none !important;
+      margin: 0 !important;
+      border-radius: 0 !important;
+    }
+  }
+
+  /* Desktop Specific Styles */
+  @media (min-width: 769px) {
+    .video-controls-desktop {
+      display: flex !important;
+    }
+    
+    .video-controls-mobile {
+      display: none !important;
+    }
+  }
+
+  /* Custom Slider Styles for Video Player */
+  .video-slider [data-radix-slider-track] {
+    background: rgba(255, 255, 255, 0.3) !important;
+    height: 4px !important;
+  }
+
+  .video-slider [data-radix-slider-range] {
+    background: #e50914 !important;
+    height: 4px !important;
+  }
+
+  .video-slider [data-radix-slider-thumb] {
+    width: 12px !important;
+    height: 12px !important;
+    background: #e50914 !important;
+    border: 2px solid white !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3) !important;
+  }
+
+  .volume-slider [data-radix-slider-track] {
+    background: rgba(255, 255, 255, 0.3) !important;
+    height: 3px !important;
+  }
+
+  .volume-slider [data-radix-slider-range] {
+    background: white !important;
+    height: 3px !important;
+  }
+
+  .volume-slider [data-radix-slider-thumb] {
+    width: 10px !important;
+    height: 10px !important;
+    background: white !important;
+    border: none !important;
+  }
 }

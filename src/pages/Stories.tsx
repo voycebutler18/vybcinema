@@ -196,7 +196,12 @@ const Stories = () => {
               streamStatus={playingContent.stream_status}
               streamId={playingContent.stream_id}
               streamThumbnailUrl={playingContent.stream_thumbnail_url}
-              canDelete={false}
+              playbackId={playingContent.playback_id}
+              vastTagUrl={playingContent.vast_tag_url}
+              adBreaks={playingContent.ad_breaks}
+              durationSeconds={playingContent.duration_seconds}
+              monetizationEnabled={playingContent.monetization_enabled}
+              contentId={playingContent.id}
             />
           )}
         </DialogContent>

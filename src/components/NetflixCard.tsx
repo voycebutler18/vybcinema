@@ -54,13 +54,27 @@ export const ContentCard: React.FC<NetflixCardProps> = ({
               controls={false}
               poster=""
               onLoadedMetadata={() => setImageLoaded(true)}
+              onError={() => {
+                console.warn(`Video failed to load: ${content.file_url}`);
+                setImageLoaded(true); // Show fallback
+              }}
               onMouseEnter={(e) => {
-                e.currentTarget.currentTime = 1; // Show frame at 1 second
-                e.currentTarget.play();
+                try {
+                  e.currentTarget.currentTime = 1; // Show frame at 1 second
+                  e.currentTarget.play().catch(() => {
+                    // Ignore autoplay errors
+                  });
+                } catch (err) {
+                  console.warn('Video hover play failed:', err);
+                }
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.pause();
-                e.currentTarget.currentTime = 1; // Reset to frame at 1 second
+                try {
+                  e.currentTarget.pause();
+                  e.currentTarget.currentTime = 1; // Reset to frame at 1 second
+                } catch (err) {
+                  console.warn('Video hover pause failed:', err);
+                }
               }}
               style={{ 
                 objectFit: 'cover',
@@ -71,7 +85,10 @@ export const ContentCard: React.FC<NetflixCardProps> = ({
               <source src={content.file_url} type="video/mp4" />
               <source src={content.file_url} type="video/webm" />
               <source src={content.file_url} type="video/ogg" />
-              Your browser does not support the video tag.
+              {/* Fallback content */}
+              <div className="w-full h-full bg-gradient-to-br from-gray-700 to-gray-800 flex items-center justify-center">
+                <Play className="h-8 w-8 text-white/70" />
+              </div>
             </video>
           ) : (
             <div className="w-full h-full bg-gradient-to-br from-gray-700 to-gray-800 flex items-center justify-center">

@@ -40,6 +40,8 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const [showControls, setShowControls] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [buffered, setBuffered] = useState(0);
+  const [videoError, setVideoError] = useState<string | null>(null);
+  const [isVideoLoaded, setIsVideoLoaded] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const playerRef = useRef<HTMLDivElement>(null);
   const controlsTimeoutRef = useRef<NodeJS.Timeout>();
@@ -154,7 +156,43 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     if (videoRef.current && !isNaN(videoRef.current.duration)) {
       setDuration(videoRef.current.duration);
       setCurrentTime(0);
+      setIsVideoLoaded(true);
+      setVideoError(null);
     }
+  };
+
+  const handleVideoLoadedData = () => {
+    setIsVideoLoaded(true);
+    setVideoError(null);
+  };
+
+  const handleVideoError = (e: React.SyntheticEvent<HTMLVideoElement>) => {
+    const video = e.currentTarget;
+    const error = video.error;
+    
+    let errorMessage = "Video playback failed";
+    if (error) {
+      switch (error.code) {
+        case MediaError.MEDIA_ERR_ABORTED:
+          errorMessage = "Video loading was aborted";
+          break;
+        case MediaError.MEDIA_ERR_NETWORK:
+          errorMessage = "Network error occurred while loading video";
+          break;
+        case MediaError.MEDIA_ERR_DECODE:
+          errorMessage = "Video codec not supported. Please re-encode using H.264 + AAC, yuv420p format for better compatibility.";
+          break;
+        case MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED:
+          errorMessage = "Video format not supported. Please use MP4 with H.264 video codec and AAC audio codec.";
+          break;
+        default:
+          errorMessage = "Unknown video error occurred";
+      }
+    }
+    
+    setVideoError(errorMessage);
+    setIsVideoLoaded(false);
+    setIsPlaying(false);
   };
 
   const handleVideoEnd = () => {
@@ -277,6 +315,8 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
               onPause={() => setIsPlaying(false)}
               onTimeUpdate={handleVideoTimeUpdate}
               onLoadedMetadata={handleVideoLoadedMetadata}
+              onLoadedData={handleVideoLoadedData}
+              onError={handleVideoError}
               onClick={togglePlay}
               playsInline
               preload="metadata"
@@ -297,6 +337,26 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
                 Your browser does not support the video tag. Please try a different browser or update your current browser.
               </p>
             </video>
+
+            {/* Video Error Overlay */}
+            {videoError && (
+              <div className="absolute inset-0 bg-black/90 flex flex-col items-center justify-center p-6 text-center">
+                <div className="max-w-md">
+                  <X className="h-16 w-16 text-red-500 mx-auto mb-4" />
+                  <h3 className="text-white text-xl font-semibold mb-2">Video Playback Error</h3>
+                  <p className="text-white/80 text-sm mb-4">{videoError}</p>
+                  <div className="text-white/60 text-xs">
+                    <p className="mb-2">For best compatibility, videos should be:</p>
+                    <ul className="text-left space-y-1">
+                      <li>• Format: MP4 container</li>
+                      <li>• Video: H.264 codec, yuv420p, 8-bit</li>
+                      <li>• Audio: AAC codec</li>
+                      <li>• Use "faststart" flag for streaming</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            )}
             
             {/* Custom Controls Overlay */}
             <div 

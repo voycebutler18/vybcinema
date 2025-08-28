@@ -7,8 +7,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Upload, Film, Tv, BookOpen, Edit, Trash2, Plus } from "lucide-react";
+import { Upload, Film, Tv, BookOpen, Edit, Trash2, Plus, DollarSign } from "lucide-react";
 import { VideoPlayer } from "@/components/VideoPlayer";
+import { AdMonetizationManager } from "@/components/AdMonetizationManager";
 import { useToast } from "@/hooks/use-toast";
 
 interface ContentItem {
@@ -27,6 +28,11 @@ interface ContentItem {
   stream_id?: string;
   stream_thumbnail_url?: string;
   playback_id?: string;
+  // Ad monetization fields
+  vast_tag_url?: string;
+  ad_breaks?: number[];
+  duration_seconds?: number;
+  monetization_enabled?: boolean;
 }
 
 const Dashboard = () => {
@@ -241,13 +247,27 @@ const Dashboard = () => {
                         streamStatus={item.stream_status}
                         streamId={item.stream_id}
                         streamThumbnailUrl={item.stream_thumbnail_url}
-                        playbackId={item.playback_id}
+                    playbackId={item.playback_id}
+                    vastTagUrl={item.vast_tag_url}
+                    adBreaks={item.ad_breaks || [0]}
+                    durationSeconds={item.duration_seconds}
+                    monetizationEnabled={item.monetization_enabled}
+                    contentId={item.id}
                         canDelete={true}
                         onDelete={() => deleteContent(item.id, item.file_url)}
                       />
                     ))}
                   </div>
                 )}
+              </div>
+
+              {/* Ad Monetization Section */}
+              <div>
+                <div className="flex items-center gap-3 mb-8">
+                  <DollarSign className="h-8 w-8 text-green-600" />
+                  <h2 className="text-3xl font-bold text-foreground">Ad Monetization</h2>
+                </div>
+                <AdMonetizationManager />
               </div>
 
             </div>

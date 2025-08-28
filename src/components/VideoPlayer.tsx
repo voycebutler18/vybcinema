@@ -6,6 +6,7 @@ import { Play, Pause, Volume2, VolumeX, Maximize, X, SkipBack, SkipForward, Sett
 import { Badge } from '@/components/ui/badge';
 import { Slider } from '@/components/ui/slider';
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
+import { CFStreamIMAPlayer } from './CFStreamIMAPlayer';
 
 interface VideoPlayerProps {
   videoUrl?: string;
@@ -22,6 +23,12 @@ interface VideoPlayerProps {
   streamId?: string;
   streamThumbnailUrl?: string;
   playbackId?: string;
+  // Ad monetization fields
+  vastTagUrl?: string;
+  adBreaks?: number[];
+  durationSeconds?: number;
+  monetizationEnabled?: boolean;
+  contentId?: string;
 }
 
 export const VideoPlayer: React.FC<VideoPlayerProps> = ({
@@ -39,6 +46,12 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   streamId,
   streamThumbnailUrl,
   playbackId,
+  // Ad monetization fields
+  vastTagUrl,
+  adBreaks = [0],
+  durationSeconds,
+  monetizationEnabled = true,
+  contentId,
 }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
@@ -226,12 +239,16 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const hasStreamPlayback = streamStatus === 'ready' && playbackId;
   const isProcessing = streamStatus === 'pending' || (streamStatus === 'processing' && !playbackId);
   const displayThumbnail = streamThumbnailUrl || coverUrl;
+  const shouldUseAds = monetizationEnabled && vastTagUrl && hasStreamPlayback;
   
   console.log('Video player state:', { 
     streamStatus, 
     playbackId, 
     hasStreamPlayback, 
-    isProcessing 
+    isProcessing,
+    shouldUseAds,
+    vastTagUrl,
+    adBreaks
   });
 
   return (
@@ -271,17 +288,18 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
               {!isProcessing && (
                 <div className="absolute inset-0 bg-gradient-overlay opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
                   <div className="flex gap-2">
-                    {(hasStreamPlayback || videoUrl) && (
-                      <Button
-                        size="lg"
-                        variant="secondary"
-                        className="bg-white/10 backdrop-blur-sm border-white/20"
-                        onClick={() => playVideo('main')}
-                      >
-                        <Play className="h-5 w-5 mr-2" />
-                        Play {contentType}
-                      </Button>
-                    )}
+                     {(hasStreamPlayback || videoUrl) && (
+                       <Button
+                         size="lg"
+                         variant="secondary"
+                         className="bg-white/10 backdrop-blur-sm border-white/20"
+                         onClick={() => playVideo('main')}
+                       >
+                         <Play className="h-5 w-5 mr-2" />
+                         Play {contentType}
+                         {shouldUseAds && <span className="ml-1 text-xs">(Ad)</span>}
+                       </Button>
+                     )}
                     {trailerUrl && (
                       <Button
                         size="sm"
@@ -336,8 +354,19 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             ref={playerRef}
             className={`relative w-full h-full bg-black ${isFullscreen ? 'video-player-fullscreen' : ''}`}
           >
-            {/* Use Cloudflare Stream iframe for stream content, fallback to HTML5 for others */}
-            {hasStreamPlayback && currentVideo === 'main' ? (
+            {/* Use IMA Player for monetized Cloudflare Stream content */}
+            {shouldUseAds && currentVideo === 'main' ? (
+              <CFStreamIMAPlayer
+                playbackId={playbackId!}
+                channelSlug={contentType.toLowerCase().replace(' ', '-')}
+                contentId={contentId || 'unknown'}
+                durationSec={durationSeconds}
+                adBreaks={adBreaks}
+                vastTagUrl={vastTagUrl}
+                title={title}
+                onError={(error) => console.error('IMA Player error:', error)}
+              />
+            ) : hasStreamPlayback && currentVideo === 'main' ? (
               <iframe
                 src={`https://iframe.cloudflarestream.com/${playbackId}?controls=true&autoplay=false`}
                 className="w-full h-full border-0"

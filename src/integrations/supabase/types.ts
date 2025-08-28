@@ -43,14 +43,17 @@ export type Database = {
       }
       content: {
         Row: {
+          ad_breaks: number[] | null
           content_type: string
           cover_url: string | null
           created_at: string
           description: string | null
+          duration_seconds: number | null
           file_url: string | null
           genre: string | null
           id: string
           is_featured: boolean | null
+          monetization_enabled: boolean | null
           playback_id: string | null
           stream_id: string | null
           stream_status: string | null
@@ -61,16 +64,20 @@ export type Database = {
           trailer_url: string | null
           updated_at: string
           user_id: string
+          vast_tag_url: string | null
         }
         Insert: {
+          ad_breaks?: number[] | null
           content_type: string
           cover_url?: string | null
           created_at?: string
           description?: string | null
+          duration_seconds?: number | null
           file_url?: string | null
           genre?: string | null
           id?: string
           is_featured?: boolean | null
+          monetization_enabled?: boolean | null
           playback_id?: string | null
           stream_id?: string | null
           stream_status?: string | null
@@ -81,16 +88,20 @@ export type Database = {
           trailer_url?: string | null
           updated_at?: string
           user_id: string
+          vast_tag_url?: string | null
         }
         Update: {
+          ad_breaks?: number[] | null
           content_type?: string
           cover_url?: string | null
           created_at?: string
           description?: string | null
+          duration_seconds?: number | null
           file_url?: string | null
           genre?: string | null
           id?: string
           is_featured?: boolean | null
+          monetization_enabled?: boolean | null
           playback_id?: string | null
           stream_id?: string | null
           stream_status?: string | null
@@ -101,6 +112,7 @@ export type Database = {
           trailer_url?: string | null
           updated_at?: string
           user_id?: string
+          vast_tag_url?: string | null
         }
         Relationships: []
       }

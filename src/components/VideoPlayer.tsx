@@ -6,6 +6,7 @@ import { Play, Pause, Volume2, VolumeX, Maximize, X, SkipBack, SkipForward, Sett
 import { Badge } from '@/components/ui/badge';
 import { Slider } from '@/components/ui/slider';
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface VideoPlayerProps {
   videoUrl?: string;
@@ -40,6 +41,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   streamThumbnailUrl,
   playbackId,
 }) => {
+  const isMobile = useIsMobile();
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [showFullPlayer, setShowFullPlayer] = useState(false);
@@ -339,7 +341,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             {/* Use Cloudflare Stream iframe for stream content, fallback to HTML5 for others */}
             {hasStreamPlayback && currentVideo === 'main' ? (
               <iframe
-                src={`https://iframe.cloudflarestream.com/${playbackId}?controls=false&autoplay=true`}
+                src={`https://iframe.cloudflarestream.com/${playbackId}?controls=true&autoplay=${!isMobile}&muted=false&preload=auto&loop=false&poster=auto`}
                 className="w-full h-full border-0"
                 allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;"
                 allowFullScreen

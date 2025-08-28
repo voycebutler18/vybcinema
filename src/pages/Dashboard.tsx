@@ -8,18 +8,25 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Upload, Film, Tv, BookOpen, Edit, Trash2, Plus } from "lucide-react";
+import { VideoPlayer } from "@/components/VideoPlayer";
 import { useToast } from "@/hooks/use-toast";
 
 interface ContentItem {
   id: string;
   title: string;
   description: string;
-  content_type: string; // Changed from strict union to string
+  content_type: string;
   genre?: string;
   is_featured: boolean;
   created_at: string;
   file_url?: string;
   thumbnail_url?: string;
+  cover_url?: string;
+  stream_url?: string;
+  stream_status?: string;
+  stream_id?: string;
+  stream_thumbnail_url?: string;
+  playback_id?: string;
 }
 
 const Dashboard = () => {
@@ -50,6 +57,7 @@ const Dashboard = () => {
 
       if (error) throw error;
 
+      console.log('Fetched content:', data);
       setContent(data || []);
     } catch (error: any) {
       toast({
@@ -61,6 +69,17 @@ const Dashboard = () => {
       setLoadingContent(false);
     }
   };
+
+  // Auto-refresh content every 10 seconds to check for ready videos
+  useEffect(() => {
+    if (!user) return;
+    
+    const interval = setInterval(() => {
+      fetchUserContent();
+    }, 10000);
+    
+    return () => clearInterval(interval);
+  }, [user]);
 
   const getContentIcon = (type: string) => {
     switch (type) {
@@ -210,68 +229,22 @@ const Dashboard = () => {
                 ) : (
                   <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {content.map((item) => (
-                      <Card key={item.id} className="cinema-card">
-                        <CardHeader className="pb-3">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center space-x-2">
-                              {getContentIcon(item.content_type)}
-                              <Badge variant="secondary">
-                                {getContentTypeLabel(item.content_type)}
-                              </Badge>
-                            </div>
-                            {item.is_featured && (
-                              <Badge variant="default">Featured</Badge>
-                            )}
-                          </div>
-                          <CardTitle className="text-lg">{item.title}</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          {/* Video Preview */}
-                          {item.file_url && (
-                            <div className="aspect-video mb-4 rounded-lg overflow-hidden bg-secondary/20">
-                              <video
-                                className="w-full h-full object-cover"
-                                preload="metadata"
-                                muted
-                                playsInline
-                                onMouseEnter={(e) => e.currentTarget.play()}
-                                onMouseLeave={(e) => {
-                                  e.currentTarget.pause();
-                                  e.currentTarget.currentTime = 0;
-                                }}
-                              >
-                                <source src={item.file_url} />
-                              </video>
-                            </div>
-                          )}
-                          
-                          <p className="text-muted-foreground text-sm mb-4 line-clamp-2">
-                            {item.description || 'No description provided'}
-                          </p>
-                          {item.genre && (
-                            <p className="text-xs text-muted-foreground mb-3">
-                              Genre: {item.genre}
-                            </p>
-                          )}
-                          <p className="text-xs text-muted-foreground mb-4">
-                            Uploaded: {new Date(item.created_at).toLocaleDateString()}
-                          </p>
-                          <div className="flex space-x-2">
-                            <Button size="sm" variant="outline">
-                              <Edit className="h-4 w-4 mr-1" />
-                              Edit
-                            </Button>
-                            <Button 
-                              size="sm" 
-                              variant="destructive"
-                              onClick={() => deleteContent(item.id, item.file_url)}
-                            >
-                              <Trash2 className="h-4 w-4 mr-1" />
-                              Delete
-                            </Button>
-                          </div>
-                        </CardContent>
-                      </Card>
+                      <VideoPlayer
+                        key={item.id}
+                        title={item.title}
+                        description={item.description}
+                        contentType={item.content_type}
+                        genre={item.genre}
+                        videoUrl={item.file_url}
+                        coverUrl={item.cover_url}
+                        streamUrl={item.stream_url}
+                        streamStatus={item.stream_status}
+                        streamId={item.stream_id}
+                        streamThumbnailUrl={item.stream_thumbnail_url}
+                        playbackId={item.playback_id}
+                        canDelete={true}
+                        onDelete={() => deleteContent(item.id, item.file_url)}
+                      />
                     ))}
                   </div>
                 )}

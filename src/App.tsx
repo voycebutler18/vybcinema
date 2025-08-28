@@ -8,7 +8,6 @@ import { ScrollToTop } from "@/components/ScrollToTop";
 import Index from "./pages/Index";
 import Movies from "./pages/Movies";
 import TVShows from "./pages/TVShows";
-import MusicVideos from "./pages/MusicVideos";
 import Stories from "./pages/Stories";
 import Upload from "./pages/Upload";
 import About from "./pages/About";
@@ -24,7 +23,6 @@ import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsOfService from "./pages/TermsOfService";
 import CookiePolicy from "./pages/CookiePolicy";
 import NotFound from "./pages/NotFound";
-import Podcasts from "./pages/Podcasts";
 import Dashboard from "./pages/Dashboard";
 
 const queryClient = new QueryClient();
@@ -41,9 +39,7 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/movies" element={<Movies />} />
           <Route path="/tv-shows" element={<TVShows />} />
-          <Route path="/music-videos" element={<MusicVideos />} />
           <Route path="/stories" element={<Stories />} />
-          <Route path="/podcasts" element={<Podcasts />} />
           <Route path="/upload" element={<Upload />} />
           <Route path="/about" element={<About />} />
           <Route path="/genre/:genreName" element={<Genre />} />

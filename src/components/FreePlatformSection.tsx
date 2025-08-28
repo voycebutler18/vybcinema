@@ -1,7 +1,9 @@
 import { Button } from "@/components/ui/button";
 import { Check, Play, Zap } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 export const FreePlatformSection = () => {
+  const navigate = useNavigate();
   const freeFeatures = [
     "Unlimited streaming",
     "HD quality (up to 1080p)",
@@ -58,7 +60,10 @@ export const FreePlatformSection = () => {
               ))}
             </ul>
 
-            <Button className="btn-hero w-full">
+            <Button 
+              className="btn-hero w-full"
+              onClick={() => navigate('/movies')}
+            >
               Start Watching Free
             </Button>
           </div>

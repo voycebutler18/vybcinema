@@ -30,13 +30,13 @@ export const NetflixDetailModal: React.FC<NetflixDetailModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl w-full p-0 bg-gray-900 border-gray-700">
+      <DialogContent className="max-w-4xl w-full p-0 bg-card border-border">
         <div className="relative">
           {/* Close Button */}
           <Button
             variant="ghost"
             size="sm"
-            className="absolute top-4 right-4 z-10 bg-black/50 hover:bg-black/70 text-white rounded-full p-2"
+            className="absolute top-4 right-4 z-10 bg-background/50 hover:bg-background/70 text-foreground rounded-full p-2"
             onClick={onClose}
           >
             <X className="h-5 w-5" />
@@ -69,20 +69,20 @@ export const NetflixDetailModal: React.FC<NetflixDetailModalProps> = ({
                 <source src={content.file_url} type="video/mp4" />
               </video>
             ) : (
-              <div className="w-full h-full bg-gradient-to-br from-gray-700 to-gray-800 rounded-t-lg flex items-center justify-center">
-                <Play className="h-24 w-24 text-gray-400" />
+              <div className="w-full h-full bg-gradient-to-br from-muted to-muted/80 rounded-t-lg flex items-center justify-center">
+                <Play className="h-24 w-24 text-muted-foreground" />
               </div>
             )}
 
             {/* Gradient Overlay */}
-            <div className="absolute inset-0 bg-gradient-to-t from-gray-900 via-transparent to-transparent rounded-t-lg"></div>
+            <div className="absolute inset-0 bg-gradient-overlay rounded-t-lg"></div>
 
             {/* Action Buttons Overlay */}
             <div className="absolute bottom-8 left-8 right-8">
               <div className="flex items-center gap-4">
                 <Button 
                   size="lg"
-                  className="bg-white text-black hover:bg-gray-200 font-semibold px-8"
+                  className="btn-hero"
                   onClick={onPlay}
                 >
                   <Play className="h-5 w-5 mr-2" />
@@ -92,7 +92,7 @@ export const NetflixDetailModal: React.FC<NetflixDetailModalProps> = ({
                 <Button 
                   size="lg"
                   variant="ghost"
-                  className="rounded-full bg-black/30 hover:bg-black/50 text-white border border-white/30 p-3"
+                  className="rounded-full bg-background/30 hover:bg-background/50 text-foreground border border-border p-3"
                 >
                   <Plus className="h-5 w-5" />
                 </Button>
@@ -100,7 +100,7 @@ export const NetflixDetailModal: React.FC<NetflixDetailModalProps> = ({
                 <Button 
                   size="lg"
                   variant="ghost"
-                  className="rounded-full bg-black/30 hover:bg-black/50 text-white border border-white/30 p-3"
+                  className="rounded-full bg-background/30 hover:bg-background/50 text-foreground border border-border p-3"
                 >
                   <ThumbsUp className="h-5 w-5" />
                 </Button>
@@ -126,28 +126,28 @@ export const NetflixDetailModal: React.FC<NetflixDetailModalProps> = ({
               {/* Main Info */}
               <div className="md:col-span-2 space-y-4">
                 <div className="flex items-center gap-3">
-                  <Badge className="bg-red-600 hover:bg-red-700 text-white">
+                  <Badge className="bg-primary hover:bg-primary/80 text-primary-foreground">
                     {contentType.toUpperCase()}
                   </Badge>
                   {content.genre && (
-                    <Badge variant="outline" className="border-gray-500 text-gray-300">
+                    <Badge variant="outline" className="border-border text-foreground">
                       {content.genre}
                     </Badge>
                   )}
                 </div>
 
-                <h1 className="text-3xl md:text-4xl font-bold text-white">
+                <h1 className="text-3xl md:text-4xl font-bold text-foreground">
                   {content.title}
                 </h1>
 
                 {content.description && (
-                  <p className="text-gray-300 text-lg leading-relaxed">
+                  <p className="text-muted-foreground text-lg leading-relaxed">
                     {content.description}
                   </p>
                 )}
 
                 {/* Upload Date */}
-                <div className="flex items-center gap-4 text-sm text-gray-400">
+                <div className="flex items-center gap-4 text-sm text-muted-foreground">
                   <span>Uploaded: {new Date(content.created_at).toLocaleDateString()}</span>
                 </div>
               </div>
@@ -157,7 +157,7 @@ export const NetflixDetailModal: React.FC<NetflixDetailModalProps> = ({
                 {/* Additional Actions */}
                 <div className="space-y-3">
                   {content.trailer_url && content.file_url && (
-                    <div className="text-gray-300 text-sm">
+                    <div className="text-foreground text-sm">
                       <p className="font-medium mb-2">Available:</p>
                       <ul className="space-y-1">
                         <li>• Full {contentType}</li>
@@ -168,14 +168,14 @@ export const NetflixDetailModal: React.FC<NetflixDetailModalProps> = ({
                 </div>
 
                 {/* Metadata */}
-                <div className="text-gray-400 text-sm space-y-2">
+                <div className="text-muted-foreground text-sm space-y-2">
                   <div>
-                    <span className="text-gray-300">Type: </span>
+                    <span className="text-foreground">Type: </span>
                     {contentType}
                   </div>
                   {content.genre && (
                     <div>
-                      <span className="text-gray-300">Genre: </span>
+                      <span className="text-foreground">Genre: </span>
                       {content.genre}
                     </div>
                   )}

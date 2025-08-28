@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/hooks/useAuth";
 
-export const NetflixNavigation = () => {
+export const NetflixNavigation: React.FC = () => {
   const { user, signOut } = useAuth();
   const location = useLocation();
   const [showSearch, setShowSearch] = useState(false);
@@ -35,7 +35,7 @@ export const NetflixNavigation = () => {
     <nav className="fixed top-0 left-0 right-0 z-50 bg-black/90 backdrop-blur-sm transition-all duration-300">
       <div className="container mx-auto px-8 py-4">
         <div className="flex items-center justify-between">
-          {/* Logo + Nav */}
+          {/* Logo & Nav */}
           <div className="flex items-center gap-8">
             <Link to="/" className="flex items-center gap-2">
               <div className="text-red-600 text-2xl font-bold">STREAMFLIX</div>
@@ -131,3 +131,7 @@ export const NetflixNavigation = () => {
     </nav>
   );
 };
+
+// Keep old imports working:
+export { NetflixNavigation as Navigation };
+export default NetflixNavigation;

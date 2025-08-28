@@ -3,5 +3,6 @@
 
 # Google AdSense
 google.com, pub-4835562127983297, DIRECT, f08c47fec0942fa0
+
 # Additional authorized sellers can be added here as needed
 # Format: domain, publisher_id, relationship_type, certification_authority_id

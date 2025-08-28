@@ -12,6 +12,8 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Upload as UploadIcon, Film, Tv, Music, BookOpen, Mic, Image, Link as LinkIcon } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
+import { useVideoTranscode } from "@/hooks/useVideoTranscode";
+import { VideoProgressTracker } from "@/components/VideoProgressTracker";
 
 const Upload = () => {
   const { user, loading } = useAuth();
@@ -36,6 +38,7 @@ const Upload = () => {
   
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState({ video: 0, cover: 0, thumbnail: 0 });
+  const { progress, isProcessing, transcodeVideo, updateUploadProgress } = useVideoTranscode();
 
   useEffect(() => {
     if (!loading && !user) {
@@ -141,6 +144,53 @@ const Upload = () => {
     }
   };
 
+  const uploadVideoToStream = async (transcodedFile: File, contentId: string) => {
+    const streamFormData = new FormData();
+    streamFormData.append('video', transcodedFile);
+    streamFormData.append('contentId', contentId);
+
+    // Simulate upload progress tracking
+    const xhr = new XMLHttpRequest();
+    
+    return new Promise((resolve, reject) => {
+      xhr.upload.addEventListener('progress', (event) => {
+        if (event.lengthComputable) {
+          const percentage = Math.round((event.loaded / event.total) * 100);
+          updateUploadProgress(percentage);
+        }
+      });
+
+      xhr.addEventListener('load', () => {
+        if (xhr.status === 200) {
+          try {
+            const response = JSON.parse(xhr.responseText);
+            resolve(response);
+          } catch (error) {
+            reject(new Error('Invalid response format'));
+          }
+        } else {
+          reject(new Error(`Upload failed with status ${xhr.status}`));
+        }
+      });
+
+      xhr.addEventListener('error', () => {
+        reject(new Error('Upload failed due to network error'));
+      });
+
+      // Use Supabase functions invoke but track progress
+      supabase.functions.invoke('cloudflare-stream-upload', {
+        body: streamFormData
+      }).then(response => {
+        if (response.error) {
+          reject(new Error(response.error.message));
+        } else {
+          updateUploadProgress(100);
+          resolve(response);
+        }
+      }).catch(reject);
+    });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -183,26 +233,18 @@ const Upload = () => {
 
       if (dbError) throw dbError;
 
-      // Upload video to Cloudflare Stream
-      const streamFormData = new FormData();
-      streamFormData.append('video', files.video);
-      streamFormData.append('contentId', contentData.id);
-
-      const streamResponse = await supabase.functions.invoke('cloudflare-stream-upload', {
-        body: streamFormData
+      // Start transcoding and upload process
+      await transcodeVideo(files.video, async (transcodedFile: File) => {
+        await uploadVideoToStream(transcodedFile, contentData.id);
       });
-
-      if (streamResponse.error) {
-        throw new Error(streamResponse.error.message);
-      }
       
-      // Upload cover image if provided
+      // Upload cover image if provided (in parallel)
       let coverUrl = null;
       if (files.cover) {
         coverUrl = await uploadFile(files.cover, 'covers', 'cover');
       }
       
-      // Upload thumbnail if provided (fallback if Stream doesn't generate one)
+      // Upload thumbnail if provided (in parallel)
       let thumbnailUrl = null;
       if (files.thumbnail) {
         thumbnailUrl = await uploadFile(files.thumbnail, 'thumbnails', 'thumbnail');
@@ -222,8 +264,8 @@ const Upload = () => {
       }
 
       toast({
-        title: "Upload Started!",
-        description: `Your ${contentTypes.find(t => t.value === formData.content_type)?.label.toLowerCase()} is being processed and will be available shortly with improved streaming quality.`
+        title: "Upload Complete!",
+        description: `Your ${contentTypes.find(t => t.value === formData.content_type)?.label.toLowerCase()} has been processed and uploaded successfully!`
       });
 
       // Reset form
@@ -239,7 +281,7 @@ const Upload = () => {
       setUploadProgress({ video: 0, cover: 0, thumbnail: 0 });
       
       // Navigate to dashboard
-      navigate('/dashboard');
+      setTimeout(() => navigate('/dashboard'), 2000);
 
     } catch (error: any) {
       console.error('Upload error:', error);
@@ -286,6 +328,14 @@ const Upload = () => {
                   Upload your videos, add details, and share with the world
                 </p>
               </div>
+
+              {/* Show progress tracker when processing */}
+              {(isProcessing || uploading) && (
+                <VideoProgressTracker 
+                  progress={progress} 
+                  fileName={files.video?.name}
+                />
+              )}
 
               {/* Upload Form */}
               <div className="cinema-card p-8" style={{ pointerEvents: 'auto', position: 'relative', zIndex: 30 }}>
@@ -462,18 +512,19 @@ const Upload = () => {
                   <div className="pt-4">
                     <Button 
                       type="submit" 
-                      disabled={uploading || !files.video || !formData.title.trim()}
+                      disabled={uploading || isProcessing || !files.video || !formData.title.trim()}
                       className="btn-hero w-full text-lg py-4"
                     >
-                      {uploading ? (
+                      {uploading || isProcessing ? (
                         <>
                           <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                          Uploading...
+                          {progress.phase === 'transcoding' ? 'Transcoding...' : 
+                           progress.phase === 'uploading' ? 'Uploading...' : 'Processing...'}
                         </>
                       ) : (
                         <>
                           <UploadIcon className="h-5 w-5 mr-2" />
-                          Upload {selectedContentType?.label}
+                          Process & Upload {selectedContentType?.label}
                         </>
                       )}
                     </Button>

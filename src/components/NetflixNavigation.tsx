@@ -3,7 +3,7 @@ import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Search, Bell, User, ChevronDown, Heart } from "lucide-react";
+import { Search, Bell, User, ChevronDown } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,35 +18,29 @@ export const NetflixNavigation = () => {
   const location = useLocation();
   const [showSearch, setShowSearch] = useState(false);
 
-  // Added Music Videos + My Favorites here
+  // Favorites removed; Music Videos kept
   const navItems = [
     { path: "/", label: "Home" },
     { path: "/movies", label: "Movies" },
     { path: "/tv-shows", label: "TV Shows" },
     { path: "/stories", label: "Short Stories" },
-    { path: "/music-videos", label: "Music Videos" }, // NEW
-    { path: "/favorites", label: "My Favorites" },    // NEW
+    { path: "/music-videos", label: "Music Videos" },
   ];
 
-  const isActive = (path: string) => {
-    if (path === "/" && location.pathname === "/") return true;
-    if (path !== "/" && location.pathname.startsWith(path)) return true;
-    return false;
-    // you can tighten this if needed (e.g., exact match for some paths)
-  };
+  const isActive = (path: string) =>
+    (path === "/" && location.pathname === "/") ||
+    (path !== "/" && location.pathname.startsWith(path));
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-black/90 backdrop-blur-sm transition-all duration-300">
       <div className="container mx-auto px-8 py-4">
         <div className="flex items-center justify-between">
-          {/* Logo and Navigation */}
+          {/* Logo + Nav */}
           <div className="flex items-center gap-8">
-            {/* Logo */}
             <Link to="/" className="flex items-center gap-2">
               <div className="text-red-600 text-2xl font-bold">STREAMFLIX</div>
             </Link>
 
-            {/* Navigation Items */}
             <div className="hidden md:flex items-center gap-6">
               {navItems.map((item) => (
                 <Link
@@ -62,7 +56,7 @@ export const NetflixNavigation = () => {
             </div>
           </div>
 
-          {/* Right Side Actions */}
+          {/* Right side */}
           <div className="flex items-center gap-4">
             {/* Search */}
             <div className="relative">
@@ -87,19 +81,18 @@ export const NetflixNavigation = () => {
             </div>
 
             {/* Notifications */}
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-white hover:text-gray-300"
-            >
+            <Button variant="ghost" size="sm" className="text-white hover:text-gray-300">
               <Bell className="h-5 w-5" />
             </Button>
 
-            {/* User Menu */}
+            {/* User menu */}
             {user ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="flex items-center gap-2 text-white hover:text-gray-300">
+                  <Button
+                    variant="ghost"
+                    className="flex items-center gap-2 text-white hover:text-gray-300"
+                  >
                     <Avatar className="h-8 w-8">
                       <AvatarFallback className="bg-red-600 text-white">
                         {user.email?.charAt(0).toUpperCase()}
@@ -109,12 +102,6 @@ export const NetflixNavigation = () => {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="bg-black/90 border-gray-700">
-                  <DropdownMenuItem asChild className="text-white hover:bg-gray-800 cursor-pointer">
-                    <Link to="/favorites" className="flex items-center">
-                      <Heart className="h-4 w-4 mr-2" />
-                      My Favorites
-                    </Link>
-                  </DropdownMenuItem>
                   <DropdownMenuItem className="text-white hover:bg-gray-800">
                     <User className="h-4 w-4 mr-2" />
                     Profile

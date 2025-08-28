@@ -36,16 +36,7 @@ export const ContentCard: React.FC<NetflixCardProps> = ({
       <div className="relative overflow-hidden rounded-lg bg-secondary/20 border border-border/50">
         {/* Main Image/Video */}
         <div className="aspect-video relative">
-          {content.playback_id ? (
-            <img
-              src={`https://videodelivery.net/${content.playback_id}/thumbnails/thumbnail.jpg?time=1s&height=360`}
-              alt={content.title}
-              className={`w-full h-full object-cover transition-opacity duration-300 ${
-                imageLoaded ? 'opacity-100' : 'opacity-0'
-              }`}
-              onLoad={() => setImageLoaded(true)}
-            />
-          ) : content.cover_url ? (
+          {content.cover_url ? (
             <img
               src={content.cover_url}
               alt={content.title}

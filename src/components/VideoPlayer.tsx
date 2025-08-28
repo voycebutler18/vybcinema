@@ -279,7 +279,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const hasStreamPlayback = streamStatus === 'ready' && playbackId;
   const isProcessing = streamStatus === 'pending' || (streamStatus === 'processing' && !playbackId);
   const displayThumbnail = streamThumbnailUrl || coverUrl;
-  const shouldUseAds = monetizationEnabled && vastTagUrl && hasStreamPlayback && !showFallbackPlayer;
+  const shouldUseAds = false;
   
   console.log('Video player state:', { 
     streamStatus, 

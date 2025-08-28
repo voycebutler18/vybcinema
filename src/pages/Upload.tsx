@@ -10,7 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Upload as UploadIcon, Film, Tv, Music, BookOpen, Mic, Image, Link as LinkIcon } from "lucide-react";
+import { Upload as UploadIcon, Film, Tv, BookOpen, Link as LinkIcon } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { useVideoTranscode } from "@/hooks/useVideoTranscode";
 import { VideoProgressTracker } from "@/components/VideoProgressTracker";
@@ -49,17 +49,13 @@ const Upload = () => {
   const contentTypes = [
     { value: 'movie', label: 'Movie', icon: Film },
     { value: 'tv_show', label: 'TV Show', icon: Tv },
-    { value: 'music_video', label: 'Music Video', icon: Music },
-    { value: 'story', label: 'Story', icon: BookOpen },
-    { value: 'podcast', label: 'Podcast', icon: Mic }
+    { value: 'story', label: 'Story', icon: BookOpen }
   ];
 
   const genres = {
     movie: ['Action', 'Comedy', 'Drama', 'Horror', 'Sci-Fi', 'Romance', 'Thriller', 'Documentary'],
     tv_show: ['Comedy', 'Drama', 'Reality', 'Documentary', 'News', 'Kids', 'Sports'],
-    music_video: ['Pop', 'Rock', 'Hip Hop', 'R&B', 'Country', 'Electronic', 'Jazz', 'Classical'],
-    story: ['Fiction', 'Non-Fiction', 'Biography', 'Mystery', 'Romance', 'Adventure', 'Fantasy'],
-    podcast: ['Technology', 'Business', 'Comedy', 'Education', 'News', 'Sports', 'Health', 'Arts']
+    story: ['Fiction', 'Non-Fiction', 'Biography', 'Mystery', 'Romance', 'Adventure', 'Fantasy']
   };
 
   const handleFileChange = (type: 'video' | 'cover' | 'thumbnail', file: File | null) => {
@@ -75,14 +71,8 @@ const Upload = () => {
         case 'tv_show':
           maxSizeLimit = 2000; // 2GB for TV shows
           break;
-        case 'music_video':
-          maxSizeLimit = 500; // 500MB for music videos
-          break;
         case 'story':
           maxSizeLimit = 200; // 200MB for stories
-          break;
-        case 'podcast':
-          maxSizeLimit = 300; // 300MB for podcasts
           break;
       }
       
@@ -435,10 +425,8 @@ const Upload = () => {
                        )}
                        <p className="text-xs text-muted-foreground mt-2">
                          Supported formats: MP4, MOV, AVI, MKV, WebM, M4V, WMV, FLV<br/>
-                         Max size: {formData.content_type === 'movie' ? '5GB' : 
-                                   formData.content_type === 'tv_show' ? '2GB' :
-                                   formData.content_type === 'music_video' ? '500MB' :
-                                   formData.content_type === 'podcast' ? '300MB' : '200MB'}
+          Max size: {formData.content_type === 'movie' ? '5GB' : 
+                    formData.content_type === 'tv_show' ? '2GB' : '200MB'}
                        </p>
                      </div>
                    </div>

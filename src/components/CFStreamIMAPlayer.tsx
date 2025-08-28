@@ -11,7 +11,6 @@ interface CFStreamIMAPlayerProps {
   vastTagUrl?: string;
   title: string;
   onError?: (error: string) => void;
-  // Add these new callback props
   onAdStart?: () => void;
   onAdComplete?: () => void;
   onContentStart?: () => void;
@@ -40,7 +39,7 @@ export const CFStreamIMAPlayer: React.FC<CFStreamIMAPlayerProps> = ({
   channelSlug,
   contentId,
   durationSec = 0,
-  adBreaks = [0], // Default preroll
+  adBreaks = [0],
   vastTagUrl,
   title,
   onError,
@@ -62,7 +61,6 @@ export const CFStreamIMAPlayer: React.FC<CFStreamIMAPlayerProps> = ({
   const [contentStarted, setContentStarted] = useState(false);
   const [adsInitialized, setAdsInitialized] = useState(false);
 
-  // Load Google IMA SDK
   useEffect(() => {
     if (window.google && window.google.ima) {
       setImaLoaded(true);
@@ -78,7 +76,9 @@ export const CFStreamIMAPlayer: React.FC<CFStreamIMAPlayerProps> = ({
     script.onerror = () => {
       console.error('Failed to load Google IMA SDK');
       setAdLoadError('Failed to load ad system');
-      onError?.('Failed to load ad system');
+      if (onError) {
+        onError('Failed to load ad system');
+      }
     };
     document.head.appendChild(script);
 
@@ -89,25 +89,23 @@ export const CFStreamIMAPlayer: React.FC<CFStreamIMAPlayerProps> = ({
     };
   }, [onError]);
 
-  // Initialize IMA
   useEffect(() => {
-    if (!imaLoaded || !videoRef.current || !adContainerRef.current || !vastTagUrl || adsInitialized) return;
+    if (!imaLoaded || !videoRef.current || !adContainerRef.current || !vastTagUrl || adsInitialized) {
+      return;
+    }
 
     try {
       console.log('Initializing IMA...');
       
-      // Create ad display container
       const adDisplayContainer = new window.google.ima.AdDisplayContainer(
         adContainerRef.current,
         videoRef.current
       );
       setAdDisplayContainer(adDisplayContainer);
 
-      // Create ads loader
       const adsLoader = new window.google.ima.AdsLoader(adDisplayContainer);
       setAdsLoader(adsLoader);
 
-      // Listen for ads manager loaded event
       adsLoader.addEventListener(
         window.google.ima.AdsManagerLoadedEvent.Type.ADS_MANAGER_LOADED,
         (event: any) => {
@@ -115,7 +113,6 @@ export const CFStreamIMAPlayer: React.FC<CFStreamIMAPlayerProps> = ({
           const adsManager = event.getAdsManager(videoRef.current);
           setAdsManager(adsManager);
 
-          // Add event listeners
           adsManager.addEventListener(window.google.ima.AdEvent.Type.LOADED, () => {
             console.log('Ad loaded');
           });
@@ -123,7 +120,9 @@ export const CFStreamIMAPlayer: React.FC<CFStreamIMAPlayerProps> = ({
           adsManager.addEventListener(window.google.ima.AdEvent.Type.STARTED, () => {
             console.log('Ad started');
             setIsAdPlaying(true);
-            onAdStart?.();
+            if (onAdStart) {
+              onAdStart();
+            }
           });
 
           adsManager.addEventListener(window.google.ima.AdEvent.Type.CONTENT_PAUSE_REQUESTED, () => {
@@ -133,7 +132,9 @@ export const CFStreamIMAPlayer: React.FC<CFStreamIMAPlayerProps> = ({
             }
             setIsPlaying(false);
             setIsAdPlaying(true);
-            onContentPause?.();
+            if (onContentPause) {
+              onContentPause();
+            }
           });
 
           adsManager.addEventListener(window.google.ima.AdEvent.Type.CONTENT_RESUME_REQUESTED, () => {
@@ -143,24 +144,31 @@ export const CFStreamIMAPlayer: React.FC<CFStreamIMAPlayerProps> = ({
 
           adsManager.addEventListener(window.google.ima.AdEvent.Type.COMPLETE, () => {
             console.log('Ad complete');
-            onAdComplete?.();
+            if (onAdComplete) {
+              onAdComplete();
+            }
             resumeContent();
           });
 
           adsManager.addEventListener(window.google.ima.AdEvent.Type.SKIPPED, () => {
             console.log('Ad skipped');
-            onAdComplete?.();
+            if (onAdComplete) {
+              onAdComplete();
+            }
             resumeContent();
           });
 
           adsManager.addEventListener(window.google.ima.AdEvent.Type.ALL_ADS_COMPLETED, () => {
             console.log('All ads completed');
-            onAdComplete?.();
+            if (onAdComplete) {
+              onAdComplete();
+            }
             resumeContent();
-            // Clean up ads manager
             setTimeout(() => {
               try {
-                adsManager?.destroy();
+                if (adsManager) {
+                  adsManager.destroy();
+                }
               } catch (e) {
                 console.warn('Error destroying ads manager:', e);
               }
@@ -169,26 +177,25 @@ export const CFStreamIMAPlayer: React.FC<CFStreamIMAPlayerProps> = ({
 
           try {
             adsManager.init(
-              videoRef.current?.clientWidth || 640, 
-              videoRef.current?.clientHeight || 480, 
+              videoRef.current?.clientWidth || 640,
+              videoRef.current?.clientHeight || 480,
               window.google.ima.ViewMode.NORMAL
             );
           } catch (adError) {
             console.error('AdsManager init error:', adError);
             setAdLoadError('Ad failed to initialize');
-            startContentVideo(); // Fallback to content
+            startContentVideo();
           }
         }
       );
 
-      // Listen for ad errors
       adsLoader.addEventListener(
         window.google.ima.AdErrorEvent.Type.AD_ERROR,
         (event: any) => {
           console.error('Ad error:', event.getError());
           setAdLoadError('Ad failed to load');
           setIsAdPlaying(false);
-          startContentVideo(); // Fallback to content
+          startContentVideo();
         }
       );
 
@@ -197,7 +204,9 @@ export const CFStreamIMAPlayer: React.FC<CFStreamIMAPlayerProps> = ({
     } catch (error) {
       console.error('IMA initialization error:', error);
       setAdLoadError('Ad system initialization failed');
-      onError?.('Ad system initialization failed');
+      if (onError) {
+        onError('Ad system initialization failed');
+      }
       startContentVideo();
     }
   }, [imaLoaded, vastTagUrl, onError, adsInitialized, onAdStart, onAdComplete, onContentPause]);
@@ -208,7 +217,6 @@ export const CFStreamIMAPlayer: React.FC<CFStreamIMAPlayerProps> = ({
       setContentStarted(true);
       setIsAdPlaying(false);
       
-      // Ensure video is visible
       videoRef.current.style.display = 'block';
       
       const playPromise = videoRef.current.play();
@@ -216,7 +224,9 @@ export const CFStreamIMAPlayer: React.FC<CFStreamIMAPlayerProps> = ({
         playPromise
           .then(() => {
             setIsPlaying(true);
-            onContentStart?.();
+            if (onContentStart) {
+              onContentStart();
+            }
           })
           .catch((error) => {
             console.warn('Autoplay failed, trying muted:', error);
@@ -226,7 +236,9 @@ export const CFStreamIMAPlayer: React.FC<CFStreamIMAPlayerProps> = ({
               videoRef.current.play()
                 .then(() => {
                   setIsPlaying(true);
-                  onContentStart?.();
+                  if (onContentStart) {
+                    onContentStart();
+                  }
                 })
                 .catch(console.error);
             }
@@ -238,7 +250,6 @@ export const CFStreamIMAPlayer: React.FC<CFStreamIMAPlayerProps> = ({
   const resumeContent = () => {
     console.log('Resuming content');
     
-    // Hide ad container
     if (adContainerRef.current) {
       adContainerRef.current.style.display = 'none';
       adContainerRef.current.style.pointerEvents = 'none';
@@ -246,12 +257,9 @@ export const CFStreamIMAPlayer: React.FC<CFStreamIMAPlayerProps> = ({
     
     setIsAdPlaying(false);
     
-    // Show and play video content
     if (videoRef.current) {
-      // Ensure video is visible
       videoRef.current.style.display = 'block';
       
-      // Small delay to ensure DOM is ready
       setTimeout(() => {
         if (videoRef.current) {
           const playPromise = videoRef.current.play();
@@ -259,7 +267,9 @@ export const CFStreamIMAPlayer: React.FC<CFStreamIMAPlayerProps> = ({
             playPromise
               .then(() => {
                 setIsPlaying(true);
-                onContentStart?.();
+                if (onContentStart) {
+                  onContentStart();
+                }
               })
               .catch((error) => {
                 console.warn('Content resume failed, trying muted:', error);
@@ -269,7 +279,9 @@ export const CFStreamIMAPlayer: React.FC<CFStreamIMAPlayerProps> = ({
                   videoRef.current.play()
                     .then(() => {
                       setIsPlaying(true);
-                      onContentStart?.();
+                      if (onContentStart) {
+                        onContentStart();
+                      }
                     })
                     .catch(console.error);
                 }
@@ -299,7 +311,6 @@ export const CFStreamIMAPlayer: React.FC<CFStreamIMAPlayerProps> = ({
 
       adsLoader.requestAds(adsRequest);
       
-      // Start ads manager if available
       if (adsManager) {
         setTimeout(() => {
           try {
@@ -321,7 +332,6 @@ export const CFStreamIMAPlayer: React.FC<CFStreamIMAPlayerProps> = ({
     if (!videoRef.current) return;
 
     if (isAdPlaying) {
-      // Don't interfere with ads
       return;
     }
 
@@ -330,17 +340,17 @@ export const CFStreamIMAPlayer: React.FC<CFStreamIMAPlayerProps> = ({
       setIsPlaying(false);
     } else {
       if (vastTagUrl && !contentStarted && videoRef.current.currentTime === 0) {
-        // First play - show ads
         console.log('First play, requesting ads');
         requestAds();
       } else {
-        // Resume content
         const playPromise = videoRef.current.play();
         if (playPromise !== undefined) {
           playPromise
             .then(() => {
               setIsPlaying(true);
-              onContentStart?.();
+              if (onContentStart) {
+                onContentStart();
+              }
             })
             .catch(console.error);
         }
@@ -372,7 +382,6 @@ export const CFStreamIMAPlayer: React.FC<CFStreamIMAPlayerProps> = ({
 
   return (
     <div className="relative w-full aspect-video bg-black rounded-lg overflow-hidden">
-      {/* Video Element */}
       <video
         ref={videoRef}
         className="w-full h-full object-contain"
@@ -385,14 +394,13 @@ export const CFStreamIMAPlayer: React.FC<CFStreamIMAPlayerProps> = ({
         onEnded={() => setIsPlaying(false)}
         onLoadedData={() => console.log('Video loaded')}
         onCanPlay={() => console.log('Video can play')}
-        controls={false} // Always use custom controls
+        controls={false}
         style={{ 
-          display: 'block', // Always show video element
-          visibility: isAdPlaying ? 'hidden' : 'visible' // Use visibility instead of display
+          display: 'block',
+          visibility: isAdPlaying ? 'hidden' : 'visible'
         }}
       />
 
-      {/* Ad Container */}
       <div
         ref={adContainerRef}
         className="absolute inset-0"
@@ -403,7 +411,6 @@ export const CFStreamIMAPlayer: React.FC<CFStreamIMAPlayerProps> = ({
         }}
       />
 
-      {/* Custom Controls Overlay */}
       {!isAdPlaying && (
         <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 hover:opacity-100 transition-opacity duration-300">
           <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between">
@@ -441,7 +448,6 @@ export const CFStreamIMAPlayer: React.FC<CFStreamIMAPlayerProps> = ({
         </div>
       )}
 
-      {/* Ad Loading/Playing Indicator */}
       {isAdPlaying && (
         <div className="absolute top-4 right-4 bg-black/70 text-white px-3 py-1 rounded text-sm flex items-center gap-2">
           <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
@@ -449,14 +455,12 @@ export const CFStreamIMAPlayer: React.FC<CFStreamIMAPlayerProps> = ({
         </div>
       )}
 
-      {/* Error Message */}
       {adLoadError && !isAdPlaying && (
         <div className="absolute top-4 left-4 bg-red-600/90 text-white px-3 py-1 rounded text-sm">
           {adLoadError} - Playing content
         </div>
       )}
 
-      {/* Initial Play Button */}
       {!isPlaying && !isAdPlaying && !contentStarted && (
         <div className="absolute inset-0 flex items-center justify-center">
           <Button

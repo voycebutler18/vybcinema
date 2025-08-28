@@ -7,9 +7,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Upload, Film, Tv, BookOpen, Edit, Trash2, Plus, DollarSign } from "lucide-react";
+import { Upload, Film, Tv, BookOpen, Edit, Trash2, Plus } from "lucide-react";
 import { VideoPlayer } from "@/components/VideoPlayer";
-import { AdMonetizationManager } from "@/components/AdMonetizationManager";
 import { useToast } from "@/hooks/use-toast";
 
 interface ContentItem {
@@ -259,15 +258,6 @@ const Dashboard = () => {
                     ))}
                   </div>
                 )}
-              </div>
-
-              {/* Ad Monetization Section */}
-              <div>
-                <div className="flex items-center gap-3 mb-8">
-                  <DollarSign className="h-8 w-8 text-green-600" />
-                  <h2 className="text-3xl font-bold text-foreground">Ad Monetization</h2>
-                </div>
-                <AdMonetizationManager />
               </div>
 
             </div>

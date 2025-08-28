@@ -59,21 +59,28 @@ export const ContentCard: React.FC<NetflixCardProps> = ({
                 setImageLoaded(true); // Show fallback
               }}
               onMouseEnter={(e) => {
-                try {
-                  e.currentTarget.currentTime = 1; // Show frame at 1 second
-                  e.currentTarget.play().catch(() => {
-                    // Ignore autoplay errors
-                  });
-                } catch (err) {
-                  console.warn('Video hover play failed:', err);
+                if (window.innerWidth >= 768) { // Only on desktop
+                  try {
+                    const video = e.currentTarget;
+                    video.currentTime = 2; // Start preview at 2 seconds
+                    video.muted = true; // Ensure muted for autoplay
+                    video.play().catch(() => {
+                      // Ignore autoplay errors on mobile
+                    });
+                  } catch (err) {
+                    console.warn('Video hover play failed:', err);
+                  }
                 }
               }}
               onMouseLeave={(e) => {
-                try {
-                  e.currentTarget.pause();
-                  e.currentTarget.currentTime = 1; // Reset to frame at 1 second
-                } catch (err) {
-                  console.warn('Video hover pause failed:', err);
+                if (window.innerWidth >= 768) { // Only on desktop
+                  try {
+                    const video = e.currentTarget;
+                    video.pause();
+                    video.currentTime = 2; // Reset to preview frame
+                  } catch (err) {
+                    console.warn('Video hover pause failed:', err);
+                  }
                 }
               }}
               style={{ 

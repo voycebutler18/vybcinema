@@ -339,7 +339,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             {/* Use Cloudflare Stream iframe for stream content, fallback to HTML5 for others */}
             {hasStreamPlayback && currentVideo === 'main' ? (
               <iframe
-                src={`https://iframe.cloudflarestream.com/${playbackId}?controls=false&autoplay=true`}
+                src={`https://iframe.cloudflarestream.com/${playbackId}?controls=true&autoplay=false`}
                 className="w-full h-full border-0"
                 allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;"
                 allowFullScreen

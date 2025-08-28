@@ -1,157 +1,178 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { Play, Pause, Volume2, VolumeX, Maximize, X, SkipBack, SkipForward, Settings, Minimize } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Slider } from '@/components/ui/slider';
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
-import { CFStreamIMAPlayer } from './CFStreamIMAPlayer';
+import {
+  Maximize,
+  Minimize,
+  Pause,
+  Play,
+  Settings,
+  SkipBack,
+  SkipForward,
+  Volume2,
+  VolumeX,
+  X,
+} from 'lucide-react';
 
 interface VideoPlayerProps {
-  videoUrl?: string;
-  coverUrl?: string;
-  trailerUrl?: string;
+  // Media sources
+  videoUrl?: string;                  // direct MP4/WebM
+  trailerUrl?: string;                // trailer (direct media)
+  playbackId?: string;                // Cloudflare Stream playback id
+
+  // Visuals
+  coverUrl?: string;                  // manual card image
+  streamThumbnailUrl?: string;        // saved poster
   title: string;
   description?: string;
+
+  // Metadata / UX
   genre?: string;
   contentType: string;
-  onDelete?: () => void;
-  canDelete?: boolean;
-  streamUrl?: string;
+
+  // Optional stream meta
   streamStatus?: string;
   streamId?: string;
-  streamThumbnailUrl?: string;
-  playbackId?: string;
-  // Ad monetization fields
-  vastTagUrl?: string;
-  adBreaks?: number[];
-  durationSeconds?: number;
+
+  // Actions
+  onDelete?: () => void;
+  canDelete?: boolean;
+
+  // (kept for future ads integration; not used now)
   monetizationEnabled?: boolean;
+  durationSeconds?: number;
+  adBreaks?: number[];
+  vastTagUrl?: string;
   contentId?: string;
 }
 
 export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   videoUrl,
-  coverUrl,
   trailerUrl,
+  playbackId,
+
+  coverUrl,
+  streamThumbnailUrl,
+
   title,
   description,
   genre,
   contentType,
+
   onDelete,
   canDelete = false,
-  streamUrl,
+
+  // unused now but kept for compatibility
   streamStatus,
-  streamId,
-  streamThumbnailUrl,
-  playbackId,
-  // Ad monetization fields
-  vastTagUrl,
-  adBreaks = [0],
-  durationSeconds,
-  monetizationEnabled = true,
-  contentId,
 }) => {
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [isMuted, setIsMuted] = useState(false);
+  // ---------- state ----------
   const [showFullPlayer, setShowFullPlayer] = useState(false);
   const [currentVideo, setCurrentVideo] = useState<'main' | 'trailer'>('main');
+
+  // local player state (used only when we're playing a direct <video>)
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [isMuted, setIsMuted] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [volume, setVolume] = useState(1);
+  const [buffered, setBuffered] = useState(0);
   const [showControls, setShowControls] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [buffered, setBuffered] = useState(0);
   const [videoError, setVideoError] = useState<string | null>(null);
-  const [isVideoLoaded, setIsVideoLoaded] = useState(false);
-  const [adPlaying, setAdPlaying] = useState(false);
-  const [adCompleted, setAdCompleted] = useState(false);
-  const [showFallbackPlayer, setShowFallbackPlayer] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const playerRef = useRef<HTMLDivElement>(null);
   const controlsTimeoutRef = useRef<NodeJS.Timeout>();
 
+  // ---------- derive ----------
+  // IMPORTANT: if we have a Cloudflare playbackId, we can embed it.
+  const hasStreamPlayback = !!playbackId;
+
+  // auto poster from CF if you didn’t pass one
+  const autoPoster = playbackId
+    ? `https://videodelivery.net/${playbackId}/thumbnails/thumbnail.jpg?time=1s&height=720`
+    : undefined;
+
+  const displayThumbnail = streamThumbnailUrl || coverUrl || autoPoster;
+
+  // show play button if we can play either cloudflare or a direct video
+  const canPlaySomething = hasStreamPlayback || !!videoUrl;
+
+  // ---------- effects ----------
   useEffect(() => {
-    const handleFullscreenChange = () => {
-      setIsFullscreen(!!document.fullscreenElement);
-    };
-    document.addEventListener('fullscreenchange', handleFullscreenChange);
-    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    const onFsChange = () => setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener('fullscreenchange', onFsChange);
+    return () => document.removeEventListener('fullscreenchange', onFsChange);
   }, []);
 
   useEffect(() => {
-    if (showFullPlayer) {
-      const handleMouseMove = () => {
-        setShowControls(true);
-        if (controlsTimeoutRef.current) {
-          clearTimeout(controlsTimeoutRef.current);
-        }
-        controlsTimeoutRef.current = setTimeout(() => {
-          if (isPlaying && !adPlaying) {
-            setShowControls(false);
-          }
-        }, 3000);
-      };
+    if (!showFullPlayer) return;
 
-      document.addEventListener('mousemove', handleMouseMove);
-      return () => {
-        document.removeEventListener('mousemove', handleMouseMove);
-        if (controlsTimeoutRef.current) {
-          clearTimeout(controlsTimeoutRef.current);
-        }
-      };
-    }
-  }, [showFullPlayer, isPlaying, adPlaying]);
+    const handleMouseMove = () => {
+      setShowControls(true);
+      if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
+      controlsTimeoutRef.current = setTimeout(() => {
+        if (isPlaying) setShowControls(false);
+      }, 2000);
+    };
 
+    document.addEventListener('mousemove', handleMouseMove);
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
+    };
+  }, [showFullPlayer, isPlaying]);
+
+  // ---------- handlers (only for the <video> branch) ----------
   const togglePlay = () => {
-    if (videoRef.current) {
-      if (isPlaying) {
-        videoRef.current.pause();
-      } else {
-        videoRef.current.play().catch(() => {
-          // autoplay safety
-          videoRef.current!.muted = true;
-          setIsMuted(true);
-          videoRef.current!.play().catch(() => undefined);
-        });
-      }
-      setIsPlaying(!isPlaying);
+    if (!videoRef.current) return;
+    if (isPlaying) {
+      videoRef.current.pause();
+    } else {
+      videoRef.current.play().catch(() => {
+        // try muted autoplay on strict browsers
+        videoRef.current!.muted = true;
+        setIsMuted(true);
+        videoRef.current!.play().catch(() => {});
+      });
     }
+    setIsPlaying(!isPlaying);
   };
 
   const toggleMute = () => {
+    if (!videoRef.current) return;
+    const next = !isMuted;
+    videoRef.current.muted = next;
+    setIsMuted(next);
+  };
+
+  const handleVolumeChange = (v: number[]) => {
+    const next = v[0];
+    setVolume(next);
     if (videoRef.current) {
-      const newMuted = !isMuted;
-      videoRef.current.muted = newMuted;
-      setIsMuted(newMuted);
+      videoRef.current.volume = next;
+      setIsMuted(next === 0);
     }
   };
 
-  const handleVolumeChange = (value: number[]) => {
-    const newVolume = value[0];
-    setVolume(newVolume);
-    if (videoRef.current) {
-      videoRef.current.volume = newVolume;
-      setIsMuted(newVolume === 0);
+  const handleSeek = (v: number[]) => {
+    const next = v[0];
+    if (!videoRef.current) return;
+    if (!isNaN(next) && isFinite(next)) {
+      videoRef.current.currentTime = next;
+      setCurrentTime(next);
     }
   };
 
-  const handleSeek = (value: number[]) => {
-    const newTime = value[0];
-    if (videoRef.current && !isNaN(newTime) && isFinite(newTime)) {
-      videoRef.current.currentTime = newTime;
-      setCurrentTime(newTime);
-    }
-  };
-
-  const skipTime = (seconds: number) => {
-    if (videoRef.current) {
-      const newTime = Math.max(0, Math.min(duration, currentTime + seconds));
-      videoRef.current.currentTime = newTime;
-      setCurrentTime(newTime);
-    }
+  const skipTime = (sec: number) => {
+    if (!videoRef.current) return;
+    const next = Math.max(0, Math.min(duration, currentTime + sec));
+    videoRef.current.currentTime = next;
+    setCurrentTime(next);
   };
 
   const toggleFullscreen = async () => {
@@ -162,97 +183,49 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       } else {
         await document.exitFullscreen();
       }
-    } catch (err) {
-      console.error('Fullscreen error:', err);
-    }
+    } catch {}
   };
-
-  // ---- tiny preview-only addition ----
-  const playbackPoster =
-    playbackId
-      ? `https://videodelivery.net/${playbackId}/thumbnails/thumbnail.jpg?time=1s&height=360`
-      : undefined;
-
-  // previously: const displayThumbnail = streamThumbnailUrl || coverUrl;
-  const displayThumbnail = playbackPoster || streamThumbnailUrl || coverUrl;
-  // -----------------------------------
-
-  const hasStreamPlayback = streamStatus === 'ready' && playbackId;
-  const isProcessing = streamStatus === 'pending' || (streamStatus === 'processing' && !playbackId);
-  const shouldUseAds = monetizationEnabled && vastTagUrl && hasStreamPlayback && !showFallbackPlayer;
-
-  const handleAdStart = () => {
-    setAdPlaying(true);
-    setShowControls(false);
-  };
-  const handleAdComplete = () => {
-    setAdPlaying(false);
-    setAdCompleted(true);
-    setShowControls(true);
-  };
-  const handleAdError = (error: any) => {
-    console.error('Ad error:', error);
-    setAdPlaying(false);
-    setShowFallbackPlayer(true);
-  };
-  const handleContentStart = () => {
-    setIsPlaying(true);
-    setAdPlaying(false);
-  };
-  const handleContentPause = () => setIsPlaying(false);
 
   const handleVideoTimeUpdate = () => {
-    if (videoRef.current && !isNaN(videoRef.current.currentTime)) {
-      setCurrentTime(videoRef.current.currentTime);
-      if (videoRef.current.buffered.length > 0) {
-        const bufferedEnd = videoRef.current.buffered.end(videoRef.current.buffered.length - 1);
-        const duration = videoRef.current.duration;
-        if (!isNaN(duration) && duration > 0) {
-          setBuffered((bufferedEnd / duration) * 100);
-        }
-      }
+    if (!videoRef.current) return;
+    setCurrentTime(videoRef.current.currentTime);
+
+    if (videoRef.current.buffered.length > 0) {
+      const end = videoRef.current.buffered.end(videoRef.current.buffered.length - 1);
+      const dur = videoRef.current.duration;
+      if (!isNaN(dur) && dur > 0) setBuffered((end / dur) * 100);
     }
   };
 
   const handleVideoLoadedMetadata = () => {
-    if (videoRef.current && !isNaN(videoRef.current.duration)) {
+    if (!videoRef.current) return;
+    if (!isNaN(videoRef.current.duration)) {
       setDuration(videoRef.current.duration);
       setCurrentTime(0);
-      setIsVideoLoaded(true);
       setVideoError(null);
     }
   };
 
-  const handleVideoLoadedData = () => {
-    setIsVideoLoaded(true);
-    setVideoError(null);
-  };
-
   const handleVideoError = (e: React.SyntheticEvent<HTMLVideoElement>) => {
-    const video = e.currentTarget;
-    const error = video.error;
-    let errorMessage = 'Video playback failed';
-    if (error) {
-      switch (error.code) {
+    const err = e.currentTarget.error;
+    let msg = 'Video playback failed';
+    if (err) {
+      switch (err.code) {
         case MediaError.MEDIA_ERR_ABORTED:
-          errorMessage = 'Video loading was aborted';
+          msg = 'Video loading was aborted';
           break;
         case MediaError.MEDIA_ERR_NETWORK:
-          errorMessage = 'Network error occurred while loading video';
+          msg = 'Network error occurred while loading video';
           break;
         case MediaError.MEDIA_ERR_DECODE:
-          errorMessage =
-            'Video codec not supported. Please re-encode using H.264 + AAC, yuv420p, 8-bit.';
+          msg = 'Video codec not supported. Use H.264 + AAC (yuv420p).';
           break;
         case MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED:
-          errorMessage = 'Video format not supported. Use MP4 (H.264) with AAC audio.';
+          msg = 'Video format not supported (use MP4/H.264 + AAC).';
           break;
-        default:
-          errorMessage = 'Unknown video error occurred';
       }
     }
-    setVideoError(errorMessage);
-    setIsVideoLoaded(false);
+    setVideoError(msg);
     setIsPlaying(false);
   };
 
@@ -265,21 +238,20 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     setCurrentVideo(type);
     setShowFullPlayer(true);
     setShowControls(true);
-    setAdPlaying(false);
-    setAdCompleted(false);
-    setShowFallbackPlayer(false);
+    setVideoError(null);
   };
 
-  const formatTime = (time: number) => {
-    if (isNaN(time) || !isFinite(time)) return '0:00';
-    const minutes = Math.floor(time / 60);
-    const seconds = Math.floor(time % 60);
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  const formatTime = (t: number) => {
+    if (isNaN(t) || !isFinite(t)) return '0:00';
+    const m = Math.floor(t / 60);
+    const s = Math.floor(t % 60);
+    return `${m}:${s.toString().padStart(2, '0')}`;
   };
 
+  // ---------- render ----------
   return (
     <Card className="cinema-card overflow-hidden">
-      {/* Cover/Thumbnail */}
+      {/* Card cover / preview */}
       <div className="relative">
         <div className="aspect-video bg-secondary/20 rounded-t-lg relative overflow-hidden group cursor-pointer">
           {displayThumbnail ? (
@@ -289,10 +261,15 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
               className="w-full h-full object-cover"
               loading="lazy"
             />
-          ) : (hasStreamPlayback || videoUrl) ? (
+          ) : canPlaySomething ? (
+            // very light-weight teaser (muted so it won't auto-play unexpectedly)
             <video
               className="w-full h-full object-cover"
-              src={hasStreamPlayback ? `https://videodelivery.net/${playbackId}/manifest/video.m3u8` : videoUrl}
+              src={
+                hasStreamPlayback
+                  ? `https://videodelivery.net/${playbackId}/manifest/video.m3u8`
+                  : videoUrl
+              }
               muted
               preload="metadata"
             />
@@ -302,43 +279,33 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             </div>
           )}
 
-          {isProcessing && (
-            <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-2"></div>
-              <p className="text-white text-sm">Processing video...</p>
-              <p className="text-white/60 text-xs">This may take a few minutes</p>
+          {/* Hover overlay with Play / Trailer */}
+          <div className="absolute inset-0 bg-gradient-overlay opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+            <div className="flex gap-2">
+              {canPlaySomething && (
+                <Button
+                  size="lg"
+                  variant="secondary"
+                  className="bg-white/10 backdrop-blur-sm border-white/20"
+                  onClick={() => playVideo('main')}
+                >
+                  <Play className="h-5 w-5 mr-2" />
+                  Play {contentType}
+                </Button>
+              )}
+              {trailerUrl && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="bg-white/10 backdrop-blur-sm border-white/20"
+                  onClick={() => playVideo('trailer')}
+                >
+                  <Play className="h-4 w-4 mr-1" />
+                  Trailer
+                </Button>
+              )}
             </div>
-          )}
-
-          {!isProcessing && (
-            <div className="absolute inset-0 bg-gradient-overlay opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-              <div className="flex gap-2">
-                {(hasStreamPlayback || videoUrl) && (
-                  <Button
-                    size="lg"
-                    variant="secondary"
-                    className="bg-white/10 backdrop-blur-sm border-white/20"
-                    onClick={() => playVideo('main')}
-                  >
-                    <Play className="h-5 w-5 mr-2" />
-                    Play {contentType}
-                    {shouldUseAds && <span className="ml-1 text-xs">(Ad)</span>}
-                  </Button>
-                )}
-                {trailerUrl && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="bg-white/10 backdrop-blur-sm border-white/20"
-                    onClick={() => playVideo('trailer')}
-                  >
-                    <Play className="h-4 w-4 mr-1" />
-                    Trailer
-                  </Button>
-                )}
-              </div>
-            </div>
-          )}
+          </div>
         </div>
       </div>
 
@@ -351,9 +318,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         <h3 className="text-lg font-semibold mb-2 line-clamp-1">{title}</h3>
 
         {description && (
-          <p className="text-muted-foreground text-sm mb-4 line-clamp-3">
-            {description}
-          </p>
+          <p className="text-muted-foreground text-sm mb-4 line-clamp-3">{description}</p>
         )}
 
         {canDelete && (
@@ -366,7 +331,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         )}
       </CardContent>
 
-      {/* Full Screen Video Player */}
+      {/* Fullscreen dialog player */}
       <Dialog open={showFullPlayer} onOpenChange={setShowFullPlayer}>
         <DialogContent className="max-w-full w-screen h-screen p-0 bg-black border-none video-player-dialog">
           <VisuallyHidden>
@@ -375,254 +340,244 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
               Playing {contentType}: {title}. {description}
             </DialogDescription>
           </VisuallyHidden>
+
           <div
             ref={playerRef}
             className={`relative w-full h-full bg-black ${isFullscreen ? 'video-player-fullscreen' : ''}`}
           >
-            {shouldUseAds && currentVideo === 'main' ? (
-              <CFStreamIMAPlayer
-                playbackId={playbackId!}
-                channelSlug={contentType.toLowerCase().replace(' ', '-')}
-                contentId={contentId || 'unknown'}
-                durationSec={durationSeconds}
-                adBreaks={adBreaks}
-                vastTagUrl={vastTagUrl}
-                title={title}
-                onError={handleAdError}
-                onAdStart={handleAdStart}
-                onAdComplete={handleAdComplete}
-                onContentStart={handleContentStart}
-                onContentPause={handleContentPause}
-              />
-            ) : hasStreamPlayback && currentVideo === 'main' ? (
-              <iframe
-                src={`https://iframe.cloudflarestream.com/${playbackId}?controls=true&autoplay=false`}
-                className="w-full h-full border-0"
-                allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;"
-                allowFullScreen
-                style={{ backgroundColor: 'black' }}
-              />
-            ) : (
-              <video
-                ref={videoRef}
-                className="w-full h-full object-contain bg-black"
-                /* IMPORTANT: avoid autoplay-blocked state on desktop */
-                autoPlay={false}
-                onEnded={handleVideoEnd}
-                onPlay={() => setIsPlaying(true)}
-                onPause={() => setIsPlaying(false)}
-                onTimeUpdate={handleVideoTimeUpdate}
-                onLoadedMetadata={handleVideoLoadedMetadata}
-                onLoadedData={handleVideoLoadedData}
-                onError={handleVideoError}
-                onClick={togglePlay}
-                playsInline
-                preload="metadata"
-                controls={false}
-                muted={isMuted}
-                crossOrigin="anonymous"
-                style={{
-                  objectFit: 'contain',
-                  width: '100%',
-                  height: '100%',
-                  backgroundColor: 'black',
-                }}
-              >
-                <source
-                  src={currentVideo === 'trailer' ? trailerUrl : videoUrl}
-                  type="video/mp4"
+            {/* Cloudflare Stream branch */}
+            {hasStreamPlayback && currentVideo === 'main' ? (
+              <div className="relative w-full h-full">
+                <iframe
+                  key={playbackId}
+                  title={`${title} player`}
+                  src={`https://iframe.cloudflarestream.com/${playbackId}?controls=true&autoplay=false`}
+                  className="absolute inset-0 w-full h-full border-0"
+                  allow="autoplay; fullscreen; picture-in-picture"
+                  allowFullScreen
+                  style={{ backgroundColor: 'black', pointerEvents: 'auto', zIndex: 0 }}
+                  loading="eager"
                 />
-                <p className="text-white text-center p-4">
-                  Your browser does not support the video tag. Please try a different browser or update your current browser.
-                </p>
-              </video>
-            )}
-
-            {/* Ad Playing Indicator */}
-            {adPlaying && (
-              <div className="absolute top-4 right-4 bg-black/70 px-3 py-1 rounded-full">
-                <span className="text-white text-sm">Ad Playing...</span>
               </div>
-            )}
+            ) : (
+              // Direct video (main or trailer)
+              <div className="relative w-full h-full">
+                <video
+                  ref={videoRef}
+                  className="w-full h-full object-contain bg-black"
+                  autoPlay
+                  onPlay={() => setIsPlaying(true)}
+                  onPause={() => setIsPlaying(false)}
+                  onTimeUpdate={handleVideoTimeUpdate}
+                  onLoadedMetadata={handleVideoLoadedMetadata}
+                  onError={handleVideoError}
+                  onEnded={handleVideoEnd}
+                  playsInline
+                  preload="metadata"
+                  controls={false}
+                  muted={isMuted}
+                  crossOrigin="anonymous"
+                  style={{ width: '100%', height: '100%', backgroundColor: 'black' }}
+                >
+                  {currentVideo === 'trailer' && trailerUrl ? (
+                    <>
+                      <source src={trailerUrl} type="video/mp4" />
+                      <source src={trailerUrl} type="video/webm" />
+                    </>
+                  ) : videoUrl ? (
+                    <>
+                      <source src={videoUrl} type="video/mp4" />
+                      <source src={videoUrl} type="video/webm" />
+                    </>
+                  ) : null}
+                  <p className="text-white text-center p-4">
+                    Your browser does not support the video tag.
+                  </p>
+                </video>
 
-            {/* Video Error Overlay */}
-            {videoError && (
-              <div className="absolute inset-0 bg-black/90 flex flex-col items-center justify-center p-6 text-center">
-                <div className="max-w-md">
-                  <X className="h-16 w-16 text-red-500 mx-auto mb-4" />
-                  <h3 className="text-white text-xl font-semibold mb-2">Video Playback Error</h3>
-                  <p className="text-white/80 text-sm mb-4">{videoError}</p>
-                  <div className="text-white/60 text-xs">
-                    <p className="mb-2">For best compatibility, videos should be:</p>
-                    <ul className="text-left space-y-1">
-                      <li>• Format: MP4 container</li>
-                      <li>• Video: H.264 codec, yuv420p, 8-bit</li>
-                      <li>• Audio: AAC codec</li>
-                      <li>• Use "faststart" flag for streaming</li>
-                    </ul>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Custom Controls Overlay - Hide during ads */}
-            {!(hasStreamPlayback && currentVideo === 'main') && !adPlaying && (
-              <div
-                className={`absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/30 transition-opacity duration-300 ${
-                  showControls ? 'opacity-100' : 'opacity-0'
-                }`}
-                onMouseEnter={() => setShowControls(true)}
-              >
-                {/* Top Controls */}
-                <div className="absolute top-0 left-0 right-0 p-4 flex justify-between items-center">
-                  <div className="flex items-center gap-4">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setShowFullPlayer(false)}
-                      className="text-white hover:bg-white/20"
-                    >
-                      <X className="h-5 w-5" />
-                    </Button>
-                    <h2 className="text-white text-lg font-semibold">
-                      {title} {currentVideo === 'trailer' && '(Trailer)'}
-                    </h2>
-                  </div>
-
-                  {(hasStreamPlayback || videoUrl) && trailerUrl && (
-                    <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        variant={currentVideo === 'main' ? 'default' : 'secondary'}
-                        onClick={() => setCurrentVideo('main')}
-                        className="bg-black/50 backdrop-blur-sm text-white border-white/20"
-                      >
-                        Full {contentType}
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant={currentVideo === 'trailer' ? 'default' : 'secondary'}
-                        onClick={() => setCurrentVideo('trailer')}
-                        className="bg-black/50 backdrop-blur-sm text-white border-white/20"
-                      >
-                        Trailer
-                      </Button>
+                {/* Error overlay (only for direct video branch) */}
+                {videoError && (
+                  <div className="absolute inset-0 bg-black/90 flex flex-col items-center justify-center p-6 text-center">
+                    <div className="max-w-md">
+                      <X className="h-16 w-16 text-red-500 mx-auto mb-4" />
+                      <h3 className="text-white text-xl font-semibold mb-2">Video Playback Error</h3>
+                      <p className="text-white/80 text-sm mb-4">{videoError}</p>
+                      <div className="text-white/60 text-xs">
+                        <p className="mb-2">For best compatibility, videos should be:</p>
+                        <ul className="text-left space-y-1">
+                          <li>• MP4 container</li>
+                          <li>• Video: H.264, yuv420p, 8-bit</li>
+                          <li>• Audio: AAC</li>
+                          <li>• “faststart” flag for streaming</li>
+                        </ul>
+                      </div>
                     </div>
-                  )}
-                </div>
-
-                {/* Center Play Button */}
-                {!isPlaying && !adPlaying && (
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <Button
-                      size="lg"
-                      variant="ghost"
-                      onClick={togglePlay}
-                      className="w-20 h-20 rounded-full bg-black/50 backdrop-blur-sm text-white hover:bg-black/70 border border-white/20"
-                    >
-                      <Play className="h-8 w-8 ml-1" />
-                    </Button>
                   </div>
                 )}
 
-                {/* Bottom Controls */}
-                <div className="absolute bottom-0 left-0 right-0 p-4 md:p-6 space-y-2 video-controls-mobile md:video-controls-desktop">
-                  {/* Progress Bar */}
-                  <div className="relative">
-                    <div className="absolute top-1/2 -translate-y-1/2 w-full h-1 bg-white/20 rounded-full">
-                      <div
-                        className="h-full bg-white/40 rounded-full transition-all duration-300"
-                        style={{ width: `${buffered}%` }}
-                      />
-                    </div>
-
-                    <Slider
-                      value={[currentTime || 0]}
-                      max={duration || 100}
-                      step={0.1}
-                      onValueChange={handleSeek}
-                      className="w-full cursor-pointer video-slider"
-                      disabled={!duration || isNaN(duration)}
-                    />
-                  </div>
-
-                  {/* Control Buttons */}
-                  <div className="flex items-center justify-between">
+                {/* Custom controls (only for direct video branch) */}
+                <div
+                  className={`absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/30 transition-opacity duration-300 ${
+                    showControls ? 'opacity-100' : 'opacity-0'
+                  }`}
+                  onMouseEnter={() => setShowControls(true)}
+                >
+                  {/* top bar */}
+                  <div className="absolute top-0 left-0 right-0 p-4 flex justify-between items-center">
                     <div className="flex items-center gap-4">
                       <Button
                         variant="ghost"
                         size="sm"
+                        onClick={() => setShowFullPlayer(false)}
+                        className="text-white hover:bg-white/20"
+                      >
+                        <X className="h-5 w-5" />
+                      </Button>
+                      <h2 className="text-white text-lg font-semibold">
+                        {title} {currentVideo === 'trailer' && '(Trailer)'}
+                      </h2>
+                    </div>
+
+                    {(videoUrl && trailerUrl) && (
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant={currentVideo === 'main' ? 'default' : 'secondary'}
+                          onClick={() => setCurrentVideo('main')}
+                          className="bg-black/50 backdrop-blur-sm text-white border-white/20"
+                        >
+                          Full {contentType}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant={currentVideo === 'trailer' ? 'default' : 'secondary'}
+                          onClick={() => setCurrentVideo('trailer')}
+                          className="bg-black/50 backdrop-blur-sm text-white border-white/20"
+                        >
+                          Trailer
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* center big play */}
+                  {!isPlaying && (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <Button
+                        size="lg"
+                        variant="ghost"
                         onClick={togglePlay}
-                        className="text-white hover:bg-white/20"
+                        className="w-20 h-20 rounded-full bg-black/50 backdrop-blur-sm text-white hover:bg-black/70 border border-white/20"
                       >
-                        {isPlaying ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
+                        <Play className="h-8 w-8 ml-1" />
                       </Button>
+                    </div>
+                  )}
 
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => skipTime(-10)}
-                        className="text-white hover:bg-white/20"
-                      >
-                        <SkipBack className="h-5 w-5" />
-                      </Button>
+                  {/* bottom controls (extra padding on mobile so you can reach them) */}
+                  <div className="absolute bottom-0 left-0 right-0 p-4 md:p-6 pb-16 md:pb-6 space-y-2">
+                    {/* progress */}
+                    <div className="relative">
+                      <div className="absolute top-1/2 -translate-y-1/2 w-full h-1 bg-white/20 rounded-full">
+                        <div
+                          className="h-full bg-white/40 rounded-full transition-all duration-300"
+                          style={{ width: `${buffered}%` }}
+                        />
+                      </div>
 
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => skipTime(10)}
-                        className="text-white hover:bg-white/20"
-                      >
-                        <SkipForward className="h-5 w-5" />
-                      </Button>
+                      <Slider
+                        value={[currentTime || 0]}
+                        max={duration || 100}
+                        step={0.1}
+                        onValueChange={handleSeek}
+                        className="w-full cursor-pointer"
+                        disabled={!duration || isNaN(duration)}
+                      />
+                    </div>
 
-                      <div className="flex items-center gap-2">
+                    {/* controls row */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4">
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={toggleMute}
+                          onClick={togglePlay}
                           className="text-white hover:bg-white/20"
                         >
-                          {isMuted || volume === 0 ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
+                          {isPlaying ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
                         </Button>
 
-                        <div className="w-20 hidden md:block">
-                          <Slider
-                            value={[isMuted ? 0 : volume]}
-                            max={1}
-                            step={0.1}
-                            onValueChange={handleVolumeChange}
-                            className="cursor-pointer volume-slider"
-                          />
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => skipTime(-10)}
+                          className="text-white hover:bg-white/20"
+                        >
+                          <SkipBack className="h-5 w-5" />
+                        </Button>
+
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => skipTime(10)}
+                          className="text-white hover:bg-white/20"
+                        >
+                          <SkipForward className="h-5 w-5" />
+                        </Button>
+
+                        {/* volume */}
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={toggleMute}
+                            className="text-white hover:bg-white/20"
+                          >
+                            {isMuted || volume === 0 ? (
+                              <VolumeX className="h-5 w-5" />
+                            ) : (
+                              <Volume2 className="h-5 w-5" />
+                            )}
+                          </Button>
+
+                          <div className="w-20 hidden md:block">
+                            <Slider
+                              value={[isMuted ? 0 : volume]}
+                              max={1}
+                              step={0.1}
+                              onValueChange={handleVolumeChange}
+                              className="cursor-pointer"
+                            />
+                          </div>
                         </div>
+
+                        <span className="text-white text-sm font-mono whitespace-nowrap">
+                          {formatTime(currentTime || 0)} / {formatTime(duration || 0)}
+                        </span>
                       </div>
 
-                      <span className="text-white text-sm font-mono whitespace-nowrap">
-                        {formatTime(currentTime || 0)} / {formatTime(duration || 0)}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <Button variant="ghost" size="sm" className="text-white hover:bg-white/20">
+                          <Settings className="h-5 w-5" />
+                        </Button>
+
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={toggleFullscreen}
+                          className="text-white hover:bg-white/20"
+                        >
+                          {isFullscreen ? <Minimize className="h-5 w-5" /> : <Maximize className="h-5 w-5" />}
+                        </Button>
+                      </div>
                     </div>
 
-                    <div className="flex items-center gap-2">
-                      <Button variant="ghost" size="sm" className="text-white hover:bg-white/20">
-                        <Settings className="h-5 w-5" />
-                      </Button>
-
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={toggleFullscreen}
-                        className="text-white hover:bg-white/20"
-                      >
-                        {isFullscreen ? <Minimize className="h-5 w-5" /> : <Maximize className="h-5 w-5" />}
-                      </Button>
-                    </div>
+                    {description && (
+                      <div className="pt-2">
+                        <p className="text-white/80 text-sm max-w-2xl">{description}</p>
+                      </div>
+                    )}
                   </div>
-
-                  {description && (
-                    <div className="pt-2">
-                      <p className="text-white/80 text-sm max-w-2xl">{description}</p>
-                    </div>
-                  )}
                 </div>
               </div>
             )}

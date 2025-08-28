@@ -22,7 +22,7 @@ export const NetflixNavigation = () => {
     { path: '/', label: 'Home' },
     { path: '/movies', label: 'Movies' },
     { path: '/tv-shows', label: 'TV Shows' },
-    { path: '/stories', label: 'Stories' },
+    { path: '/stories', label: 'Short Stories' },
   ];
 
   const isActive = (path: string) => {

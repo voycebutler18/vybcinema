@@ -38,7 +38,7 @@ export const Navigation = () => {
                 <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-primary group-hover:w-full transition-all duration-300"></span>
               </Link>
               <Link to="/stories" className="nav-link text-foreground/80 hover:text-foreground font-medium transition-all duration-300 relative group">
-                Stories
+                Short Stories
                 <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-primary group-hover:w-full transition-all duration-300"></span>
               </Link>
               <Link to="/about" className="nav-link text-foreground/80 hover:text-foreground font-medium transition-all duration-300 relative group">
@@ -56,7 +56,7 @@ export const Navigation = () => {
                 <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground transition-colors group-focus-within:text-primary" />
                 <input
                   type="text"
-                  placeholder="Search movies, shows, stories..."
+                  placeholder="Search movies, shows, short stories..."
                   className="w-80 pl-12 pr-6 py-3 bg-card/50 border border-border/30 rounded-2xl text-sm 
                            focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 
                            transition-all duration-300 backdrop-blur-sm hover:bg-card/70"
@@ -124,7 +124,7 @@ export const Navigation = () => {
               TV Shows
             </Link>
             <Link to="/stories" className="block text-foreground/80 hover:text-foreground transition-colors font-medium py-2 px-4 rounded-xl hover:bg-card/30">
-              Stories
+              Short Stories
             </Link>
             <Link to="/about" className="block text-foreground/80 hover:text-foreground transition-colors font-medium py-2 px-4 rounded-xl hover:bg-card/30">
               About

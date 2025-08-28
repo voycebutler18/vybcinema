@@ -49,7 +49,7 @@ const Upload = () => {
   const contentTypes = [
     { value: 'movie', label: 'Movie', icon: Film },
     { value: 'tv_show', label: 'TV Show', icon: Tv },
-    { value: 'story', label: 'Story', icon: BookOpen }
+    { value: 'story', label: 'Short Story', icon: BookOpen }
   ];
 
   const genres = {
@@ -72,7 +72,7 @@ const Upload = () => {
           maxSizeLimit = 2000; // 2GB for TV shows
           break;
         case 'story':
-          maxSizeLimit = 200; // 200MB for stories
+          maxSizeLimit = 200; // 200MB for short stories
           break;
       }
       

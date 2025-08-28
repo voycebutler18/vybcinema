@@ -60,6 +60,52 @@ const Upload = () => {
   };
 
   const handleFileChange = (type: 'video' | 'cover' | 'thumbnail', file: File | null) => {
+    if (file && type === 'video') {
+      // Check file size based on content type
+      const fileSizeMB = file.size / (1024 * 1024);
+      let maxSizeLimit = 50; // Default 50MB
+      
+      switch (formData.content_type) {
+        case 'movie':
+          maxSizeLimit = 5000; // 5GB for movies
+          break;
+        case 'tv_show':
+          maxSizeLimit = 2000; // 2GB for TV shows
+          break;
+        case 'music_video':
+          maxSizeLimit = 500; // 500MB for music videos
+          break;
+        case 'story':
+          maxSizeLimit = 200; // 200MB for stories
+          break;
+        case 'podcast':
+          maxSizeLimit = 300; // 300MB for podcasts
+          break;
+      }
+      
+      if (fileSizeMB > maxSizeLimit) {
+        toast({
+          title: "File too large",
+          description: `${formData.content_type} files must be less than ${maxSizeLimit}MB (${(maxSizeLimit/1000).toFixed(1)}GB)`,
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      // Check video format
+      const fileExtension = file.name.split('.').pop()?.toLowerCase();
+      const supportedFormats = ['mp4', 'mov', 'avi', 'mkv', 'webm', 'm4v', 'wmv', 'flv'];
+      
+      if (!supportedFormats.includes(fileExtension || '')) {
+        toast({
+          title: "Unsupported format",
+          description: "Please upload a video in MP4, MOV, AVI, MKV, WebM, M4V, WMV, or FLV format",
+          variant: "destructive"
+        });
+        return;
+      }
+    }
+    
     setFiles(prev => ({ ...prev, [type]: file }));
   };
 
@@ -68,17 +114,31 @@ const Upload = () => {
     const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
     const filePath = `${folder}/${fileName}`;
 
-    const { data, error } = await supabase.storage
-      .from('content-files')
-      .upload(filePath, file);
+    console.log(`Uploading ${type} file:`, file.name, `Size: ${(file.size / 1024 / 1024).toFixed(2)}MB`);
 
-    if (error) throw error;
-    
-    const { data: { publicUrl } } = supabase.storage
-      .from('content-files')
-      .getPublicUrl(filePath);
+    try {
+      const { data, error } = await supabase.storage
+        .from('content-files')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
 
-    return publicUrl;
+      if (error) {
+        console.error('Upload error:', error);
+        throw error;
+      }
+      
+      const { data: { publicUrl } } = supabase.storage
+        .from('content-files')
+        .getPublicUrl(filePath);
+
+      console.log(`Successfully uploaded ${type}:`, publicUrl);
+      return publicUrl;
+    } catch (error) {
+      console.error(`Failed to upload ${type}:`, error);
+      throw error;
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -278,25 +338,37 @@ const Upload = () => {
                     </Select>
                   </div>
 
-                  {/* Video File */}
-                  <div className="space-y-2">
-                    <Label htmlFor="video">Video File *</Label>
-                    <div className="border-2 border-dashed border-border/50 rounded-lg p-6 hover:border-primary/50 transition-colors">
-                      <input
-                        type="file"
-                        id="video"
-                        accept="video/*"
-                        onChange={(e) => handleFileChange('video', e.target.files?.[0] || null)}
-                        className="w-full"
-                        style={{ pointerEvents: 'auto' }}
-                      />
-                      {files.video && (
-                        <p className="text-sm text-muted-foreground mt-2">
-                          Selected: {files.video.name} ({(files.video.size / 1024 / 1024).toFixed(2)} MB)
-                        </p>
-                      )}
-                    </div>
-                  </div>
+                   {/* Video File */}
+                   <div className="space-y-2">
+                     <Label htmlFor="video">Video File *</Label>
+                     <div className="border-2 border-dashed border-border/50 rounded-lg p-6 hover:border-primary/50 transition-colors">
+                       <input
+                         type="file"
+                         id="video"
+                         accept="video/*,.mp4,.mov,.avi,.mkv,.webm,.m4v,.wmv,.flv"
+                         onChange={(e) => handleFileChange('video', e.target.files?.[0] || null)}
+                         className="w-full"
+                         style={{ pointerEvents: 'auto' }}
+                       />
+                       {files.video && (
+                         <div className="mt-2 space-y-1">
+                           <p className="text-sm text-muted-foreground">
+                             Selected: {files.video.name}
+                           </p>
+                           <p className="text-xs text-muted-foreground">
+                             Size: {(files.video.size / 1024 / 1024).toFixed(2)} MB
+                           </p>
+                         </div>
+                       )}
+                       <p className="text-xs text-muted-foreground mt-2">
+                         Supported formats: MP4, MOV, AVI, MKV, WebM, M4V, WMV, FLV<br/>
+                         Max size: {formData.content_type === 'movie' ? '5GB' : 
+                                   formData.content_type === 'tv_show' ? '2GB' :
+                                   formData.content_type === 'music_video' ? '500MB' :
+                                   formData.content_type === 'podcast' ? '300MB' : '200MB'}
+                       </p>
+                     </div>
+                   </div>
 
                   {/* Cover Image */}
                   <div className="space-y-2">

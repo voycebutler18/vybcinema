@@ -49,7 +49,6 @@ export const ContentCard: React.FC<NetflixCardProps> = ({
             <video
               className="w-full h-full object-cover"
               muted
-              loop
               playsInline
               preload="metadata"
               onLoadedData={() => setImageLoaded(true)}

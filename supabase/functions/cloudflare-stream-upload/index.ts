@@ -100,21 +100,27 @@ serve(async (req) => {
       
       if (statusResult.success) {
         const status = statusResult.result.status?.state || 'pending';
-        const playbackId = statusResult.result.playback?.id;
+        const uid = statusResult.result.uid;
+        const readyToStream = statusResult.result.readyToStream;
+        
+        console.log('Stream status details:', { status, uid, readyToStream, streamId });
         
         // Update database when stream is ready
-        if (status === 'ready' && playbackId) {
+        if (status === 'ready' && readyToStream && uid) {
+          console.log('Updating database - stream is ready for playback');
           const { error: updateError } = await supabase
             .from('content')
             .update({ 
               stream_status: 'ready',
-              playback_id: playbackId,
-              stream_thumbnail_url: `https://videodelivery.net/${playbackId}/thumbnails/thumbnail.jpg`
+              playback_id: uid,
+              stream_thumbnail_url: `https://videodelivery.net/${uid}/thumbnails/thumbnail.jpg`
             })
             .eq('stream_id', streamId);
             
           if (updateError) {
             console.error('Error updating stream status:', updateError);
+          } else {
+            console.log('Successfully updated database with playback_id:', uid);
           }
         }
 
@@ -122,8 +128,8 @@ serve(async (req) => {
           success: true,
           status,
           streamId,
-          playbackId,
-          ready: status === 'ready'
+          playbackId: uid,
+          ready: status === 'ready' && readyToStream
         }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });

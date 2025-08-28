@@ -25,7 +25,10 @@ import TermsOfService from "./pages/TermsOfService";
 import CookiePolicy from "./pages/CookiePolicy";
 import NotFound from "./pages/NotFound";
 import Dashboard from "./pages/Dashboard";
-import MusicVideos from "./pages/MusicVideos"; // <-- NEW
+import MusicVideos from "./pages/MusicVideos";
+
+// NEW: Favorites page
+import Favorites from "./pages/Favorites";
 
 const queryClient = new QueryClient();
 
@@ -42,7 +45,11 @@ const App = () => (
             <Route path="/movies" element={<Movies />} />
             <Route path="/tv-shows" element={<TVShows />} />
             <Route path="/stories" element={<Stories />} />
-            <Route path="/music-videos" element={<MusicVideos />} /> {/* NEW */}
+            <Route path="/music-videos" element={<MusicVideos />} />
+
+            {/* NEW: My Favorites route */}
+            <Route path="/favorites" element={<Favorites />} />
+
             <Route path="/upload" element={<Upload />} />
             <Route path="/about" element={<About />} />
             <Route path="/genre/:genreName" element={<Genre />} />
@@ -57,8 +64,10 @@ const App = () => (
             <Route path="/privacy" element={<PrivacyPolicy />} />
             <Route path="/terms" element={<TermsOfService />} />
             <Route path="/cookies" element={<CookiePolicy />} />
+
             {/* Legacy redirect */}
             <Route path="/browse" element={<Movies />} />
+
             {/* Catch-all */}
             <Route path="*" element={<NotFound />} />
           </Routes>

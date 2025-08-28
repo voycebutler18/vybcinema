@@ -35,25 +35,32 @@ export const ContentCard: React.FC<ContentCardProps> = ({
   const [imageLoaded, setImageLoaded] = useState(false);
   const { toast } = useToast();
 
-  // Add to favorites (supabase public.favorites)
+  /**
+   * ADD / UPSERT to favorites
+   * Requires:
+   *  - favorites.user_id UUID
+   *  - favorites.content_id UUID
+   *  - unique index on (user_id, content_id)
+   *    -> CREATE UNIQUE INDEX favorites_user_content_uniq ON public.favorites(user_id, content_id);
+   */
   const handleAddFavorite = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    try {
-      const {
-        data: { user },
-        error: authError
-      } = await supabase.auth.getUser();
 
+    try {
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
       if (authError || !user) {
         toast({ title: "Please log in to save favorites." });
         return;
       }
 
-      const { error } = await supabase.from("favorites").insert({
-        user_id: user.id,
-        content_id: content.id,
-      });
+      // Upsert ensures no duplicates; requires the unique index above
+      const { error } = await supabase
+        .from("favorites")
+        .upsert(
+          { user_id: user.id, content_id: content.id },
+          { onConflict: "user_id,content_id" }
+        );
 
       if (error) throw error;
 
@@ -67,30 +74,39 @@ export const ContentCard: React.FC<ContentCardProps> = ({
     }
   };
 
-  // Optional like handler (make a likes table if you use this)
+  /**
+   * Optional LIKE handler
+   * If you haven't created a `likes` table yet,
+   * this will show a friendly error instead of crashing.
+   */
   const handleLike = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    try {
-      const {
-        data: { user },
-        error: authError
-      } = await supabase.auth.getUser();
 
+    try {
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
       if (authError || !user) {
         toast({ title: "Please log in to like." });
         return;
       }
 
-      const { error } = await supabase.from("likes").upsert({
-        user_id: user.id,
-        content_id: content.id,
-      });
+      const { error } = await supabase
+        .from("likes")
+        .upsert({ user_id: user.id, content_id: content.id });
 
       if (error) throw error;
 
       toast({ title: "Thanks for the like", description: content.title });
     } catch (err: any) {
+      // 42P01 = undefined_table in Postgres (likes table not created yet)
+      const msg = String(err?.message ?? "");
+      if (msg.includes("42P01") || msg.toLowerCase().includes("likes")) {
+        toast({
+          title: "Likes not enabled",
+          description: "Create a `likes` table or hide the thumbs-up button for now.",
+        });
+        return;
+      }
       toast({
         title: "Could not like",
         description: err?.message ?? "Please try again.",

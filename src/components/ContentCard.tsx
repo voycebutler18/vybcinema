@@ -3,7 +3,13 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Play, Plus, Check, ThumbsUp, ChevronDown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/client"; // still used for Favorites ONLY
+import {
+  getLikeCount,
+  isLikedLocal,
+  likeOnce,
+  unlikeOnce,
+} from "@/utils/likes";
 
 /* ---------- Types ---------- */
 
@@ -37,18 +43,24 @@ export const ContentCard: React.FC<ContentCardProps> = ({
 }) => {
   const [isHovered, setIsHovered] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
+
+  // Favorites UI (unchanged) — comment these lines out if you removed Favorites entirely
   const [isFavorited, setIsFavorited] = useState(false);
+
+  // New: public like count + local liked state (no DB)
+  const [likeCount, setLikeCount] = useState<number | null>(null);
+  const [liked, setLiked] = useState<boolean>(false);
+
   const { toast } = useToast();
 
-  // Load initial favorite state for current user + this content
+  // Load initial states
   useEffect(() => {
-    let mounted = true;
-    (async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) return;
+    let cancelled = false;
 
+    // Favorites check (DB) - keep only if you still use favorites
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
       const { data, error } = await supabase
         .from("favorites")
         .select("id")
@@ -56,35 +68,37 @@ export const ContentCard: React.FC<ContentCardProps> = ({
         .eq("content_id", content.id)
         .maybeSingle();
 
-      if (!mounted) return;
-      // PGRST116 = no rows with maybeSingle -> not an error for us
-      if (error && error.code !== "PGRST116") {
-        console.warn("Favorite check error:", error.message);
+      if (!cancelled) {
+        if (error && error.code !== "PGRST116") {
+          console.warn("Favorite check error:", error.message);
+        }
+        setIsFavorited(!!data);
       }
-      setIsFavorited(!!data);
     })();
+
+    // Likes (no DB)
+    setLiked(isLikedLocal(content.id));
+    getLikeCount(content.id)
+      .then((n) => !cancelled && setLikeCount(n))
+      .catch(() => !cancelled && setLikeCount(0));
+
     return () => {
-      mounted = false;
+      cancelled = true;
     };
   }, [content.id]);
 
-  /* ------- Toggle Favorite (race-safe) -------
-     1) Try to DELETE (if row existed -> it's removed)
-     2) If not removed, UPSERT with onConflict to avoid duplicates
-     ------------------------------------------ */
+  /* ------- Favorites toggle (kept as-is; remove if you don’t use favorites) ------- */
   const toggleFavorite = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       toast({ title: "Please log in to save favorites." });
       return;
     }
 
-    // 1) Try to remove first (if it exists)
+    // try delete first
     const { data: removed, error: delErr } = await supabase
       .from("favorites")
       .delete()
@@ -93,11 +107,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
       .select("id");
 
     if (delErr) {
-      toast({
-        title: "Error",
-        description: delErr.message,
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: delErr.message, variant: "destructive" });
       return;
     }
 
@@ -107,26 +117,13 @@ export const ContentCard: React.FC<ContentCardProps> = ({
       return;
     }
 
-    // 2) Not removed -> add it (use UPSERT to ignore duplicates)
-    const { error: upErr } = await supabase
+    // insert if not removed
+    const { error: insErr } = await supabase
       .from("favorites")
-      .upsert(
-        { user_id: user.id, content_id: content.id },
-        { onConflict: "user_id,content_id" }
-      );
+      .insert({ user_id: user.id, content_id: content.id });
 
-    // Treat unique/race conflicts as success (already favorited)
-    if (upErr) {
-      if (upErr.code === "23505" || upErr.code === "409") {
-        setIsFavorited(true);
-        toast({ title: "Already in Favorites" });
-        return;
-      }
-      toast({
-        title: "Could not add to favorites",
-        description: upErr.message,
-        variant: "destructive",
-      });
+    if (insErr) {
+      toast({ title: "Could not add to favorites", description: insErr.message, variant: "destructive" });
       return;
     }
 
@@ -134,26 +131,26 @@ export const ContentCard: React.FC<ContentCardProps> = ({
     toast({ title: "Added to Favorites", description: content.title });
   };
 
-  // Optional “like” handler — requires a `likes` table if you want to keep it
+  /* ------- NEW Like/Unlike (no Supabase) ------- */
   const handleLike = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) {
-        toast({ title: "Please log in to like." });
-        return;
+      if (liked) {
+        const n = await unlikeOnce(content.id);
+        setLiked(false);
+        setLikeCount(n);
+        toast({ title: "Like removed" });
+      } else {
+        const n = await likeOnce(content.id);
+        setLiked(true);
+        setLikeCount(n);
+        toast({ title: "Thanks for the like", description: content.title });
       }
-      const { error } = await supabase
-        .from("likes")
-        .upsert({ user_id: user.id, content_id: content.id });
-      if (error) throw error;
-      toast({ title: "Thanks for the like", description: content.title });
     } catch (err: any) {
       toast({
-        title: "Could not like",
+        title: "Could not update like",
         description: err?.message ?? "Please try again.",
         variant: "destructive",
       });
@@ -264,6 +261,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
                   <Play className="h-4 w-4" />
                 </Button>
 
+                {/* Favorites (keep/remove as you like) */}
                 <Button
                   type="button"
                   size="sm"
@@ -275,14 +273,17 @@ export const ContentCard: React.FC<ContentCardProps> = ({
                   {isFavorited ? <Check className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
                 </Button>
 
+                {/* Likes (no DB) */}
                 <Button
                   type="button"
                   size="sm"
-                  variant="outline"
-                  className="rounded-full p-2"
+                  variant={liked ? "default" : "outline"}
+                  className="rounded-full px-3"
                   onClick={handleLike}
+                  title={liked ? "Unlike" : "Like"}
                 >
                   <ThumbsUp className="h-4 w-4" />
+                  <span className="ml-2 text-xs">{likeCount ?? "…"}</span>
                 </Button>
               </div>
 

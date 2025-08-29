@@ -1,21 +1,23 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
-import { NetflixRow } from '@/components/NetflixRow';
-import { NetflixDetailModal } from '@/components/NetflixDetailModal';
-import { VideoPlayer } from '@/components/VideoPlayer';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/useAuth';
-import { useToast } from '@/hooks/use-toast';
+import { NetflixDetailModal } from "@/components/NetflixDetailModal";
+import { VideoPlayer } from "@/components/VideoPlayer";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { ContentCard, type Content } from "@/components/ContentCard";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
 
 const Stories = () => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [content, setContent] = useState<any[]>([]);
+
+  const [content, setContent] = useState<Content[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedContent, setSelectedContent] = useState<any>(null);
-  const [playingContent, setPlayingContent] = useState<any>(null);
+
+  const [selectedContent, setSelectedContent] = useState<Content | null>(null);
+  const [playingContent, setPlayingContent] = useState<Content | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showVideoPlayer, setShowVideoPlayer] = useState(false);
 
@@ -26,26 +28,26 @@ const Stories = () => {
   const fetchStories = async () => {
     try {
       const { data, error } = await supabase
-        .from('content')
-        .select('*')
-        .eq('content_type', 'story')
-        .order('created_at', { ascending: false });
+        .from("content")
+        .select("*")
+        .eq("content_type", "story")
+        .order("created_at", { ascending: false });
 
       if (error) throw error;
-      setContent(data || []);
+      setContent((data as Content[]) || []);
     } catch (error) {
-      console.error('Error fetching stories:', error);
+      console.error("Error fetching stories:", error);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleContentClick = (item: any) => {
+  const handleContentClick = (item: Content) => {
     setSelectedContent(item);
     setShowDetailModal(true);
   };
 
-  const handlePlay = (item: any) => {
+  const handlePlay = (item: Content) => {
     setPlayingContent(item);
     setShowVideoPlayer(true);
     setShowDetailModal(false);
@@ -53,55 +55,89 @@ const Stories = () => {
 
   const deleteContent = async (id: string, fileUrl?: string) => {
     try {
-      const { error } = await supabase
-        .from('content')
-        .delete()
-        .eq('id', id);
-
+      const { error } = await supabase.from("content").delete().eq("id", id);
       if (error) throw error;
 
+      // remove file from storage if present
       if (fileUrl) {
-        // Extract the path from the full URL
-        const urlParts = fileUrl.split('/storage/v1/object/public/content-files/');
-        if (urlParts[1]) {
-          await supabase.storage
-            .from('content-files')
-            .remove([urlParts[1]]);
+        const parts = fileUrl.split("/storage/v1/object/public/content-files/");
+        if (parts[1]) {
+          await supabase.storage.from("content-files").remove([parts[1]]);
         }
       }
 
-      setContent(prev => prev.filter(item => item.id !== id));
+      setContent((prev) => prev.filter((c) => c.id !== id));
       setShowDetailModal(false);
-      
+
       toast({
         title: "Content deleted",
-        description: "Story has been successfully deleted."
+        description: "Story has been successfully deleted.",
       });
-    } catch (error: any) {
-      console.error('Error deleting content:', error);
+    } catch (err: any) {
+      console.error("Error deleting content:", err);
       toast({
         title: "Delete failed",
-        description: error.message,
-        variant: "destructive"
+        description: err.message,
+        variant: "destructive",
       });
     }
   };
 
-  // Organize content into categories
-  const featuredStory = content.find(story => story.is_featured) || content[0];
-  const recentlyAdded = content.slice(0, 10);
-  const dramaStories = content.filter(story => story.genre?.toLowerCase().includes('drama'));
-  const comedyStories = content.filter(story => story.genre?.toLowerCase().includes('comedy'));
-  const mysteryStories = content.filter(story => story.genre?.toLowerCase().includes('mystery'));
-  const myStories = user ? content.filter(story => story.user_id === user.id) : [];
+  // Sections (same layout style as Favorites)
+  const recentlyAdded = content.slice(0, 12);
+  const dramaStories = content.filter((s) =>
+    s.genre?.toLowerCase().includes("drama")
+  );
+  const comedyStories = content.filter((s) =>
+    s.genre?.toLowerCase().includes("comedy")
+  );
+  const mysteryStories = content.filter((s) =>
+    s.genre?.toLowerCase().includes("mystery")
+  );
+  const myStories = user ? content.filter((s: any) => s.user_id === user.id) : [];
+
+  const SectionGrid = ({
+    title,
+    items,
+  }: {
+    title: string;
+    items: Content[];
+  }) => {
+    if (!items.length) return null;
+    return (
+      <section className="container mx-auto px-6 mb-12">
+        <h2 className="text-2xl md:text-3xl font-bold mb-6">{title}</h2>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+          {items.map((c, i) => (
+            <ContentCard
+              key={c.id}
+              content={c}
+              contentType="Story"
+              index={i % 4}
+              onClick={() => handleContentClick(c)}
+              onPlay={() => handlePlay(c)}
+            />
+          ))}
+        </div>
+      </section>
+    );
+  };
 
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
         <Navigation />
-        <div className="pt-20 flex items-center justify-center h-screen">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-primary"></div>
-        </div>
+        <main className="container mx-auto px-6 pt-28 pb-16">
+          <h2 className="text-2xl md:text-3xl font-bold mb-6">
+            Recently Added Stories
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className="aspect-video rounded-lg bg-card/60 animate-pulse" />
+            ))}
+          </div>
+        </main>
       </div>
     );
   }
@@ -109,76 +145,51 @@ const Stories = () => {
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
-      
-      <div className="pb-20 pt-20 relative z-10">
+
+      <main className="pt-24 pb-20">
         {recentlyAdded.length > 0 && (
-          <NetflixRow
-            title="Recently Added Stories"
-            content={recentlyAdded}
-            contentType="Story"
-            onContentClick={handleContentClick}
-            onContentPlay={handlePlay}
-          />
+          <SectionGrid title="Recently Added Stories" items={recentlyAdded} />
         )}
-
-        {dramaStories.length > 0 && (
-          <NetflixRow
-            title="Drama Stories"
-            content={dramaStories}
-            contentType="Story"
-            onContentClick={handleContentClick}
-            onContentPlay={handlePlay}
-          />
-        )}
-
-        {comedyStories.length > 0 && (
-          <NetflixRow
-            title="Comedy Stories"
-            content={comedyStories}
-            contentType="Story"
-            onContentClick={handleContentClick}
-            onContentPlay={handlePlay}
-          />
-        )}
-
         {mysteryStories.length > 0 && (
-          <NetflixRow
-            title="Mystery & Thriller Stories"
-            content={mysteryStories}
-            contentType="Story"
-            onContentClick={handleContentClick}
-            onContentPlay={handlePlay}
-          />
+          <SectionGrid title="Mystery & Thriller Stories" items={mysteryStories} />
         )}
-
+        {dramaStories.length > 0 && (
+          <SectionGrid title="Drama Stories" items={dramaStories} />
+        )}
+        {comedyStories.length > 0 && (
+          <SectionGrid title="Comedy Stories" items={comedyStories} />
+        )}
         {myStories.length > 0 && (
-          <NetflixRow
-            title="My Stories"
-            content={myStories}
-            contentType="Story"
-            onContentClick={handleContentClick}
-            onContentPlay={handlePlay}
-          />
+          <SectionGrid title="My Stories" items={myStories as Content[]} />
         )}
 
         {content.length === 0 && (
-          <div className="text-center py-20">
-            <h2 className="text-2xl font-bold text-foreground mb-4">No Stories Available</h2>
-            <p className="text-muted-foreground">Be the first to upload a story!</p>
+          <div className="container mx-auto px-6">
+            <div className="bg-card/60 border border-border/40 rounded-2xl p-8 text-center">
+              <h2 className="text-2xl font-bold text-foreground mb-2">
+                No Stories Available
+              </h2>
+              <p className="text-muted-foreground">
+                Be the first to upload a story!
+              </p>
+            </div>
           </div>
         )}
-      </div>
+      </main>
 
       <Footer />
 
       <NetflixDetailModal
-        content={selectedContent}
+        content={selectedContent as any}
         contentType="Story"
         isOpen={showDetailModal}
         onClose={() => setShowDetailModal(false)}
         onPlay={() => selectedContent && handlePlay(selectedContent)}
-        onDelete={() => selectedContent && deleteContent(selectedContent.id, selectedContent.file_url)}
-        canDelete={user?.id === selectedContent?.user_id}
+        onDelete={() =>
+          selectedContent &&
+          deleteContent((selectedContent as any).id, (selectedContent as any).file_url)
+        }
+        canDelete={(user?.id ?? "") === ((selectedContent as any)?.user_id ?? "")}
       />
 
       <Dialog open={showVideoPlayer} onOpenChange={setShowVideoPlayer}>
@@ -192,15 +203,15 @@ const Stories = () => {
               description={playingContent.description}
               genre={playingContent.genre}
               contentType={playingContent.content_type}
-              streamUrl={playingContent.stream_url}
-              streamStatus={playingContent.stream_status}
-              streamId={playingContent.stream_id}
-              streamThumbnailUrl={playingContent.stream_thumbnail_url}
-              playbackId={playingContent.playback_id}
-              vastTagUrl={playingContent.vast_tag_url}
-              adBreaks={playingContent.ad_breaks}
-              durationSeconds={playingContent.duration_seconds}
-              monetizationEnabled={playingContent.monetization_enabled}
+              streamUrl={(playingContent as any).stream_url}
+              streamStatus={(playingContent as any).stream_status}
+              streamId={(playingContent as any).stream_id}
+              streamThumbnailUrl={(playingContent as any).stream_thumbnail_url}
+              playbackId={(playingContent as any).playback_id}
+              vastTagUrl={(playingContent as any).vast_tag_url}
+              adBreaks={(playingContent as any).ad_breaks}
+              durationSeconds={(playingContent as any).duration_seconds}
+              monetizationEnabled={(playingContent as any).monetization_enabled}
               contentId={playingContent.id}
               canDelete={false}
             />

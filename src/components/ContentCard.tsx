@@ -1,15 +1,16 @@
 import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Play, Plus, Check, ThumbsUp, ChevronDown } from "lucide-react";
+import { Play, ThumbsUp, ChevronDown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client"; // still used for Favorites ONLY
+
+// ✔️ new lightweight like helpers (no Supabase)
 import {
   getLikeCount,
   isLikedLocal,
   likeOnce,
   unlikeOnce,
-} from "@/utils/likes";
+} from "@/lib/likes";
 
 /* ---------- Types ---------- */
 
@@ -28,8 +29,8 @@ interface ContentCardProps {
   content: Content;
   contentType: string;
   index: number;
-  onClick: () => void;   // open details / “More”
-  onPlay: () => void;    // start playback
+  onClick: () => void;   // “More” / details
+  onPlay: () => void;    // Play action
 }
 
 /* ---------- Component ---------- */
@@ -44,109 +45,46 @@ export const ContentCard: React.FC<ContentCardProps> = ({
   const [isHovered, setIsHovered] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
 
-  // Favorites UI (unchanged) — comment these lines out if you removed Favorites entirely
-  const [isFavorited, setIsFavorited] = useState(false);
-
-  // New: public like count + local liked state (no DB)
-  const [likeCount, setLikeCount] = useState<number | null>(null);
+  // ❤️ like state (no DB)
+  const [likeCount, setLikeCount] = useState<number>(0);
   const [liked, setLiked] = useState<boolean>(false);
 
   const { toast } = useToast();
 
-  // Load initial states
+  // Load initial like state / count
   useEffect(() => {
-    let cancelled = false;
+    let alive = true;
 
-    // Favorites check (DB) - keep only if you still use favorites
     (async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      const { data, error } = await supabase
-        .from("favorites")
-        .select("id")
-        .eq("user_id", user.id)
-        .eq("content_id", content.id)
-        .maybeSingle();
-
-      if (!cancelled) {
-        if (error && error.code !== "PGRST116") {
-          console.warn("Favorite check error:", error.message);
-        }
-        setIsFavorited(!!data);
+      try {
+        const initialLiked = isLikedLocal(content.id);
+        const count = await getLikeCount(content.id);
+        if (!alive) return;
+        setLiked(initialLiked);
+        setLikeCount(count);
+      } catch (e: any) {
+        console.warn("Like load error:", e?.message ?? e);
       }
     })();
 
-    // Likes (no DB)
-    setLiked(isLikedLocal(content.id));
-    getLikeCount(content.id)
-      .then((n) => !cancelled && setLikeCount(n))
-      .catch(() => !cancelled && setLikeCount(0));
-
     return () => {
-      cancelled = true;
+      alive = false;
     };
   }, [content.id]);
 
-  /* ------- Favorites toggle (kept as-is; remove if you don’t use favorites) ------- */
-  const toggleFavorite = async (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      toast({ title: "Please log in to save favorites." });
-      return;
-    }
-
-    // try delete first
-    const { data: removed, error: delErr } = await supabase
-      .from("favorites")
-      .delete()
-      .eq("user_id", user.id)
-      .eq("content_id", content.id)
-      .select("id");
-
-    if (delErr) {
-      toast({ title: "Error", description: delErr.message, variant: "destructive" });
-      return;
-    }
-
-    if (removed && removed.length > 0) {
-      setIsFavorited(false);
-      toast({ title: "Removed from Favorites" });
-      return;
-    }
-
-    // insert if not removed
-    const { error: insErr } = await supabase
-      .from("favorites")
-      .insert({ user_id: user.id, content_id: content.id });
-
-    if (insErr) {
-      toast({ title: "Could not add to favorites", description: insErr.message, variant: "destructive" });
-      return;
-    }
-
-    setIsFavorited(true);
-    toast({ title: "Added to Favorites", description: content.title });
-  };
-
-  /* ------- NEW Like/Unlike (no Supabase) ------- */
-  const handleLike = async (e: React.MouseEvent) => {
+  const handleLikeClick = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
 
     try {
       if (liked) {
-        const n = await unlikeOnce(content.id);
+        const newCount = await unlikeOnce(content.id);
         setLiked(false);
-        setLikeCount(n);
-        toast({ title: "Like removed" });
+        setLikeCount(newCount);
       } else {
-        const n = await likeOnce(content.id);
+        const newCount = await likeOnce(content.id);
         setLiked(true);
-        setLikeCount(n);
-        toast({ title: "Thanks for the like", description: content.title });
+        setLikeCount(newCount);
       }
     } catch (err: any) {
       toast({
@@ -248,7 +186,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
         {isHovered && (
           <div className="bg-background/95 backdrop-blur-sm border-t border-border/50 p-4 space-y-3 relative z-20">
             <div className="flex items-center justify-between">
-              <div className="flex gap-2">
+              <div className="flex items-center gap-2">
                 <Button
                   type="button"
                   size="sm"
@@ -261,29 +199,19 @@ export const ContentCard: React.FC<ContentCardProps> = ({
                   <Play className="h-4 w-4" />
                 </Button>
 
-                {/* Favorites (keep/remove as you like) */}
-                <Button
-                  type="button"
-                  size="sm"
-                  variant={isFavorited ? "default" : "outline"}
-                  className="rounded-full p-2"
-                  onClick={toggleFavorite}
-                  title={isFavorited ? "Remove from Favorites" : "Add to Favorites"}
-                >
-                  {isFavorited ? <Check className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
-                </Button>
-
-                {/* Likes (no DB) */}
+                {/* Like button + live count */}
                 <Button
                   type="button"
                   size="sm"
                   variant={liked ? "default" : "outline"}
                   className="rounded-full px-3"
-                  onClick={handleLike}
+                  onClick={handleLikeClick}
                   title={liked ? "Unlike" : "Like"}
                 >
-                  <ThumbsUp className="h-4 w-4" />
-                  <span className="ml-2 text-xs">{likeCount ?? "…"}</span>
+                  <div className="flex items-center gap-2">
+                    <ThumbsUp className="h-4 w-4" />
+                    <span className="text-xs tabular-nums">{likeCount}</span>
+                  </div>
                 </Button>
               </div>
 
@@ -329,9 +257,20 @@ export const ContentCard: React.FC<ContentCardProps> = ({
         {/* Title overlay when not hovered */}
         {!isHovered && (
           <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-background/90 to-transparent p-3">
-            <h3 className="text-foreground font-semibold text-sm line-clamp-1">
-              {content.title}
-            </h3>
+            <div className="flex items-center justify-between">
+              <h3 className="text-foreground font-semibold text-sm line-clamp-1">
+                {content.title}
+              </h3>
+
+              {/* Small like count badge (non-hover state) */}
+              <div
+                className="flex items-center gap-1 text-xs text-foreground/80 bg-background/60 rounded-full px-2 py-0.5"
+                title={`${likeCount} likes`}
+              >
+                <ThumbsUp className="h-3.5 w-3.5" />
+                <span className="tabular-nums">{likeCount}</span>
+              </div>
+            </div>
           </div>
         )}
       </div>
@@ -339,5 +278,5 @@ export const ContentCard: React.FC<ContentCardProps> = ({
   );
 };
 
-/* Optional alias for legacy imports */
+/* Optional alias for older imports */
 export { ContentCard as NetflixCard };

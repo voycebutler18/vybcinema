@@ -3,7 +3,7 @@ import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Search, Bell, User, ChevronDown, Heart } from "lucide-react";
+import { Search, Bell, User, ChevronDown } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,13 +18,12 @@ export const NetflixNavigation: React.FC = () => {
   const location = useLocation();
   const [showSearch, setShowSearch] = useState(false);
 
-  // Base items; dashboard only when signed in
+  // Base items; dashboard only when signed in (Favorites removed)
   const baseNav = [
     { path: "/", label: "Home" },
     { path: "/movies", label: "Movies" },
     { path: "/tv-shows", label: "TV Shows" },
     { path: "/stories", label: "Short Stories" },
-    { path: "/favorites", label: "My Favorites" },
   ];
   const navItems = user ? [...baseNav, { path: "/dashboard", label: "Dashboard" }] : baseNav;
 
@@ -41,7 +40,6 @@ export const NetflixNavigation: React.FC = () => {
           {/* Left: Logo + Nav */}
           <div className="flex items-center gap-8">
             <Link to="/" className="flex items-center gap-2">
-              {/* BRAND — use your gradient class if available */}
               <div className="text-2xl font-bold">
                 <span className="text-cinema-gradient">VYB Cinema</span>
               </div>
@@ -86,7 +84,7 @@ export const NetflixNavigation: React.FC = () => {
               )}
             </div>
 
-            {/* Upload (neutral style, no red) */}
+            {/* Upload */}
             {user && (
               <Button asChild variant="ghost" size="sm" className="text-white hover:text-gray-300">
                 <Link to="/upload">Upload</Link>
@@ -121,12 +119,7 @@ export const NetflixNavigation: React.FC = () => {
                   <DropdownMenuItem asChild className="text-white hover:bg-gray-800 cursor-pointer">
                     <Link to="/upload">Upload</Link>
                   </DropdownMenuItem>
-                  <DropdownMenuItem asChild className="text-white hover:bg-gray-800 cursor-pointer">
-                    <Link to="/favorites" className="flex items-center">
-                      <Heart className="h-4 w-4 mr-2" />
-                      My Favorites
-                    </Link>
-                  </DropdownMenuItem>
+                  {/* Favorites item removed */}
                   <DropdownMenuItem className="text-white hover:bg-gray-800">
                     <User className="h-4 w-4 mr-2" />
                     Profile

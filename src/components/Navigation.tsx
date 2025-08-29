@@ -18,7 +18,7 @@ export const NetflixNavigation: React.FC = () => {
   const location = useLocation();
   const [showSearch, setShowSearch] = useState(false);
 
-  // Base site sections (Music Videos removed)
+  // Base items; dashboard only when signed in
   const baseNav = [
     { path: "/", label: "Home" },
     { path: "/movies", label: "Movies" },
@@ -26,8 +26,6 @@ export const NetflixNavigation: React.FC = () => {
     { path: "/stories", label: "Short Stories" },
     { path: "/favorites", label: "My Favorites" },
   ];
-
-  // If signed in, also show Dashboard
   const navItems = user ? [...baseNav, { path: "/dashboard", label: "Dashboard" }] : baseNav;
 
   const isActive = (path: string) => {
@@ -43,9 +41,8 @@ export const NetflixNavigation: React.FC = () => {
           {/* Left: Logo + Nav */}
           <div className="flex items-center gap-8">
             <Link to="/" className="flex items-center gap-2">
-              {/* BRAND — changed from STREAMFLIX to VYB Cinema */}
+              {/* BRAND — use your gradient class if available */}
               <div className="text-2xl font-bold">
-                {/* Use your gradient class if you have one; otherwise plain text */}
                 <span className="text-cinema-gradient">VYB Cinema</span>
               </div>
             </Link>
@@ -65,7 +62,7 @@ export const NetflixNavigation: React.FC = () => {
             </div>
           </div>
 
-          {/* Right: Search + (optional Upload) + Notifications + User */}
+          {/* Right: Search + Upload + Notifications + User */}
           <div className="flex items-center gap-4">
             {/* Search */}
             <div className="relative">
@@ -89,9 +86,9 @@ export const NetflixNavigation: React.FC = () => {
               )}
             </div>
 
-            {/* Show quick Upload CTA when signed in (optional) */}
+            {/* Upload (neutral style, no red) */}
             {user && (
-              <Button asChild size="sm" className="bg-red-600 hover:bg-red-700">
+              <Button asChild variant="ghost" size="sm" className="text-white hover:text-gray-300">
                 <Link to="/upload">Upload</Link>
               </Button>
             )}
@@ -119,17 +116,17 @@ export const NetflixNavigation: React.FC = () => {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="bg-black/90 border-gray-700">
                   <DropdownMenuItem asChild className="text-white hover:bg-gray-800 cursor-pointer">
+                    <Link to="/dashboard">Dashboard</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild className="text-white hover:bg-gray-800 cursor-pointer">
+                    <Link to="/upload">Upload</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild className="text-white hover:bg-gray-800 cursor-pointer">
                     <Link to="/favorites" className="flex items-center">
                       <Heart className="h-4 w-4 mr-2" />
                       My Favorites
                     </Link>
                   </DropdownMenuItem>
-
-                  {/* Dashboard also available from the menu */}
-                  <DropdownMenuItem asChild className="text-white hover:bg-gray-800 cursor-pointer">
-                    <Link to="/dashboard">Dashboard</Link>
-                  </DropdownMenuItem>
-
                   <DropdownMenuItem className="text-white hover:bg-gray-800">
                     <User className="h-4 w-4 mr-2" />
                     Profile
@@ -160,5 +157,4 @@ export const NetflixNavigation: React.FC = () => {
   );
 };
 
-/** Re-export so pages can `import { Navigation } from "@/components/Navigation"` */
 export { NetflixNavigation as Navigation };

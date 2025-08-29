@@ -1,64 +1,35 @@
-// src/lib/likes.ts
-// Public like counter via countapi.xyz + per-device guard via localStorage
+// src/utils/likes.ts
+// Pure localStorage likes — no network, no Supabase.
 
-const NAMESPACE =
-  (import.meta.env.VITE_COUNTAPI_NS as string) || "vybcinema";
-const BASE = "https://api.countapi.xyz";
+const COUNT_KEY = (id: string) => `vyb:likes:count:${id}`;
+const MINE_KEY  = (id: string) => `vyb:likes:mine:${id}`;
 
-const keyFor = (contentId: string) => encodeURIComponent(contentId);
-const lsKey = (contentId: string) => `liked:${contentId}`;
+const readCount = (id: string): number =>
+  Math.max(0, Number(localStorage.getItem(COUNT_KEY(id)) ?? 0));
 
-async function ensureCounter(contentId: string) {
-  const key = keyFor(contentId);
-  // If counter doesn’t exist, set it to 0 (ignore errors)
-  await fetch(`${BASE}/create?namespace=${NAMESPACE}&key=${key}&value=0`).catch(
-    () => {}
-  );
+const writeCount = (id: string, n: number) =>
+  localStorage.setItem(COUNT_KEY(id), String(Math.max(0, n)));
+
+export async function getLikeCount(id: string): Promise<number> {
+  return readCount(id);
 }
 
-export async function getLikeCount(contentId: string): Promise<number> {
-  const key = keyFor(contentId);
-  const res = await fetch(`${BASE}/get/${NAMESPACE}/${key}`);
-  if (res.ok) {
-    const data = await res.json();
-    return typeof data.value === "number" ? data.value : 0;
-  }
-  await ensureCounter(contentId);
-  return 0;
+export function isLikedLocal(id: string): boolean {
+  return localStorage.getItem(MINE_KEY(id)) === "1";
 }
 
-export function isLikedLocal(contentId: string): boolean {
-  return localStorage.getItem(lsKey(contentId)) === "1";
+export async function likeOnce(id: string): Promise<number> {
+  if (isLikedLocal(id)) return readCount(id);
+  const n = readCount(id) + 1;
+  writeCount(id, n);
+  localStorage.setItem(MINE_KEY(id), "1");
+  return n;
 }
 
-export function setLikedLocal(contentId: string, liked: boolean) {
-  if (liked) localStorage.setItem(lsKey(contentId), "1");
-  else localStorage.removeItem(lsKey(contentId));
-}
-
-export async function likeOnce(contentId: string): Promise<number> {
-  if (isLikedLocal(contentId)) return getLikeCount(contentId);
-  const key = keyFor(contentId);
-  const res = await fetch(`${BASE}/update/${NAMESPACE}/${key}?amount=1`);
-  if (!res.ok) {
-    await ensureCounter(contentId);
-    const res2 = await fetch(`${BASE}/update/${NAMESPACE}/${key}?amount=1`);
-    if (!res2.ok) throw new Error("Could not increase like counter");
-    const data2 = await res2.json();
-    setLikedLocal(contentId, true);
-    return data2.value ?? 0;
-  }
-  const data = await res.json();
-  setLikedLocal(contentId, true);
-  return data.value ?? 0;
-}
-
-export async function unlikeOnce(contentId: string): Promise<number> {
-  if (!isLikedLocal(contentId)) return getLikeCount(contentId);
-  const key = keyFor(contentId);
-  const res = await fetch(`${BASE}/update/${NAMESPACE}/${key}?amount=-1`);
-  if (!res.ok) throw new Error("Could not decrease like counter");
-  const data = await res.json();
-  setLikedLocal(contentId, false);
-  return data.value ?? 0;
+export async function unlikeOnce(id: string): Promise<number> {
+  if (!isLikedLocal(id)) return readCount(id);
+  const n = Math.max(0, readCount(id) - 1);
+  writeCount(id, n);
+  localStorage.removeItem(MINE_KEY(id));
+  return n;
 }

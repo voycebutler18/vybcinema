@@ -107,7 +107,8 @@ export const NetflixNavigation: React.FC = () => {
                     className="flex items-center gap-2 text-white hover:text-gray-300"
                   >
                     <Avatar className="h-8 w-8">
-                      <AvatarFallback className="bg-red-600 text-white">
+                      {/* CHANGED: remove red, use neutral theme color */}
+                      <AvatarFallback className="bg-muted text-white">
                         {user.email?.charAt(0).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>

@@ -9,7 +9,7 @@ import {
   isLikedLocal,
   likeOnce,
   unlikeOnce,
-} from "@/lib/likes"; // ✅ fixed path
+} from "@/utils/likes";
 
 /* ---------- Types ---------- */
 
@@ -44,13 +44,12 @@ export const ContentCard: React.FC<ContentCardProps> = ({
   const [isHovered, setIsHovered] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
 
-  // Favorites UI (unchanged)
+  // Favorites UI (unchanged) — comment these lines out if you removed Favorites entirely
   const [isFavorited, setIsFavorited] = useState(false);
 
-  // 👍 Likes (no DB)
+  // New: public like count + local liked state (no DB)
   const [likeCount, setLikeCount] = useState<number | null>(null);
   const [liked, setLiked] = useState<boolean>(false);
-  const [liking, setLiking] = useState<boolean>(false); // prevent double taps
 
   const { toast } = useToast();
 
@@ -58,7 +57,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
   useEffect(() => {
     let cancelled = false;
 
-    // Favorites check (DB)
+    // Favorites check (DB) - keep only if you still use favorites
     (async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
@@ -88,7 +87,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
     };
   }, [content.id]);
 
-  /* ------- Favorites toggle (unchanged) ------- */
+  /* ------- Favorites toggle (kept as-is; remove if you don’t use favorites) ------- */
   const toggleFavorite = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -132,13 +131,11 @@ export const ContentCard: React.FC<ContentCardProps> = ({
     toast({ title: "Added to Favorites", description: content.title });
   };
 
-  /* ------- NEW Like/Unlike (wired, only change) ------- */
+  /* ------- NEW Like/Unlike (no Supabase) ------- */
   const handleLike = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
 
-    if (liking) return; // guard double click
-    setLiking(true);
     try {
       if (liked) {
         const n = await unlikeOnce(content.id);
@@ -157,8 +154,6 @@ export const ContentCard: React.FC<ContentCardProps> = ({
         description: err?.message ?? "Please try again.",
         variant: "destructive",
       });
-    } finally {
-      setLiking(false);
     }
   };
 
@@ -266,7 +261,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
                   <Play className="h-4 w-4" />
                 </Button>
 
-                {/* Favorites (unchanged) */}
+                {/* Favorites (keep/remove as you like) */}
                 <Button
                   type="button"
                   size="sm"
@@ -278,7 +273,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
                   {isFavorited ? <Check className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
                 </Button>
 
-                {/* Likes (wired) */}
+                {/* Likes (no DB) */}
                 <Button
                   type="button"
                   size="sm"
@@ -286,7 +281,6 @@ export const ContentCard: React.FC<ContentCardProps> = ({
                   className="rounded-full px-3"
                   onClick={handleLike}
                   title={liked ? "Unlike" : "Like"}
-                  disabled={liking}
                 >
                   <ThumbsUp className="h-4 w-4" />
                   <span className="ml-2 text-xs">{likeCount ?? "…"}</span>

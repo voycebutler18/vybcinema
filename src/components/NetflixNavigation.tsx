@@ -3,7 +3,7 @@ import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Search, Bell, User, ChevronDown, Heart } from "lucide-react";
+import { Search, Bell, User, ChevronDown } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,21 +18,19 @@ export const NetflixNavigation = () => {
   const location = useLocation();
   const [showSearch, setShowSearch] = useState(false);
 
-  // Added Music Videos + My Favorites here
+  // Favorites removed (kept Music Videos)
   const navItems = [
     { path: "/", label: "Home" },
     { path: "/movies", label: "Movies" },
     { path: "/tv-shows", label: "TV Shows" },
     { path: "/stories", label: "Short Stories" },
-    { path: "/music-videos", label: "Music Videos" }, // NEW
-    { path: "/favorites", label: "My Favorites" },    // NEW
+    { path: "/music-videos", label: "Music Videos" },
   ];
 
   const isActive = (path: string) => {
     if (path === "/" && location.pathname === "/") return true;
     if (path !== "/" && location.pathname.startsWith(path)) return true;
     return false;
-    // you can tighten this if needed (e.g., exact match for some paths)
   };
 
   return (
@@ -109,12 +107,7 @@ export const NetflixNavigation = () => {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="bg-black/90 border-gray-700">
-                  <DropdownMenuItem asChild className="text-white hover:bg-gray-800 cursor-pointer">
-                    <Link to="/favorites" className="flex items-center">
-                      <Heart className="h-4 w-4 mr-2" />
-                      My Favorites
-                    </Link>
-                  </DropdownMenuItem>
+                  {/* Favorites entry removed */}
                   <DropdownMenuItem className="text-white hover:bg-gray-800">
                     <User className="h-4 w-4 mr-2" />
                     Profile
@@ -133,7 +126,7 @@ export const NetflixNavigation = () => {
                 <Button asChild variant="ghost" className="text-white hover:text-gray-300">
                   <Link to="/login">Sign In</Link>
                 </Button>
-                <Button asChild className="bg-red-600 hover:bg-red-700">
+                <Button asChild className="bg-gray-300 hover:bg-gray-300">
                   <Link to="/signup">Sign Up</Link>
                 </Button>
               </div>

@@ -18,14 +18,17 @@ export const NetflixNavigation: React.FC = () => {
   const location = useLocation();
   const [showSearch, setShowSearch] = useState(false);
 
-  // Top nav items (Music Videos removed)
-  const navItems = [
+  // Base site sections (Music Videos removed)
+  const baseNav = [
     { path: "/", label: "Home" },
     { path: "/movies", label: "Movies" },
     { path: "/tv-shows", label: "TV Shows" },
     { path: "/stories", label: "Short Stories" },
-    { path: "/favorites", label: "My Favorites" }, // keep if you have /favorites page
+    { path: "/favorites", label: "My Favorites" },
   ];
+
+  // If signed in, also show Dashboard
+  const navItems = user ? [...baseNav, { path: "/dashboard", label: "Dashboard" }] : baseNav;
 
   const isActive = (path: string) => {
     if (path === "/" && location.pathname === "/") return true;
@@ -40,7 +43,11 @@ export const NetflixNavigation: React.FC = () => {
           {/* Left: Logo + Nav */}
           <div className="flex items-center gap-8">
             <Link to="/" className="flex items-center gap-2">
-              <div className="text-red-600 text-2xl font-bold">STREAMFLIX</div>
+              {/* BRAND — changed from STREAMFLIX to VYB Cinema */}
+              <div className="text-2xl font-bold">
+                {/* Use your gradient class if you have one; otherwise plain text */}
+                <span className="text-cinema-gradient">VYB Cinema</span>
+              </div>
             </Link>
 
             <div className="hidden md:flex items-center gap-6">
@@ -58,7 +65,7 @@ export const NetflixNavigation: React.FC = () => {
             </div>
           </div>
 
-          {/* Right: Search + Notifications + User */}
+          {/* Right: Search + (optional Upload) + Notifications + User */}
           <div className="flex items-center gap-4">
             {/* Search */}
             <div className="relative">
@@ -82,12 +89,15 @@ export const NetflixNavigation: React.FC = () => {
               )}
             </div>
 
+            {/* Show quick Upload CTA when signed in (optional) */}
+            {user && (
+              <Button asChild size="sm" className="bg-red-600 hover:bg-red-700">
+                <Link to="/upload">Upload</Link>
+              </Button>
+            )}
+
             {/* Notifications */}
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-white hover:text-gray-300"
-            >
+            <Button variant="ghost" size="sm" className="text-white hover:text-gray-300">
               <Bell className="h-5 w-5" />
             </Button>
 
@@ -107,16 +117,19 @@ export const NetflixNavigation: React.FC = () => {
                     <ChevronDown className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent
-                  align="end"
-                  className="bg-black/90 border-gray-700"
-                >
+                <DropdownMenuContent align="end" className="bg-black/90 border-gray-700">
                   <DropdownMenuItem asChild className="text-white hover:bg-gray-800 cursor-pointer">
                     <Link to="/favorites" className="flex items-center">
                       <Heart className="h-4 w-4 mr-2" />
                       My Favorites
                     </Link>
                   </DropdownMenuItem>
+
+                  {/* Dashboard also available from the menu */}
+                  <DropdownMenuItem asChild className="text-white hover:bg-gray-800 cursor-pointer">
+                    <Link to="/dashboard">Dashboard</Link>
+                  </DropdownMenuItem>
+
                   <DropdownMenuItem className="text-white hover:bg-gray-800">
                     <User className="h-4 w-4 mr-2" />
                     Profile

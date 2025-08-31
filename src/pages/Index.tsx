@@ -1,16 +1,17 @@
 // src/pages/Index.tsx
 import Navigation from "@/components/Navigation";
 import { HeroSection } from "@/components/HeroSection";
+import WeeklySpotlightSection from "@/components/WeeklySpotlightSection";
 import { Footer } from "@/components/Footer";
 
 const Index = () => {
   return (
     <div className="relative min-h-screen bg-background overflow-hidden">
-      {/* soft neon backdrop */}
+      {/* Vibes backdrop */}
       <div className="absolute inset-0 bg-gradient-hero" />
       <div className="absolute inset-0 bg-gradient-mesh opacity-60" />
 
-      {/* floaty orbs */}
+      {/* Floaty orbs */}
       <span className="pointer-events-none absolute -top-6 left-6 h-5 w-5 rounded-full bg-primary/30 animate-float" />
       <span
         className="pointer-events-none absolute top-24 right-16 h-7 w-7 rounded-full bg-accent/25 animate-float"
@@ -23,9 +24,10 @@ const Index = () => {
 
       <Navigation />
 
-      <main className="relative z-10 pt-20">
+      <main className="relative z-10 pt-20 space-y-20 md:space-y-28">
         <HeroSection />
-        {/* Add more sections later only when their files exist */}
+        {/* New: real content “Video of the Week” per category */}
+        <WeeklySpotlightSection />
       </main>
 
       <Footer />

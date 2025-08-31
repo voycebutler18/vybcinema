@@ -1,14 +1,12 @@
+// src/pages/Index.tsx
 import Navigation from "@/components/Navigation";
 import { HeroSection } from "@/components/HeroSection";
-import { WeeklySpotlightSection } from "@/components/WeeklySpotlightSection";
-import { FeatureSection } from "@/components/FeatureSection";
-import { StatsSection } from "@/components/StatsSection";
 import { Footer } from "@/components/Footer";
 
 const Index = () => {
   return (
     <div className="relative min-h-screen bg-background overflow-hidden">
-      {/* vibey gradient layers */}
+      {/* soft neon backdrop */}
       <div className="absolute inset-0 bg-gradient-hero" />
       <div className="absolute inset-0 bg-gradient-mesh opacity-60" />
 
@@ -16,22 +14,18 @@ const Index = () => {
       <span className="pointer-events-none absolute -top-6 left-6 h-5 w-5 rounded-full bg-primary/30 animate-float" />
       <span
         className="pointer-events-none absolute top-24 right-16 h-7 w-7 rounded-full bg-accent/25 animate-float"
-        style={{ animationDelay: "1.6s" }}
+        style={{ animationDelay: "1.4s" }}
       />
       <span
-        className="pointer-events-none absolute bottom-28 left-1/4 h-4 w-4 rounded-full bg-cinema-gold/40 animate-float"
-        style={{ animationDelay: "3s" }}
+        className="pointer-events-none absolute bottom-28 left-1/5 h-4 w-4 rounded-full bg-cinema-gold/40 animate-float"
+        style={{ animationDelay: "2.8s" }}
       />
 
       <Navigation />
 
-      {/* content sits above gradients */}
-      <main className="relative z-10 pt-20 space-y-16 md:space-y-24">
+      <main className="relative z-10 pt-20">
         <HeroSection />
-        {/* New: real content pulled per category for the week */}
-        <WeeklySpotlightSection />
-        <FeatureSection />
-        <StatsSection />
+        {/* Add more sections later only when their files exist */}
       </main>
 
       <Footer />

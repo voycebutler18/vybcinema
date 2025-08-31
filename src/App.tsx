@@ -26,9 +26,6 @@ import CookiePolicy from "./pages/CookiePolicy";
 import NotFound from "./pages/NotFound";
 import Dashboard from "./pages/Dashboard";
 
-// OPTIONAL (keep if you still use it)
-// import Favorites from "./pages/Favorites";
-
 // NEW teen IA pages
 import Music from "./pages/Music";
 import Shows from "./pages/Shows";
@@ -47,6 +44,7 @@ const App = () => (
         <BrowserRouter>
           <ScrollToTop />
           <Routes>
+            {/* Home */}
             <Route path="/" element={<Index />} />
 
             {/* Browse */}
@@ -59,7 +57,7 @@ const App = () => (
             <Route path="/challenges" element={<Challenges />} />
             <Route path="/live" element={<Live />} />
 
-            {/* Creator */}
+            {/* Creator (Upload supports /create, /create/:type and /create?type=) */}
             <Route path="/create" element={<Upload />} />
             <Route path="/create/:type" element={<Upload />} />
             <Route path="/upload" element={<Upload />} />
@@ -82,7 +80,7 @@ const App = () => (
             {/* Legacy redirect */}
             <Route path="/browse" element={<Movies />} />
 
-            {/* Catch-all */}
+            {/* 404 */}
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

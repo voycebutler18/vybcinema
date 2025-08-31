@@ -3,7 +3,18 @@ import { Link, NavLink, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Search, Bell, User, ChevronDown, Menu, X, Upload, Sparkles, Trophy, Radio } from "lucide-react";
+import {
+  Search,
+  Bell,
+  User,
+  ChevronDown,
+  Menu,
+  X,
+  Upload,
+  Sparkles,
+  Trophy,
+  Radio,
+} from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -88,10 +99,12 @@ export const Navigation: React.FC = () => {
             <div className="hidden md:flex items-center gap-5">
               {navItems.map((item) => {
                 const Icon = (item as any).icon;
+                const isHome = item.path === "/";
                 return (
                   <NavLink
                     key={item.path}
                     to={item.path}
+                    end={isHome}
                     className={({ isActive }) =>
                       [
                         "text-sm font-semibold transition-colors duration-200 hover:text-gray-100 flex items-center gap-1.5",
@@ -235,10 +248,12 @@ export const Navigation: React.FC = () => {
             <div className="grid gap-2">
               {navItems.map((item) => {
                 const Icon = (item as any).icon;
+                const isHome = item.path === "/";
                 return (
                   <NavLink
                     key={item.path}
                     to={item.path}
+                    end={isHome}
                     onClick={() => setMobileOpen(false)}
                     className={({ isActive }) =>
                       [

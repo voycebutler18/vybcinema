@@ -36,7 +36,7 @@ const Live = () => {
       if (error) throw error;
       setContent((data as Content[]) || []);
     } catch (e) {
-      console.error(e);
+      console.error("Error loading live content:", e);
     } finally {
       setLoading(false);
     }
@@ -60,21 +60,33 @@ const Live = () => {
 
       if (fileUrl) {
         const parts = fileUrl.split("/storage/v1/object/public/content-files/");
-        if (parts[1]) await supabase.storage.from("content-files").remove([parts[1]]);
+        if (parts[1]) {
+          await supabase.storage.from("content-files").remove([parts[1]]);
+        }
       }
 
       setContent((prev) => prev.filter((c) => c.id !== id));
       setShowDetailModal(false);
       toast({ title: "Deleted", description: "Live video removed." });
     } catch (err: any) {
-      toast({ title: "Delete failed", description: err.message, variant: "destructive" });
+      toast({
+        title: "Delete failed",
+        description: err.message,
+        variant: "destructive",
+      });
     }
   };
 
+  // Sections
   const recentlyAdded = content.slice(0, 12);
   const events = content.filter((v) => v.genre?.toLowerCase().includes("event"));
-  const concerts = content.filter((v) => v.genre?.toLowerCase().includes("concert"));
-  const esports = content.filter((v) => v.genre?.toLowerCase().includes("esport") || v.genre?.toLowerCase().includes("game"));
+  const concerts = content.filter((v) =>
+    v.genre?.toLowerCase().includes("concert")
+  );
+  const esports = content.filter((v) => {
+    const g = v.genre?.toLowerCase() || "";
+    return g.includes("esport") || g.includes("e-sport") || g.includes("game");
+  });
   const myLive = user ? content.filter((s: any) => s.user_id === user.id) : [];
 
   const Section = ({ title, items }: { title: string; items: Content[] }) =>
@@ -115,6 +127,7 @@ const Live = () => {
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
+
       <main className="pt-24 pb-20">
         <Section title="Latest Live" items={recentlyAdded} />
         <Section title="Live Events" items={events} />
@@ -131,6 +144,7 @@ const Live = () => {
           </div>
         )}
       </main>
+
       <Footer />
 
       <NetflixDetailModal
@@ -159,7 +173,7 @@ const Live = () => {
               contentType={playingContent.content_type}
               streamUrl={(playingContent as any).stream_url}
               streamStatus={(playingContent as any).stream_status}
-              streamId={(playingContent as any).stream_id)
+              streamId={(playingContent as any).stream_id} {/* fixed */}
               streamThumbnailUrl={(playingContent as any).stream_thumbnail_url}
               playbackId={(playingContent as any).playback_id}
               contentId={playingContent.id}

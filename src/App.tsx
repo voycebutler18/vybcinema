@@ -26,8 +26,14 @@ import CookiePolicy from "./pages/CookiePolicy";
 import NotFound from "./pages/NotFound";
 import Dashboard from "./pages/Dashboard";
 
-// Favorites page
+// Keep Favorites if you still use it
 import Favorites from "./pages/Favorites";
+
+// NEW sections
+import Music from "./pages/Music";
+import Talent from "./pages/Talent";
+import Challenges from "./pages/Challenges";
+import Live from "./pages/Live";
 
 const queryClient = new QueryClient();
 
@@ -41,14 +47,27 @@ const App = () => (
           <ScrollToTop />
           <Routes>
             <Route path="/" element={<Index />} />
+
+            {/* Core content */}
             <Route path="/movies" element={<Movies />} />
             <Route path="/tv-shows" element={<TVShows />} />
+            <Route path="/shows" element={<TVShows />} /> {/* alias for navbar */}
             <Route path="/stories" element={<Stories />} />
 
-            {/* My Favorites */}
+            {/* NEW sections */}
+            <Route path="/music" element={<Music />} />
+            <Route path="/talent" element={<Talent />} />
+            <Route path="/challenges" element={<Challenges />} />
+            <Route path="/live" element={<Live />} />
+
+            {/* Favorites (optional) */}
             <Route path="/favorites" element={<Favorites />} />
 
+            {/* Upload / Create */}
             <Route path="/upload" element={<Upload />} />
+            <Route path="/create" element={<Upload />} /> {/* alias for "Create" button */}
+
+            {/* Misc */}
             <Route path="/about" element={<About />} />
             <Route path="/genre/:genreName" element={<Genre />} />
             <Route path="/login" element={<Login />} />
@@ -66,7 +85,7 @@ const App = () => (
             {/* Legacy redirect */}
             <Route path="/browse" element={<Movies />} />
 
-            {/* Catch-all */}
+            {/* 404 */}
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

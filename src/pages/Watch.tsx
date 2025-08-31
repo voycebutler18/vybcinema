@@ -1,7 +1,7 @@
 // src/pages/Watch.tsx
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
-import { Navigation } from "@/components/Navigation";
+import Navigation from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
 import { VideoPlayer } from "@/components/VideoPlayer";
 import { Button } from "@/components/ui/button";
@@ -43,7 +43,6 @@ const Watch: React.FC = () => {
 
   const [item, setItem] = useState<Content | null>(null);
   const [loading, setLoading] = useState(true);
-
   const [related, setRelated] = useState<Content[]>([]);
 
   // likes UI (optional if you created a `likes` table)
@@ -115,7 +114,6 @@ const Watch: React.FC = () => {
     };
 
     load();
-    // re-run on id change
   }, [id, user, toast]);
 
   const toggleLike = async () => {
@@ -215,6 +213,7 @@ const Watch: React.FC = () => {
           {/* LEFT: Player + details */}
           <div>
             <VideoPlayer
+              inline
               videoUrl={item.file_url || undefined}
               trailerUrl={item.trailer_url || undefined}
               playbackId={item.playback_id || undefined}

@@ -1,16 +1,10 @@
+// src/components/WeeklySpotlightSection.tsx
 import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { VideoPlayer } from "@/components/VideoPlayer";
-import {
-  Play,
-  Music,
-  Tv,
-  BookOpen,
-  Sparkles,
-  Trophy,
-} from "lucide-react";
+import { Play, Music, Tv, BookOpen, Sparkles, Trophy } from "lucide-react";
 
 type Content = {
   id: string;
@@ -37,9 +31,6 @@ type Cat = {
   key: string;
   label: string;
   icon: React.ComponentType<any>;
-  // how to find items in your table
-  // most maps directly to content_type;
-  // talent/challenges fall back to genre search if content_type not present
   match: { content_type?: string; genreLike?: string };
 };
 
@@ -47,8 +38,6 @@ const CATS: Cat[] = [
   { key: "music", label: "Music", icon: Music, match: { content_type: "music_video" } },
   { key: "shows", label: "Shows", icon: Tv, match: { content_type: "tv_show" } },
   { key: "stories", label: "Stories", icon: BookOpen, match: { content_type: "story" } },
-  // If you later store these as content_type = 'talent'/'challenge', we’ll catch them.
-  // Today we also fall back to genre match so you can ship now.
   { key: "talent", label: "Talent", icon: Sparkles, match: { content_type: "talent", genreLike: "%talent%" } },
   { key: "challenges", label: "Challenges", icon: Trophy, match: { content_type: "challenge", genreLike: "%challenge%" } },
 ];
@@ -72,22 +61,17 @@ export const WeeklySpotlightSection: React.FC = () => {
 
       const results = await Promise.all(
         CATS.map(async (cat) => {
-          // Base query in last 7 days
           let q = supabase
             .from<Content>("content")
             .select("*")
             .gte("created_at", since)
             .order("created_at", { ascending: false })
-            .limit(12); // small batch
+            .limit(12);
 
-          // content_type match
-          if (cat.match.content_type) {
-            q = q.eq("content_type", cat.match.content_type);
-          }
+          if (cat.match.content_type) q = q.eq("content_type", cat.match.content_type);
 
           let { data, error } = await q;
 
-          // If nothing for talent/challenge content_type, try genre contains
           if (!error && (!data || data.length === 0) && cat.match.genreLike) {
             const alt = await supabase
               .from<Content>("content")
@@ -96,7 +80,6 @@ export const WeeklySpotlightSection: React.FC = () => {
               .ilike("genre", cat.match.genreLike)
               .order("created_at", { ascending: false })
               .limit(12);
-
             data = alt.data || [];
           }
 
@@ -104,9 +87,6 @@ export const WeeklySpotlightSection: React.FC = () => {
             console.error(`WeeklySpotlight ${cat.key} error:`, error);
             return [cat.key, null] as const;
           }
-
-          // TODO (optional): if you add a `votes` table, pick the item with
-          // highest votes in the last 7 days instead of the first item here.
 
           const winner = data && data.length ? data[0] : null;
           return [cat.key, winner] as const;
@@ -148,7 +128,6 @@ export const WeeklySpotlightSection: React.FC = () => {
           </div>
         </div>
 
-        {/* grid */}
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
           {CATS.map((cat) => {
             const Icon = cat.icon;
@@ -173,9 +152,10 @@ export const WeeklySpotlightSection: React.FC = () => {
                     <div
                       className="relative aspect-[16/9] w-full overflow-hidden rounded-xl bg-black"
                       style={{
-                        backgroundImage: winner.cover_url || winner.thumbnail_url
-                          ? `url(${winner.cover_url || winner.thumbnail_url})`
-                          : undefined,
+                        backgroundImage:
+                          winner.cover_url || winner.thumbnail_url
+                            ? `url(${winner.cover_url || winner.thumbnail_url})`
+                            : undefined,
                         backgroundSize: "cover",
                         backgroundPosition: "center",
                       }}
@@ -210,7 +190,6 @@ export const WeeklySpotlightSection: React.FC = () => {
         </div>
       </div>
 
-      {/* Player */}
       <Dialog open={showPlayer} onOpenChange={setShowPlayer}>
         <DialogContent className="max-w-5xl w-full p-0 bg-black">
           {active && (
@@ -240,3 +219,5 @@ export const WeeklySpotlightSection: React.FC = () => {
     </section>
   );
 };
+
+export default WeeklySpotlightSection;

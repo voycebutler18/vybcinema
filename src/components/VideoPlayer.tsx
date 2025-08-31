@@ -16,18 +16,21 @@ import {
   Volume2,
   VolumeX,
   X,
+  Share2,
 } from "lucide-react";
+import { LikeBadge } from "@/components/LikeBadge";
 import { LikeButton } from "@/components/LikeButton";
+import { useToast } from "@/hooks/use-toast";
 
 interface VideoPlayerProps {
   // Media sources
-  videoUrl?: string; // direct MP4/WebM
-  trailerUrl?: string; // trailer (direct media)
-  playbackId?: string; // Cloudflare Stream playback id
+  videoUrl?: string;           // direct MP4/WebM
+  trailerUrl?: string;         // trailer (direct media)
+  playbackId?: string;         // Cloudflare Stream playback id
 
   // Visuals
-  coverUrl?: string; // manual card image
-  streamThumbnailUrl?: string; // saved poster
+  coverUrl?: string;
+  streamThumbnailUrl?: string;
   title: string;
   description?: string;
 
@@ -43,13 +46,13 @@ interface VideoPlayerProps {
   onDelete?: () => void;
   canDelete?: boolean;
 
-  // (kept for future ads integration; not used now)
+  // Monetization (kept)
   monetizationEnabled?: boolean;
   durationSeconds?: number;
   adBreaks?: number[];
   vastTagUrl?: string;
 
-  // Needed for public like counts
+  // Needed for likes/sharing
   contentId?: string;
 }
 
@@ -69,17 +72,15 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   onDelete,
   canDelete = false,
 
-  // unused now but kept for compatibility
-  streamStatus,
-
-  // Likes
   contentId,
 }) => {
+  const { toast } = useToast();
+
   // ---------- state ----------
   const [showFullPlayer, setShowFullPlayer] = useState(false);
   const [currentVideo, setCurrentVideo] = useState<"main" | "trailer">("main");
 
-  // local player state (used only when we're playing a direct <video>)
+  // local player state (only when using <video>)
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -96,15 +97,10 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
   // ---------- derive ----------
   const hasStreamPlayback = !!playbackId;
-
-  // auto poster from CF if you didn’t pass one
   const autoPoster = playbackId
     ? `https://videodelivery.net/${playbackId}/thumbnails/thumbnail.jpg?time=1s&height=720`
     : undefined;
-
   const displayThumbnail = streamThumbnailUrl || coverUrl || autoPoster;
-
-  // show play button if we can play either cloudflare or a direct video
   const canPlaySomething = hasStreamPlayback || !!videoUrl;
 
   // ---------- effects ----------
@@ -116,7 +112,6 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
   useEffect(() => {
     if (!showFullPlayer) return;
-
     const handleMouseMove = () => {
       setShowControls(true);
       if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
@@ -124,7 +119,6 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         if (isPlaying) setShowControls(false);
       }, 2000);
     };
-
     document.addEventListener("mousemove", handleMouseMove);
     return () => {
       document.removeEventListener("mousemove", handleMouseMove);
@@ -132,7 +126,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     };
   }, [showFullPlayer, isPlaying]);
 
-  // ---------- handlers (only for the <video> branch) ----------
+  // ---------- handlers (only for <video>) ----------
   const togglePlay = () => {
     if (!videoRef.current) return;
     if (isPlaying) {
@@ -141,7 +135,6 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       videoRef.current
         .play()
         .catch(() => {
-          // try muted autoplay on strict browsers
           videoRef.current!.muted = true;
           setIsMuted(true);
           videoRef.current!.play().catch(() => {});
@@ -255,6 +248,12 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     return `${m}:${s.toString().padStart(2, "0")}`;
   };
 
+  const share = async () => {
+    const url = `${window.location.origin}/watch/${contentId || ""}`;
+    await navigator.clipboard.writeText(url);
+    toast({ title: "Link copied", description: "Share this video with friends!" });
+  };
+
   // ---------- render ----------
   return (
     <Card className="cinema-card overflow-hidden">
@@ -269,7 +268,6 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
               loading="lazy"
             />
           ) : canPlaySomething ? (
-            // light-weight teaser (muted)
             <video
               className="w-full h-full object-cover"
               src={
@@ -313,18 +311,18 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
               )}
             </div>
           </div>
+
+          {/* Like badge (YouTube-like count on the thumbnail) */}
+          {contentId && (
+            <LikeBadge contentId={contentId} className="absolute bottom-2 right-2" />
+          )}
         </div>
       </div>
 
       <CardContent className="p-4">
         <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-2">
-            <Badge variant="secondary">{contentType}</Badge>
-            {genre && <Badge variant="outline">{genre}</Badge>}
-          </div>
-
-          {/* NEW: public likes on the card */}
-          {contentId && <LikeButton contentId={contentId} size="sm" />}
+          <Badge variant="secondary">{contentType}</Badge>
+          {genre && <Badge variant="outline">{genre}</Badge>}
         </div>
 
         <h3 className="text-lg font-semibold mb-2 line-clamp-1">{title}</h3>
@@ -333,14 +331,22 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
           <p className="text-muted-foreground text-sm mb-4 line-clamp-3">{description}</p>
         )}
 
-        {canDelete && (
-          <div className="flex justify-end">
+        {/* Under-card quick actions, YouTube-y */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <LikeButton contentId={contentId} size="sm" />
+            <Button variant="secondary" size="sm" onClick={share}>
+              <Share2 className="h-4 w-4 mr-2" /> Share
+            </Button>
+          </div>
+
+          {canDelete && (
             <Button size="sm" variant="destructive" onClick={onDelete}>
               <X className="h-4 w-4 mr-1" />
               Delete
             </Button>
-          </div>
-        )}
+          )}
+        </div>
       </CardContent>
 
       {/* Fullscreen dialog player */}
@@ -360,23 +366,6 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             {/* Cloudflare Stream branch */}
             {hasStreamPlayback && currentVideo === "main" ? (
               <div className="relative w-full h-full">
-                {/* Overlay top bar (close + like) */}
-                <div className="pointer-events-none absolute top-0 left-0 right-0 p-4 flex justify-between items-center bg-gradient-to-b from-black/60 to-transparent z-10">
-                  <div className="pointer-events-auto">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setShowFullPlayer(false)}
-                      className="text-white hover:bg-white/20"
-                    >
-                      <X className="h-5 w-5" />
-                    </Button>
-                  </div>
-                  <div className="pointer-events-auto flex items-center gap-3">
-                    {contentId && <LikeButton contentId={contentId} size="sm" />}
-                  </div>
-                </div>
-
                 <iframe
                   key={playbackId}
                   title={`${title} player`}
@@ -419,10 +408,12 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
                       <source src={videoUrl} type="video/webm" />
                     </>
                   ) : null}
-                  <p className="text-white text-center p-4">Your browser does not support the video tag.</p>
+                  <p className="text-white text-center p-4">
+                    Your browser does not support the video tag.
+                  </p>
                 </video>
 
-                {/* Error overlay (only for direct video branch) */}
+                {/* Error overlay */}
                 {videoError && (
                   <div className="absolute inset-0 bg-black/90 flex flex-col items-center justify-center p-6 text-center">
                     <div className="max-w-md">
@@ -465,31 +456,26 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
                       </h2>
                     </div>
 
-                    <div className="flex items-center gap-2">
-                      {/* NEW: likes in fullscreen too */}
-                      {contentId && <LikeButton contentId={contentId} size="sm" />}
-
-                      {(videoUrl && trailerUrl) && (
-                        <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            variant={currentVideo === "main" ? "default" : "secondary"}
-                            onClick={() => setCurrentVideo("main")}
-                            className="bg-black/50 backdrop-blur-sm text-white border-white/20"
-                          >
-                            Full {contentType}
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant={currentVideo === "trailer" ? "default" : "secondary"}
-                            onClick={() => setCurrentVideo("trailer")}
-                            className="bg-black/50 backdrop-blur-sm text-white border-white/20"
-                          >
-                            Trailer
-                          </Button>
-                        </div>
-                      )}
-                    </div>
+                    {videoUrl && trailerUrl && (
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant={currentVideo === "main" ? "default" : "secondary"}
+                          onClick={() => setCurrentVideo("main")}
+                          className="bg-black/50 backdrop-blur-sm text-white border-white/20"
+                        >
+                          Full {contentType}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant={currentVideo === "trailer" ? "default" : "secondary"}
+                          onClick={() => setCurrentVideo("trailer")}
+                          className="bg-black/50 backdrop-blur-sm text-white border-white/20"
+                        >
+                          Trailer
+                        </Button>
+                      </div>
+                    )}
                   </div>
 
                   {/* center big play */}
@@ -507,7 +493,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
                   )}
 
                   {/* bottom controls */}
-                  <div className="absolute bottom-0 left-0 right-0 p-4 md:p-6 pb-16 md:pb-6 space-y-2">
+                  <div className="absolute bottom-0 left-0 right-0 p-4 md:p-6 pb-24 md:pb-20 space-y-2">
                     {/* progress */}
                     <div className="relative">
                       <div className="absolute top-1/2 -translate-y-1/2 w-full h-1 bg-white/20 rounded-full">
@@ -516,7 +502,6 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
                           style={{ width: `${buffered}%` }}
                         />
                       </div>
-
                       <Slider
                         value={[currentTime || 0]}
                         max={duration || 100}
@@ -527,49 +512,24 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
                       />
                     </div>
 
-                    {/* controls row */}
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-4">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={togglePlay}
-                          className="text-white hover:bg-white/20"
-                        >
+                        <Button variant="ghost" size="sm" onClick={togglePlay} className="text-white hover:bg-white/20">
                           {isPlaying ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
                         </Button>
 
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => skipTime(-10)}
-                          className="text-white hover:bg-white/20"
-                        >
+                        <Button variant="ghost" size="sm" onClick={() => skipTime(-10)} className="text-white hover:bg-white/20">
                           <SkipBack className="h-5 w-5" />
                         </Button>
 
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => skipTime(10)}
-                          className="text-white hover:bg-white/20"
-                        >
+                        <Button variant="ghost" size="sm" onClick={() => skipTime(10)} className="text-white hover:bg-white/20">
                           <SkipForward className="h-5 w-5" />
                         </Button>
 
                         {/* volume */}
                         <div className="flex items-center gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={toggleMute}
-                            className="text-white hover:bg-white/20"
-                          >
-                            {isMuted || volume === 0 ? (
-                              <VolumeX className="h-5 w-5" />
-                            ) : (
-                              <Volume2 className="h-5 w-5" />
-                            )}
+                          <Button variant="ghost" size="sm" onClick={toggleMute} className="text-white hover:bg-white/20">
+                            {isMuted || volume === 0 ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
                           </Button>
 
                           <div className="w-20 hidden md:block">
@@ -592,27 +552,31 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
                         <Button variant="ghost" size="sm" className="text-white hover:bg-white/20">
                           <Settings className="h-5 w-5" />
                         </Button>
-
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={toggleFullscreen}
-                          className="text-white hover:bg-white/20"
-                        >
+                        <Button variant="ghost" size="sm" onClick={toggleFullscreen} className="text-white hover:bg-white/20">
                           {isFullscreen ? <Minimize className="h-5 w-5" /> : <Maximize className="h-5 w-5" />}
                         </Button>
                       </div>
                     </div>
-
-                    {description && (
-                      <div className="pt-2">
-                        <p className="text-white/80 text-sm max-w-2xl">{description}</p>
-                      </div>
-                    )}
                   </div>
                 </div>
               </div>
             )}
+
+            {/* Meta bar (YouTube-like) – overlays near bottom so it works for iframe too */}
+            <div className="pointer-events-auto absolute left-0 right-0 bottom-0 p-4 bg-gradient-to-t from-black/80 to-transparent">
+              <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                <div className="text-white font-semibold truncate">{title}</div>
+                <div className="flex items-center gap-2">
+                  <LikeButton contentId={contentId} />
+                  <Button variant="secondary" onClick={share}>
+                    <Share2 className="h-4 w-4 mr-2" /> Share
+                  </Button>
+                </div>
+              </div>
+              {description && (
+                <p className="text-white/80 text-sm mt-2 max-w-3xl line-clamp-2">{description}</p>
+              )}
+            </div>
           </div>
         </DialogContent>
       </Dialog>

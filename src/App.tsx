@@ -26,11 +26,12 @@ import CookiePolicy from "./pages/CookiePolicy";
 import NotFound from "./pages/NotFound";
 import Dashboard from "./pages/Dashboard";
 
-// Keep Favorites if you still use it
-import Favorites from "./pages/Favorites";
+// OPTIONAL (keep if you still use it)
+// import Favorites from "./pages/Favorites";
 
-// NEW sections
+// NEW teen IA pages
 import Music from "./pages/Music";
+import Shows from "./pages/Shows";
 import Talent from "./pages/Talent";
 import Challenges from "./pages/Challenges";
 import Live from "./pages/Live";
@@ -48,31 +49,27 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
 
-            {/* Core content */}
+            {/* Browse */}
+            <Route path="/music" element={<Music />} />
+            <Route path="/shows" element={<Shows />} />
+            <Route path="/stories" element={<Stories />} />
             <Route path="/movies" element={<Movies />} />
             <Route path="/tv-shows" element={<TVShows />} />
-            <Route path="/shows" element={<TVShows />} /> {/* alias for navbar */}
-            <Route path="/stories" element={<Stories />} />
-
-            {/* NEW sections */}
-            <Route path="/music" element={<Music />} />
             <Route path="/talent" element={<Talent />} />
             <Route path="/challenges" element={<Challenges />} />
             <Route path="/live" element={<Live />} />
 
-            {/* Favorites (optional) */}
-            <Route path="/favorites" element={<Favorites />} />
-
-            {/* Upload / Create */}
+            {/* Creator */}
+            <Route path="/create" element={<Upload />} />
+            <Route path="/create/:type" element={<Upload />} />
             <Route path="/upload" element={<Upload />} />
-            <Route path="/create" element={<Upload />} /> {/* alias for "Create" button */}
 
-            {/* Misc */}
+            {/* Auth + misc */}
+            <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/about" element={<About />} />
             <Route path="/genre/:genreName" element={<Genre />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
-            <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/careers" element={<Careers />} />
             <Route path="/press" element={<Press />} />
             <Route path="/contact" element={<Contact />} />
@@ -85,7 +82,7 @@ const App = () => (
             {/* Legacy redirect */}
             <Route path="/browse" element={<Movies />} />
 
-            {/* 404 */}
+            {/* Catch-all */}
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

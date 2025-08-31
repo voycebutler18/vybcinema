@@ -26,12 +26,15 @@ import CookiePolicy from "./pages/CookiePolicy";
 import NotFound from "./pages/NotFound";
 import Dashboard from "./pages/Dashboard";
 
-// NEW teen IA pages
+// Teen IA pages
 import Music from "./pages/Music";
 import Shows from "./pages/Shows";
 import Talent from "./pages/Talent";
 import Challenges from "./pages/Challenges";
 import Live from "./pages/Live";
+
+// NEW: YouTube-style watch page
+import Watch from "./pages/Watch";
 
 const queryClient = new QueryClient();
 
@@ -57,7 +60,10 @@ const App = () => (
             <Route path="/challenges" element={<Challenges />} />
             <Route path="/live" element={<Live />} />
 
-            {/* Creator (Upload supports /create, /create/:type and /create?type=) */}
+            {/* Watch page */}
+            <Route path="/watch/:id" element={<Watch />} />
+
+            {/* Creator (Upload supports /create, /create/:type and /upload) */}
             <Route path="/create" element={<Upload />} />
             <Route path="/create/:type" element={<Upload />} />
             <Route path="/upload" element={<Upload />} />

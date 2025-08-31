@@ -1,10 +1,10 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
-import { Badge } from '@/components/ui/badge';
-import { Slider } from '@/components/ui/slider';
-import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
+import React, { useEffect, useRef, useState } from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
+import { Slider } from "@/components/ui/slider";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import {
   Maximize,
   Minimize,
@@ -16,17 +16,18 @@ import {
   Volume2,
   VolumeX,
   X,
-} from 'lucide-react';
+} from "lucide-react";
+import { LikeButton } from "@/components/LikeButton";
 
 interface VideoPlayerProps {
   // Media sources
-  videoUrl?: string;                  // direct MP4/WebM
-  trailerUrl?: string;                // trailer (direct media)
-  playbackId?: string;                // Cloudflare Stream playback id
+  videoUrl?: string; // direct MP4/WebM
+  trailerUrl?: string; // trailer (direct media)
+  playbackId?: string; // Cloudflare Stream playback id
 
   // Visuals
-  coverUrl?: string;                  // manual card image
-  streamThumbnailUrl?: string;        // saved poster
+  coverUrl?: string; // manual card image
+  streamThumbnailUrl?: string; // saved poster
   title: string;
   description?: string;
 
@@ -47,6 +48,8 @@ interface VideoPlayerProps {
   durationSeconds?: number;
   adBreaks?: number[];
   vastTagUrl?: string;
+
+  // Needed for public like counts
   contentId?: string;
 }
 
@@ -68,10 +71,13 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
   // unused now but kept for compatibility
   streamStatus,
+
+  // Likes
+  contentId,
 }) => {
   // ---------- state ----------
   const [showFullPlayer, setShowFullPlayer] = useState(false);
-  const [currentVideo, setCurrentVideo] = useState<'main' | 'trailer'>('main');
+  const [currentVideo, setCurrentVideo] = useState<"main" | "trailer">("main");
 
   // local player state (used only when we're playing a direct <video>)
   const [isPlaying, setIsPlaying] = useState(false);
@@ -89,7 +95,6 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const controlsTimeoutRef = useRef<NodeJS.Timeout>();
 
   // ---------- derive ----------
-  // IMPORTANT: if we have a Cloudflare playbackId, we can embed it.
   const hasStreamPlayback = !!playbackId;
 
   // auto poster from CF if you didn’t pass one
@@ -105,8 +110,8 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   // ---------- effects ----------
   useEffect(() => {
     const onFsChange = () => setIsFullscreen(!!document.fullscreenElement);
-    document.addEventListener('fullscreenchange', onFsChange);
-    return () => document.removeEventListener('fullscreenchange', onFsChange);
+    document.addEventListener("fullscreenchange", onFsChange);
+    return () => document.removeEventListener("fullscreenchange", onFsChange);
   }, []);
 
   useEffect(() => {
@@ -120,9 +125,9 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       }, 2000);
     };
 
-    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener("mousemove", handleMouseMove);
     return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener("mousemove", handleMouseMove);
       if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
     };
   }, [showFullPlayer, isPlaying]);
@@ -133,12 +138,14 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     if (isPlaying) {
       videoRef.current.pause();
     } else {
-      videoRef.current.play().catch(() => {
-        // try muted autoplay on strict browsers
-        videoRef.current!.muted = true;
-        setIsMuted(true);
-        videoRef.current!.play().catch(() => {});
-      });
+      videoRef.current
+        .play()
+        .catch(() => {
+          // try muted autoplay on strict browsers
+          videoRef.current!.muted = true;
+          setIsMuted(true);
+          videoRef.current!.play().catch(() => {});
+        });
     }
     setIsPlaying(!isPlaying);
   };
@@ -208,20 +215,20 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
   const handleVideoError = (e: React.SyntheticEvent<HTMLVideoElement>) => {
     const err = e.currentTarget.error;
-    let msg = 'Video playback failed';
+    let msg = "Video playback failed";
     if (err) {
       switch (err.code) {
         case MediaError.MEDIA_ERR_ABORTED:
-          msg = 'Video loading was aborted';
+          msg = "Video loading was aborted";
           break;
         case MediaError.MEDIA_ERR_NETWORK:
-          msg = 'Network error occurred while loading video';
+          msg = "Network error occurred while loading video";
           break;
         case MediaError.MEDIA_ERR_DECODE:
-          msg = 'Video codec not supported. Use H.264 + AAC (yuv420p).';
+          msg = "Video codec not supported. Use H.264 + AAC (yuv420p).";
           break;
         case MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED:
-          msg = 'Video format not supported (use MP4/H.264 + AAC).';
+          msg = "Video format not supported (use MP4/H.264 + AAC).";
           break;
       }
     }
@@ -234,7 +241,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     setCurrentTime(0);
   };
 
-  const playVideo = (type: 'main' | 'trailer') => {
+  const playVideo = (type: "main" | "trailer") => {
     setCurrentVideo(type);
     setShowFullPlayer(true);
     setShowControls(true);
@@ -242,10 +249,10 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   };
 
   const formatTime = (t: number) => {
-    if (isNaN(t) || !isFinite(t)) return '0:00';
+    if (isNaN(t) || !isFinite(t)) return "0:00";
     const m = Math.floor(t / 60);
     const s = Math.floor(t % 60);
-    return `${m}:${s.toString().padStart(2, '0')}`;
+    return `${m}:${s.toString().padStart(2, "0")}`;
   };
 
   // ---------- render ----------
@@ -262,7 +269,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
               loading="lazy"
             />
           ) : canPlaySomething ? (
-            // very light-weight teaser (muted so it won't auto-play unexpectedly)
+            // light-weight teaser (muted)
             <video
               className="w-full h-full object-cover"
               src={
@@ -287,7 +294,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
                   size="lg"
                   variant="secondary"
                   className="bg-white/10 backdrop-blur-sm border-white/20"
-                  onClick={() => playVideo('main')}
+                  onClick={() => playVideo("main")}
                 >
                   <Play className="h-5 w-5 mr-2" />
                   Play {contentType}
@@ -298,7 +305,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
                   size="sm"
                   variant="outline"
                   className="bg-white/10 backdrop-blur-sm border-white/20"
-                  onClick={() => playVideo('trailer')}
+                  onClick={() => playVideo("trailer")}
                 >
                   <Play className="h-4 w-4 mr-1" />
                   Trailer
@@ -311,8 +318,13 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
       <CardContent className="p-4">
         <div className="flex items-center justify-between mb-2">
-          <Badge variant="secondary">{contentType}</Badge>
-          {genre && <Badge variant="outline">{genre}</Badge>}
+          <div className="flex items-center gap-2">
+            <Badge variant="secondary">{contentType}</Badge>
+            {genre && <Badge variant="outline">{genre}</Badge>}
+          </div>
+
+          {/* NEW: public likes on the card */}
+          {contentId && <LikeButton contentId={contentId} size="sm" />}
         </div>
 
         <h3 className="text-lg font-semibold mb-2 line-clamp-1">{title}</h3>
@@ -343,11 +355,28 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
           <div
             ref={playerRef}
-            className={`relative w-full h-full bg-black ${isFullscreen ? 'video-player-fullscreen' : ''}`}
+            className={`relative w-full h-full bg-black ${isFullscreen ? "video-player-fullscreen" : ""}`}
           >
             {/* Cloudflare Stream branch */}
-            {hasStreamPlayback && currentVideo === 'main' ? (
+            {hasStreamPlayback && currentVideo === "main" ? (
               <div className="relative w-full h-full">
+                {/* Overlay top bar (close + like) */}
+                <div className="pointer-events-none absolute top-0 left-0 right-0 p-4 flex justify-between items-center bg-gradient-to-b from-black/60 to-transparent z-10">
+                  <div className="pointer-events-auto">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowFullPlayer(false)}
+                      className="text-white hover:bg-white/20"
+                    >
+                      <X className="h-5 w-5" />
+                    </Button>
+                  </div>
+                  <div className="pointer-events-auto flex items-center gap-3">
+                    {contentId && <LikeButton contentId={contentId} size="sm" />}
+                  </div>
+                </div>
+
                 <iframe
                   key={playbackId}
                   title={`${title} player`}
@@ -355,7 +384,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
                   className="absolute inset-0 w-full h-full border-0"
                   allow="autoplay; fullscreen; picture-in-picture"
                   allowFullScreen
-                  style={{ backgroundColor: 'black', pointerEvents: 'auto', zIndex: 0 }}
+                  style={{ backgroundColor: "black", pointerEvents: "auto", zIndex: 0 }}
                   loading="eager"
                 />
               </div>
@@ -377,9 +406,9 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
                   controls={false}
                   muted={isMuted}
                   crossOrigin="anonymous"
-                  style={{ width: '100%', height: '100%', backgroundColor: 'black' }}
+                  style={{ width: "100%", height: "100%", backgroundColor: "black" }}
                 >
-                  {currentVideo === 'trailer' && trailerUrl ? (
+                  {currentVideo === "trailer" && trailerUrl ? (
                     <>
                       <source src={trailerUrl} type="video/mp4" />
                       <source src={trailerUrl} type="video/webm" />
@@ -390,9 +419,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
                       <source src={videoUrl} type="video/webm" />
                     </>
                   ) : null}
-                  <p className="text-white text-center p-4">
-                    Your browser does not support the video tag.
-                  </p>
+                  <p className="text-white text-center p-4">Your browser does not support the video tag.</p>
                 </video>
 
                 {/* Error overlay (only for direct video branch) */}
@@ -418,7 +445,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
                 {/* Custom controls (only for direct video branch) */}
                 <div
                   className={`absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/30 transition-opacity duration-300 ${
-                    showControls ? 'opacity-100' : 'opacity-0'
+                    showControls ? "opacity-100" : "opacity-0"
                   }`}
                   onMouseEnter={() => setShowControls(true)}
                 >
@@ -434,30 +461,35 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
                         <X className="h-5 w-5" />
                       </Button>
                       <h2 className="text-white text-lg font-semibold">
-                        {title} {currentVideo === 'trailer' && '(Trailer)'}
+                        {title} {currentVideo === "trailer" && "(Trailer)"}
                       </h2>
                     </div>
 
-                    {(videoUrl && trailerUrl) && (
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          variant={currentVideo === 'main' ? 'default' : 'secondary'}
-                          onClick={() => setCurrentVideo('main')}
-                          className="bg-black/50 backdrop-blur-sm text-white border-white/20"
-                        >
-                          Full {contentType}
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant={currentVideo === 'trailer' ? 'default' : 'secondary'}
-                          onClick={() => setCurrentVideo('trailer')}
-                          className="bg-black/50 backdrop-blur-sm text-white border-white/20"
-                        >
-                          Trailer
-                        </Button>
-                      </div>
-                    )}
+                    <div className="flex items-center gap-2">
+                      {/* NEW: likes in fullscreen too */}
+                      {contentId && <LikeButton contentId={contentId} size="sm" />}
+
+                      {(videoUrl && trailerUrl) && (
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant={currentVideo === "main" ? "default" : "secondary"}
+                            onClick={() => setCurrentVideo("main")}
+                            className="bg-black/50 backdrop-blur-sm text-white border-white/20"
+                          >
+                            Full {contentType}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant={currentVideo === "trailer" ? "default" : "secondary"}
+                            onClick={() => setCurrentVideo("trailer")}
+                            className="bg-black/50 backdrop-blur-sm text-white border-white/20"
+                          >
+                            Trailer
+                          </Button>
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   {/* center big play */}
@@ -474,7 +506,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
                     </div>
                   )}
 
-                  {/* bottom controls (extra padding on mobile so you can reach them) */}
+                  {/* bottom controls */}
                   <div className="absolute bottom-0 left-0 right-0 p-4 md:p-6 pb-16 md:pb-6 space-y-2">
                     {/* progress */}
                     <div className="relative">

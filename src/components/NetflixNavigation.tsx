@@ -18,13 +18,12 @@ export const NetflixNavigation = () => {
   const location = useLocation();
   const [showSearch, setShowSearch] = useState(false);
 
-  // Favorites removed (kept Music Videos)
+  // Favorites and Music Videos removed (to avoid 404)
   const navItems = [
     { path: "/", label: "Home" },
     { path: "/movies", label: "Movies" },
     { path: "/tv-shows", label: "TV Shows" },
     { path: "/stories", label: "Short Stories" },
-    { path: "/music-videos", label: "Music Videos" },
   ];
 
   const isActive = (path: string) => {
@@ -107,7 +106,6 @@ export const NetflixNavigation = () => {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="bg-black/90 border-gray-700">
-                  {/* Favorites entry removed */}
                   <DropdownMenuItem className="text-white hover:bg-gray-800">
                     <User className="h-4 w-4 mr-2" />
                     Profile

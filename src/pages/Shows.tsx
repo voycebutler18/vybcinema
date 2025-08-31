@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from "react";
-import { Navigation } from "@/components/Navigation";
+import Navigation from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
-import { ContentRow } from "@/components/NetflixRow";
 import { NetflixDetailModal } from "@/components/NetflixDetailModal";
 import { VideoPlayer } from "@/components/VideoPlayer";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { ContentCard, type Content } from "@/components/ContentCard";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -12,10 +12,12 @@ import { useToast } from "@/hooks/use-toast";
 const Shows = () => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [content, setContent] = useState<any[]>([]);
+
+  const [content, setContent] = useState<Content[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedContent, setSelectedContent] = useState<any>(null);
-  const [playingContent, setPlayingContent] = useState<any>(null);
+
+  const [selectedContent, setSelectedContent] = useState<Content | null>(null);
+  const [playingContent, setPlayingContent] = useState<Content | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showVideoPlayer, setShowVideoPlayer] = useState(false);
 
@@ -28,24 +30,24 @@ const Shows = () => {
       const { data, error } = await supabase
         .from("content")
         .select("*")
-        .in("content_type", ["tv_show", "show", "series"])
+        .or("content_type.eq.tv_show,genre.ilike.%show%")
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      setContent(data || []);
-    } catch (error) {
-      console.error("Error fetching shows:", error);
+      setContent((data as Content[]) || []);
+    } catch (e) {
+      console.error(e);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleContentClick = (item: any) => {
+  const handleContentClick = (item: Content) => {
     setSelectedContent(item);
     setShowDetailModal(true);
   };
 
-  const handlePlay = (item: any) => {
+  const handlePlay = (item: Content) => {
     setPlayingContent(item);
     setShowVideoPlayer(true);
     setShowDetailModal(false);
@@ -58,32 +60,54 @@ const Shows = () => {
 
       if (fileUrl) {
         const parts = fileUrl.split("/storage/v1/object/public/content-files/");
-        if (parts[1]) {
-          await supabase.storage.from("content-files").remove([parts[1]]);
-        }
+        if (parts[1]) await supabase.storage.from("content-files").remove([parts[1]]);
       }
 
-      setContent((prev) => prev.filter((i) => i.id !== id));
+      setContent((prev) => prev.filter((c) => c.id !== id));
       setShowDetailModal(false);
-      toast({ title: "Content deleted", description: "Show removed." });
+      toast({ title: "Deleted", description: "Show removed." });
     } catch (err: any) {
       toast({ title: "Delete failed", description: err.message, variant: "destructive" });
     }
   };
 
-  const recentlyAdded = content.slice(0, 10);
-  const drama = content.filter((c) => c.genre?.toLowerCase().includes("drama"));
-  const comedy = content.filter((c) => c.genre?.toLowerCase().includes("comedy"));
-  const scifi = content.filter((c) => c.genre?.toLowerCase().includes("sci"));
-  const myShows = user ? content.filter((c) => c.user_id === user.id) : [];
+  const recentlyAdded = content.slice(0, 12);
+  const drama = content.filter((v) => v.genre?.toLowerCase().includes("drama"));
+  const comedy = content.filter((v) => v.genre?.toLowerCase().includes("comedy"));
+  const reality = content.filter((v) => v.genre?.toLowerCase().includes("reality"));
+  const myShows = user ? content.filter((s: any) => s.user_id === user.id) : [];
+
+  const Section = ({ title, items }: { title: string; items: Content[] }) =>
+    !items.length ? null : (
+      <section className="container mx-auto px-6 mb-12">
+        <h2 className="text-2xl md:text-3xl font-bold mb-6">{title}</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+          {items.map((c, i) => (
+            <ContentCard
+              key={c.id}
+              content={c}
+              contentType="Show"
+              index={i % 4}
+              onClick={() => handleContentClick(c)}
+              onPlay={() => handlePlay(c)}
+            />
+          ))}
+        </div>
+      </section>
+    );
 
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
         <Navigation />
-        <div className="pt-20 flex items-center justify-center h-screen">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-primary" />
-        </div>
+        <main className="container mx-auto px-6 pt-28 pb-16">
+          <h2 className="text-2xl md:text-3xl font-bold mb-6">Recently Added Shows</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className="aspect-video rounded-lg bg-card/60 animate-pulse" />
+            ))}
+          </div>
+        </main>
       </div>
     );
   }
@@ -91,76 +115,35 @@ const Shows = () => {
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
+      <main className="pt-24 pb-20">
+        <Section title="Recently Added Shows" items={recentlyAdded} />
+        <Section title="Drama Series" items={drama} />
+        <Section title="Comedy Series" items={comedy} />
+        <Section title="Reality & Unscripted" items={reality} />
+        <Section title="My Shows" items={myShows as Content[]} />
 
-      <div className="pb-20 pt-20 relative z-10">
-        {recentlyAdded.length > 0 && (
-          <ContentRow
-            title="Recently Added Shows"
-            content={recentlyAdded}
-            contentType="TV Show"
-            onContentClick={handleContentClick}
-            onContentPlay={handlePlay}
-          />
-        )}
-
-        {drama.length > 0 && (
-          <ContentRow
-            title="Drama"
-            content={drama}
-            contentType="TV Show"
-            onContentClick={handleContentClick}
-            onContentPlay={handlePlay}
-          />
-        )}
-
-        {comedy.length > 0 && (
-          <ContentRow
-            title="Comedy"
-            content={comedy}
-            contentType="TV Show"
-            onContentClick={handleContentClick}
-            onContentPlay={handlePlay}
-          />
-        )}
-
-        {scifi.length > 0 && (
-          <ContentRow
-            title="Sci-Fi & Fantasy"
-            content={scifi}
-            contentType="TV Show"
-            onContentClick={handleContentClick}
-            onContentPlay={handlePlay}
-          />
-        )}
-
-        {myShows.length > 0 && (
-          <ContentRow
-            title="My Shows"
-            content={myShows}
-            contentType="TV Show"
-            onContentClick={handleContentClick}
-            onContentPlay={handlePlay}
-          />
-        )}
-
-        {content.length === 0 && (
-          <div className="text-center py-20">
-            <h2 className="text-2xl font-bold text-foreground mb-4">No Shows Yet</h2>
-            <p className="text-muted-foreground">Upload your first show or series.</p>
+        {!content.length && (
+          <div className="container mx-auto px-6">
+            <div className="bg-card/60 border border-border/40 rounded-2xl p-8 text-center">
+              <h2 className="text-2xl font-bold">No Shows Yet</h2>
+              <p className="text-muted-foreground">Be the first to upload a show!</p>
+            </div>
           </div>
         )}
-      </div>
-
+      </main>
       <Footer />
 
       <NetflixDetailModal
-        content={selectedContent}
-        contentType="TV Show"
+        content={selectedContent as any}
+        contentType="Show"
         isOpen={showDetailModal}
         onClose={() => setShowDetailModal(false)}
         onPlay={() => selectedContent && handlePlay(selectedContent)}
-        onDelete={() => selectedContent && deleteContent(selectedContent.id, selectedContent.file_url)}
-        canDelete={user?.id === selectedContent?.user_id}
+        onDelete={() =>
+          selectedContent &&
+          deleteContent((selectedContent as any).id, (selectedContent as any).file_url)
+        }
+        canDelete={(user?.id ?? "") === ((selectedContent as any)?.user_id ?? "")}
       />
 
       <Dialog open={showVideoPlayer} onOpenChange={setShowVideoPlayer}>
@@ -169,20 +152,16 @@ const Shows = () => {
             <VideoPlayer
               videoUrl={playingContent.file_url}
               coverUrl={playingContent.cover_url}
-              trailerUrl={playingContent.trailer_url}
+              trailerUrl={(playingContent as any).trailer_url}
               title={playingContent.title}
               description={playingContent.description}
               genre={playingContent.genre}
               contentType={playingContent.content_type}
-              streamUrl={playingContent.stream_url}
-              streamStatus={playingContent.stream_status}
-              streamId={playingContent.stream_id}
-              streamThumbnailUrl={playingContent.stream_thumbnail_url}
-              playbackId={playingContent.playback_id}
-              vastTagUrl={playingContent.vast_tag_url}
-              adBreaks={playingContent.ad_breaks}
-              durationSeconds={playingContent.duration_seconds}
-              monetizationEnabled={playingContent.monetization_enabled}
+              streamUrl={(playingContent as any).stream_url}
+              streamStatus={(playingContent as any).stream_status}
+              streamId={(playingContent as any).stream_id}
+              streamThumbnailUrl={(playingContent as any).stream_thumbnail_url}
+              playbackId={(playingContent as any).playback_id}
               contentId={playingContent.id}
               canDelete={false}
             />

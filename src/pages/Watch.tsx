@@ -1,11 +1,16 @@
 // src/pages/Watch.tsx
-import React, { useEffect, useState } from "react";
-import { useParams, Link, useNavigate } from "react-router-dom";
+import React, { useEffect, useMemo, useState } from "react";
+import { useNavigate, useParams, Link } from "react-router-dom";
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
 import { VideoPlayer } from "@/components/VideoPlayer";
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
+import { HandThumbUp, Share2 } from "lucide-react";
 
 type Content = {
   id: string;
@@ -27,23 +32,32 @@ type Content = {
   duration_seconds?: number | null;
   monetization_enabled?: boolean | null;
   created_at: string;
+  user_id?: string | null;
 };
 
 const Watch: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { toast } = useToast();
+  const { user } = useAuth();
 
   const [item, setItem] = useState<Content | null>(null);
-  const [upNext, setUpNext] = useState<Content[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const [related, setRelated] = useState<Content[]>([]);
+
+  // likes UI (optional if you created a `likes` table)
+  const [likeCount, setLikeCount] = useState<number | null>(null);
+  const [likedByMe, setLikedByMe] = useState<boolean>(false);
+  const likeEnabled = useMemo(() => !!id && !!user, [id, user]);
 
   useEffect(() => {
     if (!id) return;
 
-    const run = async () => {
+    const load = async () => {
       setLoading(true);
 
-      // fetch the selected video
+      // 1) main content
       const { data, error } = await supabase
         .from("content")
         .select("*")
@@ -51,128 +65,253 @@ const Watch: React.FC = () => {
         .single();
 
       if (error || !data) {
+        setItem(null);
         setLoading(false);
-        navigate("/"); // fallback if bad id
+        toast({
+          title: "Not found",
+          description: "That video doesn’t exist (or was removed).",
+          variant: "destructive",
+        });
         return;
       }
       setItem(data as Content);
 
-      // fetch "up next" (same type if possible)
-      const { data: more } = await supabase
+      // 2) related list (same content_type, newest first)
+      const { data: rel } = await supabase
         .from("content")
         .select("*")
         .neq("id", id)
+        .eq("content_type", data.content_type)
         .order("created_at", { ascending: false })
         .limit(12);
 
-      setUpNext((more || []) as Content[]);
+      setRelated((rel as Content[]) || []);
+
+      // 3) likes (optional table)
+      try {
+        const { count } = await supabase
+          .from("likes")
+          .select("*", { count: "exact", head: true })
+          .eq("content_id", id);
+
+        setLikeCount(count ?? 0);
+
+        if (user) {
+          const { data: myLike } = await supabase
+            .from("likes")
+            .select("id")
+            .eq("content_id", id)
+            .eq("user_id", user.id)
+            .maybeSingle();
+
+          setLikedByMe(!!myLike);
+        }
+      } catch {
+        // if table doesn't exist, hide likes gracefully
+        setLikeCount(null);
+      }
+
       setLoading(false);
     };
 
-    run();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
+    load();
+    // re-run on id change
+  }, [id, user, toast]);
+
+  const toggleLike = async () => {
+    if (!id) return;
+    if (!user) {
+      toast({ title: "Sign in to like videos" });
+      return;
+    }
+    try {
+      if (likedByMe) {
+        // Unlike
+        const { error } = await supabase
+          .from("likes")
+          .delete()
+          .eq("content_id", id)
+          .eq("user_id", user.id);
+        if (error) throw error;
+        setLikedByMe(false);
+        setLikeCount((c) => (typeof c === "number" ? Math.max(0, c - 1) : c));
+      } else {
+        // Like
+        const { error } = await supabase.from("likes").insert({
+          content_id: id,
+          user_id: user.id,
+        });
+        if (error) throw error;
+        setLikedByMe(true);
+        setLikeCount((c) => (typeof c === "number" ? c + 1 : c));
+      }
+    } catch (e: any) {
+      toast({
+        title: "Couldn’t update like",
+        description: e.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const share = async () => {
+    try {
+      const url = `${window.location.origin}/watch/${id}`;
+      await navigator.clipboard.writeText(url);
+      toast({ title: "Link copied", description: "Share it with friends!" });
+    } catch {
+      toast({ title: "Copy failed", variant: "destructive" });
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navigation />
+        <main className="container mx-auto px-6 pt-24 pb-20">
+          <div className="grid lg:grid-cols-[minmax(0,2fr),minmax(280px,1fr)] gap-8">
+            <div className="space-y-4">
+              <div className="aspect-video rounded-xl bg-card/60 animate-pulse" />
+              <div className="h-6 w-2/3 bg-card/60 rounded animate-pulse" />
+              <div className="h-4 w-1/2 bg-card/60 rounded animate-pulse" />
+            </div>
+            <div className="space-y-4">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="h-24 rounded-xl bg-card/60 animate-pulse" />
+              ))}
+            </div>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  if (!item) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navigation />
+        <main className="container mx-auto px-6 pt-32 pb-20">
+          <Card className="p-8 text-center">
+            <h2 className="text-2xl font-bold">Video not found</h2>
+            <p className="text-muted-foreground mt-2">
+              It may have been removed or the link is wrong.
+            </p>
+            <Button className="mt-6" onClick={() => navigate("/")}>
+              Go Home
+            </Button>
+          </Card>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
 
       <main className="container mx-auto px-6 pt-24 pb-20">
-        {loading && (
-          <div className="grid lg:grid-cols-12 gap-6">
-            <div className="lg:col-span-8">
-              <div className="aspect-video rounded-xl bg-card/60 animate-pulse" />
-              <div className="h-6 w-2/3 mt-4 bg-card/60 rounded animate-pulse" />
-              <div className="h-4 w-1/2 mt-2 bg-card/60 rounded animate-pulse" />
-            </div>
-            <div className="lg:col-span-4 space-y-3">
-              {Array.from({ length: 6 }).map((_, i) => (
-                <div key={i} className="h-24 rounded-lg bg-card/60 animate-pulse" />
-              ))}
-            </div>
-          </div>
-        )}
+        <div className="grid lg:grid-cols-[minmax(0,2fr),minmax(300px,1fr)] gap-8">
+          {/* LEFT: Player + details */}
+          <div>
+            <VideoPlayer
+              videoUrl={item.file_url || undefined}
+              trailerUrl={item.trailer_url || undefined}
+              playbackId={item.playback_id || undefined}
+              coverUrl={item.cover_url || undefined}
+              streamThumbnailUrl={item.stream_thumbnail_url || undefined}
+              title={item.title}
+              description={item.description || undefined}
+              genre={item.genre || undefined}
+              contentType={item.content_type}
+              streamUrl={item.stream_url || undefined}
+              streamStatus={item.stream_status || undefined}
+              streamId={item.stream_id || undefined}
+              vastTagUrl={item.vast_tag_url || undefined}
+              adBreaks={item.ad_breaks || undefined}
+              durationSeconds={item.duration_seconds || undefined}
+              monetizationEnabled={!!item.monetization_enabled}
+              contentId={item.id}
+              canDelete={false}
+            />
 
-        {!loading && item && (
-          <div className="grid lg:grid-cols-12 gap-6">
-            {/* Player + details */}
-            <section className="lg:col-span-8">
-              <VideoPlayer
-                videoUrl={item.file_url || undefined}
-                coverUrl={item.cover_url || undefined}
-                trailerUrl={item.trailer_url || undefined}
-                title={item.title}
-                description={item.description || ""}
-                genre={item.genre || ""}
-                contentType={item.content_type}
-                streamUrl={item.stream_url || undefined}
-                streamStatus={item.stream_status || undefined}
-                streamId={item.stream_id || undefined}
-                streamThumbnailUrl={item.stream_thumbnail_url || undefined}
-                playbackId={item.playback_id || undefined}
-                vastTagUrl={item.vast_tag_url || undefined}
-                adBreaks={item.ad_breaks || [0]}
-                durationSeconds={item.duration_seconds || undefined}
-                monetizationEnabled={!!item.monetization_enabled}
-                contentId={item.id}
-                canDelete={false}
-              />
+            {/* Title */}
+            <h1 className="mt-4 text-2xl font-bold">{item.title}</h1>
 
-              <div className="mt-4">
-                <h1 className="text-2xl md:text-3xl font-bold">{item.title}</h1>
-                {item.genre && (
-                  <p className="text-sm text-muted-foreground mt-1">{item.genre}</p>
-                )}
-                {item.description && (
-                  <p className="mt-3 text-foreground/80">{item.description}</p>
-                )}
-              </div>
-            </section>
+            {/* Meta row */}
+            <div className="mt-2 flex flex-wrap items-center gap-3">
+              <Badge variant="secondary" className="font-medium capitalize">
+                {item.content_type.replace("_", " ")}
+              </Badge>
+              {item.genre && <Badge variant="outline">{item.genre}</Badge>}
+              <span className="text-sm text-muted-foreground">
+                {new Date(item.created_at).toLocaleDateString()}
+              </span>
 
-            {/* Up next rail */}
-            <aside className="lg:col-span-4">
-              <h3 className="text-lg font-semibold mb-3">Up next</h3>
-              <div className="space-y-3">
-                {upNext.map((c) => (
-                  <Link
-                    to={`/watch/${c.id}`}
-                    key={c.id}
-                    className="group flex gap-3 rounded-lg border border-border/40 bg-card/60 hover:bg-card transition p-2"
+              {/* Like / Share */}
+              <div className="ml-auto flex items-center gap-2">
+                {likeCount !== null && (
+                  <Button
+                    variant={likedByMe ? "default" : "secondary"}
+                    size="sm"
+                    onClick={toggleLike}
+                    className="gap-2"
                   >
-                    <div className="relative w-40 shrink-0 aspect-video rounded-md overflow-hidden bg-muted">
-                      {c.cover_url || c.thumbnail_url ? (
-                        <img
-                          src={c.cover_url || c.thumbnail_url || ""}
-                          alt={c.title}
-                          className="absolute inset-0 w-full h-full object-cover"
-                          loading="lazy"
-                        />
-                      ) : null}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold line-clamp-2">{c.title}</p>
-                      {c.genre && (
-                        <p className="text-xs text-muted-foreground mt-1 line-clamp-1">
-                          {c.genre}
-                        </p>
-                      )}
-                      <Button
-                        size="xs"
-                        variant="ghost"
-                        className="mt-2 opacity-0 group-hover:opacity-100 transition"
-                      >
-                        Watch
-                      </Button>
-                    </div>
-                  </Link>
-                ))}
-                {upNext.length === 0 && (
-                  <p className="text-sm text-muted-foreground">No more videos yet.</p>
+                    <HandThumbUp className="h-4 w-4" />
+                    {likedByMe ? "Liked" : "Like"}
+                    <span className="opacity-80">• {likeCount}</span>
+                  </Button>
                 )}
+                <Button variant="outline" size="sm" onClick={share} className="gap-2">
+                  <Share2 className="h-4 w-4" />
+                  Share
+                </Button>
               </div>
-            </aside>
+            </div>
+
+            {/* Description */}
+            {item.description && (
+              <div className="mt-4 rounded-xl border border-border/50 bg-card/60 p-4">
+                <p className="whitespace-pre-line text-sm text-foreground/90">
+                  {item.description}
+                </p>
+              </div>
+            )}
           </div>
-        )}
+
+          {/* RIGHT: Related list */}
+          <aside className="space-y-4">
+            {related.map((r) => (
+              <Link
+                to={`/watch/${r.id}`}
+                key={r.id}
+                className="group grid grid-cols-[168px,1fr] gap-3 rounded-xl border border-border/40 bg-card/60 hover:bg-card transition"
+              >
+                <div className="relative aspect-video w-full overflow-hidden rounded-l-xl">
+                  <img
+                    src={r.cover_url || r.thumbnail_url || ""}
+                    alt={r.title}
+                    className="h-full w-full object-cover"
+                    loading="lazy"
+                  />
+                </div>
+                <div className="py-2 pr-3">
+                  <p className="line-clamp-2 font-semibold group-hover:underline">{r.title}</p>
+                  {r.genre && (
+                    <p className="mt-1 text-xs text-muted-foreground">{r.genre}</p>
+                  )}
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {new Date(r.created_at).toLocaleDateString()}
+                  </p>
+                </div>
+              </Link>
+            ))}
+
+            {related.length === 0 && (
+              <div className="text-sm text-muted-foreground">No related videos yet.</div>
+            )}
+          </aside>
+        </div>
       </main>
 
       <Footer />

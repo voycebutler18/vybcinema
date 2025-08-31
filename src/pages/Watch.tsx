@@ -10,7 +10,7 @@ import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { HandThumbUp, Share2 } from "lucide-react";
+import { ThumbsUp, Share2 } from "lucide-react";
 
 type Content = {
   id: string;
@@ -257,7 +257,7 @@ const Watch: React.FC = () => {
                     onClick={toggleLike}
                     className="gap-2"
                   >
-                    <HandThumbUp className="h-4 w-4" />
+                    <ThumbsUp className="h-4 w-4" />
                     {likedByMe ? "Liked" : "Like"}
                     <span className="opacity-80">• {likeCount}</span>
                   </Button>

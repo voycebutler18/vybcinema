@@ -1,71 +1,75 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
+import { supabase } from "../integrations/supabase/client";
 import { Eye } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 
-type Props = {
+type ViewCounterProps = {
   contentId: string;
-  className?: string;
 };
 
-export default function ViewCounter({ contentId, className }: Props) {
-  const [count, setCount] = useState<number | null>(null);
+const ViewCounter: React.FC<ViewCounterProps> = ({ contentId }) => {
+  const [viewCount, setViewCount] = useState<number | null>(null);
 
-  // fetch initial count
   useEffect(() => {
-    let isMounted = true;
-    (async () => {
-      const { count, error } = await supabase
-        .from("views")
-        .select("*", { head: true, count: "exact" })
-        .eq("content_id", contentId);
+    if (!contentId) return;
 
-      if (!isMounted) return;
-      if (!error) setCount(count ?? 0);
-      else console.warn("views count error:", error);
-    })();
+    // 1. Get the initial view count when the component loads
+    const fetchInitialViews = async () => {
+      const { data, error } = await supabase
+        .from("content")
+        .select("views_count")
+        .eq("id", contentId)
+        .single();
 
-    return () => {
-      isMounted = false;
+      if (error) {
+        console.warn("Could not fetch initial view count:", error.message);
+        setViewCount(0); // Default to 0 if there's an error
+      } else {
+        setViewCount(data?.views_count ?? 0);
+      }
     };
-  }, [contentId]);
 
-  // realtime updates when new views rows insert
-  useEffect(() => {
+    fetchInitialViews();
+
+    // 2. Subscribe to real-time updates for this specific video's view count
     const channel = supabase
-      .channel(`views-${contentId}`)
+      .channel(`content-views-channel-${contentId}`)
       .on(
         "postgres_changes",
         {
-          event: "INSERT",
+          event: "UPDATE",
           schema: "public",
-          table: "views",
-          filter: `content_id=eq.${contentId}`,
+          table: "content",
+          filter: `id=eq.${contentId}`,
         },
-        () => setCount((c) => (typeof c === "number" ? c + 1 : 1))
+        (payload) => {
+          // When an update happens, get the new views_count from the payload
+          const newViewsCount = (payload.new as { views_count: number })
+            .views_count;
+          setViewCount(newViewsCount);
+        }
       )
       .subscribe();
 
+    // 3. Cleanup function to remove the subscription when the component is no longer displayed
     return () => {
       supabase.removeChannel(channel);
     };
   }, [contentId]);
 
-  // optional fallback polling every 15s (helps if realtime is off)
-  useEffect(() => {
-    const t = setInterval(async () => {
-      const { count, error } = await supabase
-        .from("views")
-        .select("*", { head: true, count: "exact" })
-        .eq("content_id", contentId);
-      if (!error) setCount(count ?? 0);
-    }, 15000);
-    return () => clearInterval(t);
-  }, [contentId]);
+  // Don't render anything until the count has been loaded to prevent a flicker
+  if (viewCount === null) {
+    return null;
+  }
 
   return (
-    <span className={["inline-flex items-center gap-1 text-sm text-muted-foreground", className].filter(Boolean).join(" ")}>
+    <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
       <Eye className="h-4 w-4" />
-      {count === null ? "—" : count.toLocaleString()}
-    </span>
+      <span>
+        {viewCount.toLocaleString()} {viewCount === 1 ? "view" : "views"}
+      </span>
+    </div>
   );
-}
+};
+
+export default ViewCounter;
+

@@ -11,7 +11,6 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { ThumbsUp, Share2 } from "lucide-react";
-import Comments from "@/components/Comments";
 
 type Content = {
   id: string;
@@ -37,15 +36,6 @@ type Content = {
   likes_count?: number | null;
 };
 
-type Profile = {
-  id?: string;
-  user_id: string;
-  username?: string | null;
-  display_name?: string | null;
-  full_name?: string | null;
-  avatar_url?: string | null;
-};
-
 const Watch: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -53,11 +43,15 @@ const Watch: React.FC = () => {
   const { user } = useAuth();
 
   const [item, setItem] = useState<Content | null>(null);
-  const [creator, setCreator] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [related, setRelated] = useState<Content[]>([]);
   const [likeCount, setLikeCount] = useState<number>(0);
   const [likedByMe, setLikedByMe] = useState<boolean>(false);
+
+  // creator display state (always render something)
+  const [creatorId, setCreatorId] = useState<string | null>(null);
+  const [creatorUsername, setCreatorUsername] = useState<string | null>(null);
+  const [creatorDisplayName, setCreatorDisplayName] = useState<string>("Creator");
 
   useEffect(() => {
     if (!id) return;
@@ -65,16 +59,11 @@ const Watch: React.FC = () => {
     (async () => {
       setLoading(true);
 
-      // 1) load the video row (includes likes_count)
-      const { data, error } = await supabase
-        .from("content")
-        .select("*")
-        .eq("id", id)
-        .single();
+      // 1) load the video row
+      const { data, error } = await supabase.from("content").select("*").eq("id", id).single();
 
       if (error || !data) {
         setItem(null);
-        setCreator(null);
         setLoading(false);
         toast({
           title: "Not found",
@@ -88,24 +77,38 @@ const Watch: React.FC = () => {
       setItem(row);
       setLikeCount(row.likes_count ?? 0);
 
-      // 1a) fetch the creator profile by user_id (not profiles.id)
+      // 2) fetch creator profile (compute a display name)
       if (row.user_id) {
-        const { data: prof, error: pErr } = await supabase
+        const { data: prof } = await supabase
           .from("profiles")
-          .select("id, user_id, username, display_name, full_name, avatar_url")
-          .eq("user_id", row.user_id)
+          .select("id, username, full_name, display_name_mode")
+          .eq("id", row.user_id)
           .maybeSingle();
 
-        if (!pErr && prof) {
-          setCreator(prof as Profile);
+        if (prof) {
+          const mode = prof.display_name_mode as "username" | "full_name" | null;
+          const disp =
+            mode === "username"
+              ? prof.username || "Creator"
+              : prof.full_name || prof.username || "Creator";
+
+          setCreatorId(prof.id);
+          setCreatorUsername(prof.username ?? null);
+          setCreatorDisplayName(disp);
         } else {
-          setCreator(null);
+          // profile missing but user_id exists
+          setCreatorId(row.user_id);
+          setCreatorUsername(null);
+          setCreatorDisplayName("Creator");
         }
       } else {
-        setCreator(null);
+        // no user_id on content
+        setCreatorId(null);
+        setCreatorUsername(null);
+        setCreatorDisplayName("Creator");
       }
 
-      // 2) load related
+      // 3) related
       const { data: rel } = await supabase
         .from("content")
         .select("*")
@@ -115,7 +118,7 @@ const Watch: React.FC = () => {
         .limit(12);
       setRelated((rel as Content[]) || []);
 
-      // 3) only check "did I like it?" if signed in
+      // 4) my like (only if signed in)
       if (user) {
         const { data: myLike } = await supabase
           .from("likes")
@@ -138,7 +141,6 @@ const Watch: React.FC = () => {
       toast({ title: "Sign in to like videos" });
       return;
     }
-
     try {
       if (likedByMe) {
         const { error } = await supabase
@@ -219,17 +221,6 @@ const Watch: React.FC = () => {
     );
   }
 
-  // Compute creator name + link
-  const creatorUsername = creator?.username ?? undefined;
-  const creatorDisplayName =
-    creator?.display_name || creator?.full_name || creator?.username || undefined;
-  const creatorId = item.user_id ?? undefined;
-  const creatorHref = creatorUsername
-    ? `/creator/${creatorUsername}`
-    : creatorId
-    ? `/creator/id/${creatorId}`
-    : "#";
-
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
@@ -240,6 +231,7 @@ const Watch: React.FC = () => {
           <div>
             <VideoPlayer
               inline
+              showInlineMeta={false} // prevent duplicate title/meta
               videoUrl={item.file_url || undefined}
               trailerUrl={item.trailer_url || undefined}
               playbackId={item.playback_id || undefined}
@@ -258,24 +250,31 @@ const Watch: React.FC = () => {
               monetizationEnabled={!!item.monetization_enabled}
               contentId={item.id}
               canDelete={false}
-              // NEW: pass creator info to the player (it can render a small byline too)
-              creatorId={creatorId}
-              creatorUsername={creatorUsername}
-              creatorDisplayName={creatorDisplayName}
+              creatorId={creatorId || undefined}
+              creatorUsername={creatorUsername || undefined}
+              creatorDisplayName={creatorDisplayName || undefined}
             />
 
+            {/* Title */}
             <h1 className="mt-4 text-2xl font-bold">{item.title}</h1>
 
-            {(creatorUsername || creatorId) && creatorDisplayName && (
-              <div className="mt-1 text-sm">
-                <span className="text-muted-foreground">by </span>
-                <Link to={creatorHref} className="text-primary font-medium hover:underline">
-                  {creatorDisplayName}
+            {/* by … (always render) */}
+            <div className="mt-1 text-sm text-muted-foreground">
+              by{" "}
+              {creatorId ? (
+                <Link
+                  to={`/creator/id/${creatorId}`}
+                  className="text-primary hover:underline"
+                >
+                  {creatorDisplayName || creatorUsername || "Creator"}
                 </Link>
-              </div>
-            )}
+              ) : (
+                <span>Creator</span>
+              )}
+            </div>
 
-            <div className="mt-2 flex flex-wrap items-center gap-3">
+            {/* chips + date + actions */}
+            <div className="mt-3 flex flex-wrap items-center gap-3">
               <Badge variant="secondary" className="font-medium capitalize">
                 {item.content_type.replace("_", " ")}
               </Badge>
@@ -284,7 +283,6 @@ const Watch: React.FC = () => {
                 {new Date(item.created_at).toLocaleDateString()}
               </span>
 
-              {/* Like / Share — count is visible to EVERYONE */}
               <div className="ml-auto flex items-center gap-2">
                 <Button
                   variant={likedByMe ? "default" : "secondary"}
@@ -313,9 +311,9 @@ const Watch: React.FC = () => {
             )}
 
             {/* Comments */}
-            <div className="mt-6">
-              <Comments contentId={item.id} />
-            </div>
+            {/* If you use your Comments component, render it here:
+                <div className="mt-6"><Comments contentId={item.id} /></div>
+            */}
           </div>
 
           {/* RIGHT: related */}

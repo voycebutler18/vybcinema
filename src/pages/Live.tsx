@@ -9,7 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 
-const Live = () => {
+const Challenges = () => {
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -22,15 +22,15 @@ const Live = () => {
   const [showVideoPlayer, setShowVideoPlayer] = useState(false);
 
   useEffect(() => {
-    fetchLive();
+    fetchChallenges();
   }, []);
 
-  const fetchLive = async () => {
+  const fetchChallenges = async () => {
     try {
       const { data, error } = await supabase
         .from("content")
         .select("*")
-        .or("content_type.eq.live,genre.ilike.%live%")
+        .or("content_type.eq.challenge,genre.ilike.%challenge%")
         .order("created_at", { ascending: false });
 
       if (error) throw error;
@@ -65,26 +65,22 @@ const Live = () => {
 
       setContent((prev) => prev.filter((c) => c.id !== id));
       setShowDetailModal(false);
-      toast({ title: "Deleted", description: "Live video removed." });
+      toast({ title: "Deleted", description: "Challenge removed." });
     } catch (err: any) {
       toast({ title: "Delete failed", description: err.message, variant: "destructive" });
     }
   };
 
   const recentlyAdded = content.slice(0, 12);
-  const events = content.filter((v) => v.genre?.toLowerCase().includes("event"));
-  const concerts = content.filter((v) => v.genre?.toLowerCase().includes("concert"));
-  const esports = content.filter(
-    (v) => v.genre?.toLowerCase().includes("esport") || v.genre?.toLowerCase().includes("game")
-  );
-  const myLive = user ? content.filter((s: any) => s.user_id === user.id) : [];
+  const acting = content.filter((v) => v.genre?.toLowerCase().includes("acting"));
+  const directing = content.filter((v) => v.genre?.toLowerCase().includes("direct"));
+  const editing = content.filter((v) => v.genre?.toLowerCase().includes("edit"));
+  const myEntries = user ? content.filter((s: any) => s.user_id === user.id) : [];
 
   const Section = ({ title, items }: { title: string; items: Content[] }) =>
     !items.length ? null : (
       <section className="container mx-auto px-6 mb-12">
-        <h2 className="text-2xl md:text-3xl font-bold mb-6">{title}</h2>
-
-        {/* Hide likes only on the grid cards on this page */}
+        {/* Hide like badge & like/unlike buttons inside cards on this page */}
         <style>{`
           .hide-likes [title$="likes"],
           .hide-likes button[title="Like"],
@@ -93,12 +89,13 @@ const Live = () => {
           }
         `}</style>
 
+        <h2 className="text-2xl md:text-3xl font-bold mb-6">{title}</h2>
         <div className="hide-likes grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
           {items.map((c, i) => (
             <ContentCard
               key={c.id}
               content={c}
-              contentType="Live"
+              contentType="Challenge"
               index={i % 4}
               onClick={() => handleContentClick(c)}
               onPlay={() => handlePlay(c)}
@@ -113,7 +110,7 @@ const Live = () => {
       <div className="min-h-screen bg-background">
         <Navigation />
         <main className="container mx-auto px-6 pt-28 pb-16">
-          <h2 className="text-2xl md:text-3xl font-bold mb-6">Latest Live</h2>
+          <h2 className="text-2xl md:text-3xl font-bold mb-6">Recently Added Challenges</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {Array.from({ length: 8 }).map((_, i) => (
               <div key={i} className="aspect-video rounded-lg bg-card/60 animate-pulse" />
@@ -128,17 +125,17 @@ const Live = () => {
     <div className="min-h-screen bg-background">
       <Navigation />
       <main className="pt-24 pb-20">
-        <Section title="Latest Live" items={recentlyAdded} />
-        <Section title="Live Events" items={events} />
-        <Section title="Concerts" items={concerts} />
-        <Section title="Esports & Gaming" items={esports} />
-        <Section title="My Live Videos" items={myLive as Content[]} />
+        <Section title="Recently Added Challenges" items={recentlyAdded} />
+        <Section title="Acting" items={acting} />
+        <Section title="Directing" items={directing} />
+        <Section title="Editing" items={editing} />
+        <Section title="My Entries" items={myEntries as Content[]} />
 
         {!content.length && (
           <div className="container mx-auto px-6">
             <div className="bg-card/60 border border-border/40 rounded-2xl p-8 text-center">
-              <h2 className="text-2xl font-bold">No Live Videos Yet</h2>
-              <p className="text-muted-foreground">Stream something awesome!</p>
+              <h2 className="text-2xl font-bold">No Challenge Videos Yet</h2>
+              <p className="text-muted-foreground">Upload your first entry to kick things off!</p>
             </div>
           </div>
         )}
@@ -147,7 +144,7 @@ const Live = () => {
 
       <NetflixDetailModal
         content={selectedContent as any}
-        contentType="Live"
+        contentType="Challenge"
         isOpen={showDetailModal}
         onClose={() => setShowDetailModal(false)}
         onPlay={() => selectedContent && handlePlay(selectedContent)}
@@ -184,4 +181,4 @@ const Live = () => {
   );
 };
 
-export default Live;
+export default Challenges;

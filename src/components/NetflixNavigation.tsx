@@ -108,7 +108,6 @@ export const NetflixNavigation = () => {
                 <DropdownMenuContent align="end" className="bg-black/90 border-gray-700">
                   <DropdownMenuItem className="text-white hover:bg-gray-800">
                     <User className="h-4 w-4 mr-2" />
-                    Profile
                   </DropdownMenuItem>
                   <DropdownMenuSeparator className="bg-gray-700" />
                   <DropdownMenuItem

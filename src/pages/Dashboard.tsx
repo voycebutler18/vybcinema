@@ -361,29 +361,17 @@ const Dashboard = () => {
     }
   };
 
-  // ⤵️ Only this function was changed to call "delete-user-simple"
+  // UPDATED: send users to Contact page to request deletion (24–48h)
   const requestAccountDeletion = async () => {
     if (!user) return;
     const confirm = window.confirm(
-      "This will permanently delete your account and all associated data. This action cannot be undone. Continue?"
+      "We'll take you to the Contact page to submit a deletion request. Your account will be permanently deleted within 24–48 hours after submission. Continue?"
     );
     if (!confirm) return;
 
     setDeleting(true);
     try {
-      // Call the minimal Edge Function that deletes the auth user
-      const { error } = await supabase.functions.invoke("delete-user-simple");
-      if (error) throw error;
-
-      toast({ title: "Account deleted", description: "We’re signing you out now." });
-      await supabase.auth.signOut();
-      navigate("/goodbye");
-    } catch (e: any) {
-      toast({
-        title: "Delete failed",
-        description: e.message ?? "Could not delete account. Make sure the Edge Function is deployed and secrets are set.",
-        variant: "destructive",
-      });
+      navigate("/contact?subject=delete-account");
     } finally {
       setDeleting(false);
     }
@@ -652,6 +640,11 @@ const Dashboard = () => {
                         <div className="font-medium">Delete account</div>
                         <p className="text-sm text-muted-foreground">
                           Permanently delete your account and all content. This cannot be undone.
+                          <br />
+                          <span className="text-foreground">
+                            Clicking the button will take you to the Contact page to submit a request —
+                            your account will be deleted permanently within 24–48 hours after submission.
+                          </span>
                         </p>
                       </div>
                       <Button variant="destructive" onClick={requestAccountDeletion} disabled={deleting}>

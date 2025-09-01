@@ -1,3 +1,4 @@
+// src/components/VideoPlayer.tsx
 import React, { useEffect, useRef, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -17,6 +18,7 @@ import {
   VolumeX,
   X,
 } from 'lucide-react';
+import { useViewCounter } from '@/hooks/useViewCounter'; // ⬅️ ADDED
 
 interface VideoPlayerProps {
   // Media sources
@@ -96,6 +98,9 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const playerRef = useRef<HTMLDivElement>(null);
   const controlsTimeoutRef = useRef<NodeJS.Timeout>();
 
+  // ⬅️ ADDED: 5s view counter (safe if contentId missing)
+  const { views, onPlay: trackPlay, onPauseOrStop: trackStop } = useViewCounter(contentId ?? '');
+
   const hasStreamPlayback = !!playbackId;
   const autoPoster = playbackId
     ? `https://videodelivery.net/${playbackId}/thumbnails/thumbnail.jpg?time=1s&height=720`
@@ -124,6 +129,13 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
     };
   }, [inline, isPlaying]);
+
+  // When the dialog opens with a Cloudflare iframe (no native onPlay),
+  // start the 5s qualification timer; stop when dialog closes.
+  useEffect(() => {
+    // This effect will be re-run in the dialog section where showFullPlayer exists.
+    // No-op here; see the dialog open state effect at bottom.
+  }, [playbackId]);
 
   // ---------- handlers ----------
   const togglePlay = () => {
@@ -224,6 +236,8 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const handleVideoEnd = () => {
     setIsPlaying(false);
     setCurrentTime(0);
+    // ⬅️ ADDED: stop the 5s timer if still pending
+    trackStop();
   };
 
   const formatTime = (t: number) => {
@@ -236,6 +250,13 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   // ---------- shared player markup (used for inline and dialog) ----------
   const PlayerSurface = (
     <div ref={playerRef} className={`relative w-full h-full bg-black ${isFullscreen ? 'video-player-fullscreen' : ''}`}>
+      {/* views badge (small, top-right) — only if we have an id */}
+      {contentId && (
+        <div className="absolute top-2 right-2 z-10 rounded-full bg-black/70 px-2 py-1 text-xs text-white">
+          {views.toLocaleString()} views
+        </div>
+      )}
+
       {/* Cloudflare Stream */}
       {hasStreamPlayback && currentVideo === 'main' ? (
         <div className="relative w-full h-full">
@@ -257,8 +278,16 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             ref={videoRef}
             className="w-full h-full object-contain bg-black"
             autoPlay={inline ? false : true}
-            onPlay={() => setIsPlaying(true)}
-            onPause={() => setIsPlaying(false)}
+            onPlay={() => {
+              setIsPlaying(true);
+              // ⬅️ ADDED: start 5s qualification when native video plays
+              trackPlay();
+            }}
+            onPause={() => {
+              setIsPlaying(false);
+              // ⬅️ ADDED: cancel 5s qualification if paused
+              trackStop();
+            }}
             onTimeUpdate={handleVideoTimeUpdate}
             onLoadedMetadata={handleVideoLoadedMetadata}
             onError={handleVideoError}
@@ -446,6 +475,20 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const [showFullPlayer, setShowFullPlayer] = useState(false);
 
   const open = () => setShowFullPlayer(true);
+
+  // ⬅️ ADDED: when dialog opens with Cloudflare iframe, start 5s timer; stop when it closes
+  useEffect(() => {
+    if (!playbackId) return;          // only relevant for iframe path
+    if (!contentId) return;           // need an id to track
+    if (showFullPlayer) {
+      // user just opened the dialog (iframe visible) — start qualify timer
+      trackPlay();
+    } else {
+      // dialog closed — cancel timer if not reached 5s
+      trackStop();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showFullPlayer, playbackId, contentId]);
 
   return (
     <Card className="cinema-card overflow-hidden">

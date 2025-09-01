@@ -97,9 +97,6 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const playerRef = useRef<HTMLDivElement>(null);
   const controlsTimeoutRef = useRef<NodeJS.Timeout>();
 
-  // ⬅️ ADDED: 5s view counter (safe if contentId missing)
-  const { views, onPlay: trackPlay, onPauseOrStop: trackStop } = useViewCounter(contentId ?? '');
-
   const hasStreamPlayback = !!playbackId;
   const autoPoster = playbackId
     ? `https://videodelivery.net/${playbackId}/thumbnails/thumbnail.jpg?time=1s&height=720`
@@ -279,13 +276,6 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             autoPlay={inline ? false : true}
             onPlay={() => {
               setIsPlaying(true);
-              // ⬅️ ADDED: start 5s qualification when native video plays
-              trackPlay();
-            }}
-            onPause={() => {
-              setIsPlaying(false);
-              // ⬅️ ADDED: cancel 5s qualification if paused
-              trackStop();
             }}
             onTimeUpdate={handleVideoTimeUpdate}
             onLoadedMetadata={handleVideoLoadedMetadata}

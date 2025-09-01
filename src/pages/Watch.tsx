@@ -1,6 +1,5 @@
 
 // src/pages/Watch.tsx
-import React, { useEffect, useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import Navigation from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
@@ -12,9 +11,6 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { ThumbsUp, Share2 } from "lucide-react";
-
-/* ✅ ADDED: live view counter */
-import ViewCounter from "@/components/ViewCounter";
 
 /* ✅ ADDED: comments component */
 import Comments from "@/components/Comments";
@@ -238,9 +234,6 @@ const Watch: React.FC = () => {
               <span className="text-sm text-muted-foreground">
                 {new Date(item.created_at).toLocaleDateString()}
               </span>
-
-              {/* ✅ NEW: Live view counter */}
-              <ViewCounter contentId={item.id} />
 
               {/* Like / Share — count is visible to EVERYONE */}
               <div className="ml-auto flex items-center gap-2">

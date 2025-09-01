@@ -189,7 +189,7 @@ const Stories = () => {
               streamStatus={(playingContent as any).stream_status}
               streamId={(playingContent as any).stream_id}
               streamThumbnailUrl={(playingContent as any).stream_thumbnail_url}
-              playbackId={(playingContent as any).playback_id}   {/* <-- fixed brace */}
+              playbackId={(playingContent as any).playback_id}
               vastTagUrl={(playingContent as any).vast_tag_url}
               adBreaks={(playingContent as any).ad_breaks}
               durationSeconds={(playingContent as any).duration_seconds}

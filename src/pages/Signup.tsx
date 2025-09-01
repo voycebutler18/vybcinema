@@ -4,12 +4,10 @@ import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Eye, EyeOff } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
-import { useNavigate } from "react-router-dom";
-
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -35,12 +33,10 @@ const Signup = () => {
   const ageNum = Number.parseInt(formData.age || "", 10);
 
   useEffect(() => {
-    if (user) {
-      navigate("/dashboard");
-    }
+    if (user) navigate("/dashboard");
   }, [user, navigate]);
 
-  // When age changes: set default for adults (18–19)
+  // When age changes: set defaults (minors always username)
   useEffect(() => {
     if (Number.isNaN(ageNum)) return;
     if (ageNum >= 18 && ageNum <= 19) {
@@ -48,7 +44,6 @@ const Signup = () => {
         prev === "username" || prev === "full_name" ? prev : "full_name"
       );
     } else if (ageNum >= 13 && ageNum < 18) {
-      // minors (13–17) always username
       setDisplayNameMode("username");
     }
   }, [ageNum]);
@@ -60,7 +55,7 @@ const Signup = () => {
     }));
   };
 
-  // Validate username, teen-only age (13–19), username uniqueness
+  // Validate username, age (13–19), and username uniqueness
   const validateExtras = async () => {
     const u = formData.username.trim();
     if (!/^[a-zA-Z0-9_]{3,20}$/.test(u)) {
@@ -112,42 +107,57 @@ const Signup = () => {
     e.preventDefault();
     setLoading(true);
 
-    const ok = await validateExtras();
-    if (!ok) {
-      setLoading(false);
-      return;
-    }
+    try {
+      const ok = await validateExtras();
+      if (!ok) return;
 
-    const { error } = await signUp(
-      formData.email,
-      formData.password,
-      formData.fullName
-    );
+      const { error } = await signUp(
+        formData.email,
+        formData.password,
+        formData.fullName
+      );
+      if (error) {
+        toast({
+          title: "Signup failed",
+          description: error.message,
+          variant: "destructive",
+        });
+        return;
+      }
 
-    if (!error) {
+      // Create / update the profile row
       const age = parseInt(formData.age, 10);
       const isMinor = age < 18; // 13–17 only
-
-      // minors always username; 18–19 use selected mode
       const modeToSave: "username" | "full_name" = isMinor
         ? "username"
         : displayNameMode;
 
-      const { data: session } = await supabase.auth.getUser();
-      const authedId = session.user?.id;
+      const {
+        data: { user: authed },
+      } = await supabase.auth.getUser();
+      const authedId = authed?.id;
 
       if (authedId) {
+        // Decide what the public display name should be
+        const publicName =
+          modeToSave === "username"
+            ? formData.username
+            : formData.fullName || formData.username;
+
+        // ✅ Save to profiles using user_id (your FK), and include display_name
         const { error: profileErr } = await supabase.from("profiles").upsert(
           {
-            id: authedId, // keeping your original upsert target
+            user_id: authedId, // IMPORTANT: your schema uses user_id, not id
             username: formData.username,
             first_name: formData.firstName || null,
+            full_name: formData.fullName || null,
+            display_name: publicName, // what we’ll show publicly
+
             age,
             is_minor: isMinor,
             display_name_mode: modeToSave, // "username" | "full_name"
-            full_name: formData.fullName || null,
           },
-          { onConflict: "id" }
+          { onConflict: "user_id" } // ensure updates hit the same row
         );
 
         if (profileErr) {
@@ -160,22 +170,22 @@ const Signup = () => {
           toast({
             title: "Account created",
             description: isMinor
-              ? "Your account is set up to show your username only."
+              ? "Your account is set to show your username publicly."
               : modeToSave === "full_name"
               ? "Your account will display your full name publicly."
               : "Your account will display your username publicly.",
           });
         }
       }
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   };
 
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
-      
+
       <main className="pt-8">
         <section className="py-16">
           <div className="container mx-auto px-4">
@@ -230,7 +240,7 @@ const Signup = () => {
                     </p>
                   </div>
 
-                  {/* Public display options */}
+                  {/* Public display options for 18–19 */}
                   {!Number.isNaN(ageNum) && ageNum >= 18 && ageNum <= 19 && (
                     <div className="space-y-2">
                       <Label>Public display</Label>
@@ -290,7 +300,7 @@ const Signup = () => {
                       required
                     />
                   </div>
-                  
+
                   {/* Email */}
                   <div className="space-y-2">
                     <Label htmlFor="email">Email</Label>
@@ -305,7 +315,7 @@ const Signup = () => {
                       required
                     />
                   </div>
-                  
+
                   {/* Password */}
                   <div className="space-y-2">
                     <Label htmlFor="password">Password</Label>
@@ -416,7 +426,7 @@ const Signup = () => {
           </div>
         </section>
       </main>
-      
+
       <Footer />
     </div>
   );

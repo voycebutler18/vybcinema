@@ -6,6 +6,9 @@ import { Play, ThumbsUp, ChevronDown } from "lucide-react";
 // Local like helpers (no Supabase)
 import { getLikeCount, isLikedLocal, likeOnce, unlikeOnce } from "@/lib/likes";
 
+/* ✅ ADDED: live view counter */
+import ViewCounter from "@/components/ViewCounter";
+
 /* ---------- Types ---------- */
 
 export interface Content {
@@ -202,6 +205,9 @@ export const ContentCard: React.FC<ContentCardProps> = ({
                     <span className="text-xs tabular-nums">{likeCount}</span>
                   </div>
                 </Button>
+
+                {/* ✅ ADDED: live views (small pill) */}
+                <ViewCounter contentId={content.id} />
               </div>
 
               <Button
@@ -250,12 +256,17 @@ export const ContentCard: React.FC<ContentCardProps> = ({
               <h3 className="text-foreground font-semibold text-sm line-clamp-1">
                 {content.title}
               </h3>
-              <div
-                className="flex items-center gap-1 text-xs text-foreground/80 bg-background/60 rounded-full px-2 py-0.5"
-                title={`${likeCount} likes`}
-              >
-                <ThumbsUp className="h-3.5 w-3.5" />
-                <span className="tabular-nums">{likeCount}</span>
+
+              {/* ✅ ADDED: keep likes + add views pill */}
+              <div className="flex items-center gap-2">
+                <div
+                  className="flex items-center gap-1 text-xs text-foreground/80 bg-background/60 rounded-full px-2 py-0.5"
+                  title={`${likeCount} likes`}
+                >
+                  <ThumbsUp className="h-3.5 w-3.5" />
+                  <span className="tabular-nums">{likeCount}</span>
+                </div>
+                <ViewCounter contentId={content.id} />
               </div>
             </div>
           </div>

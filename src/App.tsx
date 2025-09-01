@@ -31,6 +31,7 @@ import Shows from "./pages/Shows";
 import Talent from "./pages/Talent";
 import Challenges from "./pages/Challenges";
 import Live from "./pages/Live";
+import Profile from "./pages/Profile";
 
 // NEW: single video watch page
 import Watch from "./pages/Watch";
@@ -58,6 +59,7 @@ const App = () => (
             <Route path="/talent" element={<Talent />} />
             <Route path="/challenges" element={<Challenges />} />
             <Route path="/live" element={<Live />} />
+            <Route path="/profile" element={<Profile />} />
 
             {/* Watch (YouTube-style page) */}
             <Route path="/watch/:id" element={<Watch />} />

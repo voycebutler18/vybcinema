@@ -1,10 +1,12 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
-import { Badge } from '@/components/ui/badge';
-import { Slider } from '@/components/ui/slider';
-import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
+// src/components/VideoPlayer.tsx
+import React, { useEffect, useRef, useState } from "react";
+import { Link } from "react-router-dom";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
+import { Slider } from "@/components/ui/slider";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import {
   Maximize,
   Minimize,
@@ -16,7 +18,7 @@ import {
   Volume2,
   VolumeX,
   X,
-} from 'lucide-react';
+} from "lucide-react";
 
 interface VideoPlayerProps {
   // Media sources
@@ -49,8 +51,13 @@ interface VideoPlayerProps {
   vastTagUrl?: string;
   contentId?: string;
 
-  /** NEW: if true, render the player inline (no Dialog). */
+  /** If true, render the player inline (no Dialog). */
   inline?: boolean;
+
+  /** NEW: creator info so we can render a clickable username */
+  creatorId?: string;
+  creatorUsername?: string;      // e.g. "vybteen"
+  creatorDisplayName?: string;   // e.g. "VYB Teen"
 }
 
 export const VideoPlayer: React.FC<VideoPlayerProps> = ({
@@ -79,9 +86,14 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   contentId,
 
   inline = false,
+
+  // NEW creator props
+  creatorId,
+  creatorUsername,
+  creatorDisplayName,
 }) => {
   // ---------- player state (for direct <video>) ----------
-  const [currentVideo, setCurrentVideo] = useState<'main' | 'trailer'>('main');
+  const [currentVideo, setCurrentVideo] = useState<"main" | "trailer">("main");
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -105,8 +117,8 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
   useEffect(() => {
     const onFsChange = () => setIsFullscreen(!!document.fullscreenElement);
-    document.addEventListener('fullscreenchange', onFsChange);
-    return () => document.removeEventListener('fullscreenchange', onFsChange);
+    document.addEventListener("fullscreenchange", onFsChange);
+    return () => document.removeEventListener("fullscreenchange", onFsChange);
   }, []);
 
   useEffect(() => {
@@ -118,9 +130,9 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         if (isPlaying) setShowControls(false);
       }, 2000);
     };
-    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener("mousemove", handleMouseMove);
     return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener("mousemove", handleMouseMove);
       if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
     };
   }, [inline, isPlaying]);
@@ -204,17 +216,21 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
   const handleVideoError = (e: React.SyntheticEvent<HTMLVideoElement>) => {
     const err = e.currentTarget.error;
-    let msg = 'Video playback failed';
+    let msg = "Video playback failed";
     if (err) {
       switch (err.code) {
         case MediaError.MEDIA_ERR_ABORTED:
-          msg = 'Video loading was aborted'; break;
+          msg = "Video loading was aborted";
+          break;
         case MediaError.MEDIA_ERR_NETWORK:
-          msg = 'Network error occurred while loading video'; break;
+          msg = "Network error occurred while loading video";
+          break;
         case MediaError.MEDIA_ERR_DECODE:
-          msg = 'Video codec not supported. Use H.264 + AAC (yuv420p).'; break;
+          msg = "Video codec not supported. Use H.264 + AAC (yuv420p).";
+          break;
         case MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED:
-          msg = 'Video format not supported (use MP4/H.264 + AAC).'; break;
+          msg = "Video format not supported (use MP4/H.264 + AAC).";
+          break;
       }
     }
     setVideoError(msg);
@@ -227,17 +243,35 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   };
 
   const formatTime = (t: number) => {
-    if (isNaN(t) || !isFinite(t)) return '0:00';
+    if (isNaN(t) || !isFinite(t)) return "0:00";
     const m = Math.floor(t / 60);
     const s = Math.floor(t % 60);
-    return `${m}:${s.toString().padStart(2, '0')}`;
+    return `${m}:${s.toString().padStart(2, "0")}`;
+  };
+
+  // ---------- small helper: creator link ----------
+  const CreatorByline: React.FC = () => {
+    if (!(creatorUsername || creatorId)) return null;
+    const to = creatorUsername ? `/creator/${creatorUsername}` : `/creator/id/${creatorId}`;
+    const label = creatorDisplayName || creatorUsername || "Creator";
+    return (
+      <div className="mb-2 text-sm">
+        <span className="text-muted-foreground">by </span>
+        <Link to={to} className="font-medium text-primary hover:underline">
+          {label}
+        </Link>
+      </div>
+    );
   };
 
   // ---------- shared player markup (used for inline and dialog) ----------
   const PlayerSurface = (
-    <div ref={playerRef} className={`relative w-full h-full bg-black ${isFullscreen ? 'video-player-fullscreen' : ''}`}>
+    <div
+      ref={playerRef}
+      className={`relative w-full h-full bg-black ${isFullscreen ? "video-player-fullscreen" : ""}`}
+    >
       {/* Cloudflare Stream */}
-      {hasStreamPlayback && currentVideo === 'main' ? (
+      {hasStreamPlayback && currentVideo === "main" ? (
         <div className="relative w-full h-full">
           <iframe
             key={playbackId}
@@ -246,7 +280,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             className="absolute inset-0 w-full h-full border-0"
             allow="autoplay; fullscreen; picture-in-picture"
             allowFullScreen
-            style={{ backgroundColor: 'black', pointerEvents: 'auto', zIndex: 0 }}
+            style={{ backgroundColor: "black", pointerEvents: "auto", zIndex: 0 }}
             loading="eager"
           />
         </div>
@@ -268,9 +302,9 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             controls={false}
             muted={isMuted}
             crossOrigin="anonymous"
-            style={{ width: '100%', height: '100%', backgroundColor: 'black' }}
+            style={{ width: "100%", height: "100%", backgroundColor: "black" }}
           >
-            {currentVideo === 'trailer' && trailerUrl ? (
+            {currentVideo === "trailer" && trailerUrl ? (
               <>
                 <source src={trailerUrl} type="video/mp4" />
                 <source src={trailerUrl} type="video/webm" />
@@ -298,27 +332,30 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
           {/* Controls */}
           <div
             className={`absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/30 transition-opacity duration-300 ${
-              showControls ? 'opacity-100' : 'opacity-0'
+              showControls ? "opacity-100" : "opacity-0"
             }`}
             onMouseEnter={() => setShowControls(true)}
           >
             {/* top bar */}
             <div className="absolute top-0 left-0 right-0 p-4 flex justify-between items-center">
-              <h2 className="text-white text-lg font-semibold">{title}{currentVideo === 'trailer' && ' (Trailer)'}</h2>
-              {(videoUrl && trailerUrl) && (
+              <h2 className="text-white text-lg font-semibold">
+                {title}
+                {currentVideo === "trailer" && " (Trailer)"}
+              </h2>
+              {videoUrl && trailerUrl && (
                 <div className="flex gap-2">
                   <Button
                     size="sm"
-                    variant={currentVideo === 'main' ? 'default' : 'secondary'}
-                    onClick={() => setCurrentVideo('main')}
+                    variant={currentVideo === "main" ? "default" : "secondary"}
+                    onClick={() => setCurrentVideo("main")}
                     className="bg-black/50 backdrop-blur-sm text-white border-white/20"
                   >
                     Full {contentType}
                   </Button>
                   <Button
                     size="sm"
-                    variant={currentVideo === 'trailer' ? 'default' : 'secondary'}
-                    onClick={() => setCurrentVideo('trailer')}
+                    variant={currentVideo === "trailer" ? "default" : "secondary"}
+                    onClick={() => setCurrentVideo("trailer")}
                     className="bg-black/50 backdrop-blur-sm text-white border-white/20"
                   >
                     Trailer
@@ -427,8 +464,14 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             <Badge variant="secondary">{contentType}</Badge>
             {genre && <Badge variant="outline">{genre}</Badge>}
           </div>
-          <h3 className="text-lg font-semibold mb-2 line-clamp-1">{title}</h3>
-          {description && <p className="text-muted-foreground text-sm mb-4 line-clamp-3">{description}</p>}
+
+          <h3 className="text-lg font-semibold mb-1 line-clamp-1">{title}</h3>
+          <CreatorByline />
+
+          {description && (
+            <p className="text-muted-foreground text-sm mb-4 line-clamp-3">{description}</p>
+          )}
+
           {canDelete && (
             <div className="flex justify-end">
               <Button size="sm" variant="destructive" onClick={onDelete}>
@@ -444,7 +487,6 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
   // Original card + dialog behavior for grid pages
   const [showFullPlayer, setShowFullPlayer] = useState(false);
-
   const open = () => setShowFullPlayer(true);
 
   return (
@@ -453,7 +495,12 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       <div className="relative">
         <div className="aspect-video bg-secondary/20 rounded-t-lg relative overflow-hidden group cursor-pointer">
           {displayThumbnail ? (
-            <img src={displayThumbnail} alt={`${title} cover`} className="w-full h-full object-cover" loading="lazy" />
+            <img
+              src={displayThumbnail}
+              alt={`${title} cover`}
+              className="w-full h-full object-cover"
+              loading="lazy"
+            />
           ) : canPlaySomething ? (
             <div className="w-full h-full bg-black" />
           ) : (
@@ -482,8 +529,14 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
           <Badge variant="secondary">{contentType}</Badge>
           {genre && <Badge variant="outline">{genre}</Badge>}
         </div>
-        <h3 className="text-lg font-semibold mb-2 line-clamp-1">{title}</h3>
-        {description && <p className="text-muted-foreground text-sm mb-4 line-clamp-3">{description}</p>}
+
+        <h3 className="text-lg font-semibold mb-1 line-clamp-1">{title}</h3>
+        <CreatorByline />
+
+        {description && (
+          <p className="text-muted-foreground text-sm mb-4 line-clamp-3">{description}</p>
+        )}
+
         {canDelete && (
           <div className="flex justify-end">
             <Button size="sm" variant="destructive" onClick={onDelete}>
@@ -506,3 +559,5 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     </Card>
   );
 };
+
+export default VideoPlayer;

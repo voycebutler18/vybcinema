@@ -8,10 +8,12 @@ import { ContentCard, type Content } from "@/components/ContentCard";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
 
 const Shows = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const [content, setContent] = useState<Content[]>([]);
   const [loading, setLoading] = useState(true);
@@ -43,14 +45,13 @@ const Shows = () => {
   };
 
   const handleContentClick = (item: Content) => {
-    setSelectedContent(item);
-    setShowDetailModal(true);
+    // Route directly to the watch page
+    navigate(`/watch/${item.id}`);
   };
 
   const handlePlay = (item: Content) => {
-    setPlayingContent(item);
-    setShowVideoPlayer(true);
-    setShowDetailModal(false);
+    // Route directly to the watch page
+    navigate(`/watch/${item.id}`);
   };
 
   const deleteContent = async (id: string, fileUrl?: string) => {
@@ -80,16 +81,25 @@ const Shows = () => {
   const Section = ({ title, items }: { title: string; items: Content[] }) =>
     !items.length ? null : (
       <section className="container mx-auto px-6 mb-12">
+        {/* Hide like badge & like/unlike buttons inside cards on this page */}
+        <style>{`
+          .hide-likes [title$="likes"],
+          .hide-likes button[title="Like"],
+          .hide-likes button[title="Unlike"] {
+            display: none !important;
+          }
+        `}</style>
+
         <h2 className="text-2xl md:text-3xl font-bold mb-6">{title}</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+        <div className="hide-likes grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
           {items.map((c, i) => (
             <ContentCard
               key={c.id}
               content={c}
               contentType="Show"
               index={i % 4}
-              onClick={() => handleContentClick(c)}
-              onPlay={() => handlePlay(c)}
+              onClick={() => handleContentClick(c)}  // -> /watch/:id
+              onPlay={() => handlePlay(c)}          // -> /watch/:id
             />
           ))}
         </div>
@@ -133,6 +143,7 @@ const Shows = () => {
       </main>
       <Footer />
 
+      {/* Keeping modal/player intact; clicks now route to /watch/:id */}
       <NetflixDetailModal
         content={selectedContent as any}
         contentType="Show"

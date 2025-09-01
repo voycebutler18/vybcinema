@@ -35,6 +35,8 @@ import Live from "./pages/Live";
 // NEW: single video watch page
 import Watch from "./pages/Watch";
 
+const queryClient = new QueryClient();
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
@@ -56,7 +58,6 @@ const App = () => (
             <Route path="/talent" element={<Talent />} />
             <Route path="/challenges" element={<Challenges />} />
             <Route path="/live" element={<Live />} />
-            <Route path="/profile" element={<Profile />} />
 
             {/* Watch (YouTube-style page) */}
             <Route path="/watch/:id" element={<Watch />} />

@@ -12,6 +12,9 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { ThumbsUp, Share2 } from "lucide-react";
 
+/* ✅ ADDED: comments component */
+import Comments from "@/components/Comments";
+
 type Content = {
   id: string;
   title: string;
@@ -259,6 +262,11 @@ const Watch: React.FC = () => {
                 </p>
               </div>
             )}
+
+            {/* ✅ ADDED: comments block */}
+            <div className="mt-6">
+              <Comments contentId={item.id} />
+            </div>
           </div>
 
           {/* RIGHT: related */}

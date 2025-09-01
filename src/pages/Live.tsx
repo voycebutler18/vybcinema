@@ -74,14 +74,26 @@ const Live = () => {
   const recentlyAdded = content.slice(0, 12);
   const events = content.filter((v) => v.genre?.toLowerCase().includes("event"));
   const concerts = content.filter((v) => v.genre?.toLowerCase().includes("concert"));
-  const esports = content.filter((v) => v.genre?.toLowerCase().includes("esport") || v.genre?.toLowerCase().includes("game"));
+  const esports = content.filter(
+    (v) => v.genre?.toLowerCase().includes("esport") || v.genre?.toLowerCase().includes("game")
+  );
   const myLive = user ? content.filter((s: any) => s.user_id === user.id) : [];
 
   const Section = ({ title, items }: { title: string; items: Content[] }) =>
     !items.length ? null : (
       <section className="container mx-auto px-6 mb-12">
         <h2 className="text-2xl md:text-3xl font-bold mb-6">{title}</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+
+        {/* Hide likes only on the grid cards on this page */}
+        <style>{`
+          .hide-likes [title$="likes"],
+          .hide-likes button[title="Like"],
+          .hide-likes button[title="Unlike"] {
+            display: none !important;
+          }
+        `}</style>
+
+        <div className="hide-likes grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
           {items.map((c, i) => (
             <ContentCard
               key={c.id}

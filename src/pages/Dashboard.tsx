@@ -361,6 +361,7 @@ const Dashboard = () => {
     }
   };
 
+  // ⤵️ Only this function was changed to call "delete-user-simple"
   const requestAccountDeletion = async () => {
     if (!user) return;
     const confirm = window.confirm(
@@ -370,21 +371,17 @@ const Dashboard = () => {
 
     setDeleting(true);
     try {
-      // Prefer invoking an Edge Function that deletes the auth.user and all rows in a transaction.
-      const { error: fxErr } = await supabase.functions.invoke("delete-user", {
-        body: { user_id: user.id },
-      });
-      if (fxErr) throw fxErr;
+      // Call the minimal Edge Function that deletes the auth user
+      const { error } = await supabase.functions.invoke("delete-user-simple");
+      if (error) throw error;
 
       toast({ title: "Account deleted", description: "We’re signing you out now." });
       await supabase.auth.signOut();
       navigate("/goodbye");
     } catch (e: any) {
-      // If function is not configured, explain next step but keep user safe
       toast({
-        title: "Deletion not available",
-        description:
-          "Server deletion function is not configured. Ask your admin to add an Edge Function named `delete-user` that deletes the auth user and related rows.",
+        title: "Delete failed",
+        description: e.message ?? "Could not delete account. Make sure the Edge Function is deployed and secrets are set.",
         variant: "destructive",
       });
     } finally {

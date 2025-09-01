@@ -159,7 +159,7 @@ const Live = () => {
               contentType={playingContent.content_type}
               streamUrl={(playingContent as any).stream_url}
               streamStatus={(playingContent as any).stream_status}
-              streamId={(playingContent as any).stream_id)
+              streamId={(playingContent as any).stream_id}
               streamThumbnailUrl={(playingContent as any).stream_thumbnail_url}
               playbackId={(playingContent as any).playback_id}
               contentId={playingContent.id}

@@ -1,176 +1,179 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { Link, useParams } from "react-router-dom";
 
-import Navigation from "@/components/Navigation";
-import { Footer } from "@/components/Footer";
-
+// src/pages/CreatorVideosPage.tsx
+import { useEffect, useState } from "react";
+import { useParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import VideoPlayer from "@/components/VideoPlayer";
 
-type ContentRow = {
+type Profile = {
+  id: string;
+  username: string | null;
+  display_name: string | null;
+  bio?: string | null;
+  avatar_url?: string | null;
+};
+
+type VideoRow = {
   id: string;
   title: string;
-  created_at: string;
-  user_id: string | null;
-  cover_url?: string | null;
-  thumbnail_url?: string | null;
-};
-
-type ProfileRow = {
+  description: string | null;
+  cover_url: string | null;
+  playback_id: string | null; // Cloudflare Stream id (if used)
+  video_url: string | null;   // direct mp4 (if used)
+  genre: string | null;
+  content_type: string | null;
   user_id: string;
-  username?: string | null;
-  display_name?: string | null; // if you have this
-  full_name?: string | null;    // if you have this
+  profiles?: {
+    username: string | null;
+    display_name: string | null;
+  } | null;
 };
 
-const CreatorVideosPage: React.FC = () => {
-  const { userId } = useParams<{ userId: string }>();
-
+export default function CreatorVideosPage() {
+  // supports /creator/:username and /creator/id/:id (optional second route)
+  const { username, id } = useParams();
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [videos, setVideos] = useState<VideoRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [videos, setVideos] = useState<ContentRow[]>([]);
-  const [profile, setProfile] = useState<ProfileRow | null>(null);
-
-  // Friendly display name: prefer display_name → username → full_name → "Creator"
-  const displayName = useMemo(() => {
-    if (!profile) return "Creator";
-    return (
-      (profile as any).display_name ||
-      (profile as any).username ||
-      (profile as any).full_name ||
-      "Creator"
-    );
-  }, [profile]);
+  const [notFound, setNotFound] = useState(false);
 
   useEffect(() => {
-    if (!userId) return;
-
-    let isMounted = true;
-
     (async () => {
       setLoading(true);
+      setNotFound(false);
 
-      // 1) Fetch creator's profile name (best-effort; if missing/blocked we fall back)
-      try {
-        const { data: prof } = await supabase
+      // 1) Resolve the profile
+      let userId = id ?? null;
+
+      if (!userId && username) {
+        const { data: p, error: pErr } = await supabase
           .from("profiles")
-          .select("user_id, display_name, username, full_name")
-          .eq("user_id", userId)
+          .select("id, username, display_name, bio, avatar_url")
+          .eq("username", username)
           .maybeSingle();
-
-        if (isMounted) setProfile(prof as ProfileRow | null);
-      } catch {
-        if (isMounted) setProfile(null);
+        if (pErr) console.error(pErr);
+        if (!p || !p.id) {
+          setNotFound(true);
+          setLoading(false);
+          return;
+        }
+        setProfile(p as Profile);
+        userId = p.id;
       }
 
-      // 2) Fetch all content by this user
-      try {
-        const { data: rows } = await supabase
-          .from("content")
-          .select("id, title, created_at, user_id, cover_url, thumbnail_url")
-          .eq("user_id", userId)
-          .order("created_at", { ascending: false });
-
-        if (isMounted) setVideos((rows as ContentRow[]) || []);
-      } catch {
-        if (isMounted) setVideos([]);
+      if (!userId) {
+        setNotFound(true);
+        setLoading(false);
+        return;
       }
 
-      if (isMounted) setLoading(false);
+      if (!profile) {
+        // If we came via /creator/id/:id, also fetch the profile
+        const { data: p2 } = await supabase
+          .from("profiles")
+          .select("id, username, display_name, bio, avatar_url")
+          .eq("id", userId)
+          .maybeSingle();
+        if (p2) setProfile(p2 as Profile);
+      }
+
+      // 2) Fetch videos for that user, joined with profile (for username/display name)
+      const { data: vids, error: vErr } = await supabase
+        .from("content") // <- your videos table
+        .select(
+          `
+            id, title, description, cover_url, playback_id, video_url, genre, content_type, user_id,
+            profiles:profiles!content_user_id_fkey ( username, display_name )
+          `
+        )
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false });
+
+      if (vErr) {
+        console.error(vErr);
+        setVideos([]);
+      } else {
+        setVideos((vids ?? []) as unknown as VideoRow[]);
+      }
+
+      setLoading(false);
     })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [username, id]);
 
-    return () => {
-      isMounted = false;
-    };
-  }, [userId]);
+  if (loading) {
+    return <div className="container py-10">Loading…</div>;
+  }
 
-  const initial = (displayName?.[0] || "C").toUpperCase();
+  if (notFound) {
+    return (
+      <div className="container py-10">
+        <h1 className="text-2xl font-bold mb-2">Creator not found</h1>
+        <p className="text-muted-foreground mb-6">
+          We couldn’t find that username.
+        </p>
+        <Button asChild>
+          <Link to="/">Go home</Link>
+        </Button>
+      </div>
+    );
+  }
+
+  const displayName =
+    profile?.display_name ||
+    (profile?.username ? `@${profile.username}` : "Creator");
 
   return (
-    <div className="min-h-screen bg-background">
-      <Navigation />
-
-      <main className="container mx-auto px-6 pt-24 pb-20">
-        {/* Header */}
-        <div className="mb-6 flex items-center gap-3">
-          <Avatar className="h-12 w-12">
-            <AvatarFallback className="bg-primary/20 text-primary font-semibold">
-              {initial}
-            </AvatarFallback>
-          </Avatar>
-          <div>
-            <h1 className="text-2xl font-bold">
-              {displayName}
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              Creator profile
-            </p>
-          </div>
-        </div>
-
-        {/* Videos */}
-        {loading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <Card
-                key={i}
-                className="overflow-hidden border-border/50 bg-card/60 animate-pulse h-56"
-              />
-            ))}
-          </div>
-        ) : videos.length === 0 ? (
-          <Card className="p-6 bg-card/60 border border-border/50">
-            <p className="text-muted-foreground">No videos yet.</p>
-          </Card>
+    <div className="container py-8">
+      {/* Header */}
+      <div className="mb-6 flex items-center gap-4">
+        {profile?.avatar_url ? (
+          <img
+            src={profile.avatar_url}
+            alt={displayName}
+            className="h-14 w-14 rounded-full object-cover"
+          />
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {videos.map((v) => {
-              const thumb = v.cover_url || v.thumbnail_url || "";
-              return (
-                <Link
-                  key={v.id}
-                  to={`/watch/${v.id}`}
-                  className="group rounded-xl border border-border/40 bg-card/60 hover:bg-card transition"
-                >
-                  <div className="aspect-video w-full overflow-hidden rounded-t-xl">
-                    {thumb ? (
-                      <img
-                        src={thumb}
-                        alt={v.title}
-                        className="h-full w-full object-cover"
-                        loading="lazy"
-                      />
-                    ) : (
-                      <div className="h-full w-full bg-secondary/20" />
-                    )}
-                  </div>
-                  <div className="p-3">
-                    <p className="font-semibold group-hover:underline line-clamp-2">
-                      {v.title}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {new Date(v.created_at).toLocaleDateString()}
-                    </p>
-                  </div>
-                </Link>
-              );
-            })}
+          <div className="h-14 w-14 rounded-full bg-primary text-primary-foreground grid place-items-center text-lg font-semibold">
+            {(profile?.display_name?.[0] ||
+              profile?.username?.[0] ||
+              "C"
+            ).toUpperCase()}
           </div>
         )}
-
-        {/* Back home */}
-        <div className="mt-8">
-          <Button asChild variant="secondary">
-            <Link to="/">Back to Home</Link>
-          </Button>
+        <div>
+          <h1 className="text-2xl font-bold leading-tight">{displayName}</h1>
+          {profile?.username && (
+            <div className="text-muted-foreground">@{profile.username}</div>
+          )}
         </div>
-      </main>
+      </div>
 
-      <Footer />
+      {/* Videos */}
+      {videos.length === 0 ? (
+        <Card className="p-6 text-muted-foreground">No videos yet.</Card>
+      ) : (
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {videos.map((v) => (
+            <VideoPlayer
+              key={v.id}
+              title={v.title}
+              description={v.description ?? undefined}
+              contentType={v.content_type || "Video"}
+              coverUrl={v.cover_url ?? undefined}
+              playbackId={v.playback_id ?? undefined}
+              videoUrl={v.video_url ?? undefined}
+              genre={v.genre ?? undefined}
+              // pass creator props so byline in the card remains clickable
+              creatorId={v.user_id}
+              creatorUsername={v.profiles?.username ?? profile?.username ?? undefined}
+              creatorDisplayName={v.profiles?.display_name ?? profile?.display_name ?? undefined}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
-};
-
-export default CreatorVideosPage;
+}

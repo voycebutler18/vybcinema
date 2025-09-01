@@ -1,4 +1,3 @@
-
 // src/pages/Watch.tsx
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
@@ -12,8 +11,6 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { ThumbsUp, Share2 } from "lucide-react";
-
-/* ✅ ADDED: comments component */
 import Comments from "@/components/Comments";
 
 type Content = {
@@ -37,7 +34,15 @@ type Content = {
   monetization_enabled?: boolean | null;
   created_at: string;
   user_id?: string | null;
-  likes_count?: number | null; // <-- new
+  likes_count?: number | null;
+
+  // joined profile
+  profiles?: {
+    id: string;
+    username: string | null;
+    display_name: string | null;
+    avatar_url?: string | null;
+  } | null;
 };
 
 const Watch: React.FC = () => {
@@ -58,12 +63,20 @@ const Watch: React.FC = () => {
     (async () => {
       setLoading(true);
 
-      // 1) load the video row (includes likes_count)
+      // 1) Load the video row + JOIN the creator profile (for username)
       const { data, error } = await supabase
         .from("content")
-        .select("*")
+        .select(
+          `
+          id, title, description, content_type, genre, cover_url, thumbnail_url,
+          file_url, trailer_url, stream_url, stream_status, stream_id,
+          stream_thumbnail_url, playback_id, vast_tag_url, ad_breaks,
+          duration_seconds, monetization_enabled, created_at, user_id, likes_count,
+          profiles:profiles!content_user_id_fkey ( id, username, display_name, avatar_url )
+        `
+        )
         .eq("id", id)
-        .single();
+        .maybeSingle();
 
       if (error || !data) {
         setItem(null);
@@ -76,20 +89,21 @@ const Watch: React.FC = () => {
         return;
       }
 
-      setItem(data as Content);
-      setLikeCount((data as Content).likes_count ?? 0); // visible to everyone
+      const row = data as unknown as Content;
+      setItem(row);
+      setLikeCount(row.likes_count ?? 0);
 
-      // 2) load related
+      // 2) Related
       const { data: rel } = await supabase
         .from("content")
         .select("*")
         .neq("id", id)
-        .eq("content_type", data.content_type)
+        .eq("content_type", row.content_type)
         .order("created_at", { ascending: false })
         .limit(12);
       setRelated((rel as Content[]) || []);
 
-      // 3) only check "did I like it?" if signed in
+      // 3) Did I like it?
       if (user) {
         const { data: myLike } = await supabase
           .from("likes")
@@ -112,10 +126,8 @@ const Watch: React.FC = () => {
       toast({ title: "Sign in to like videos" });
       return;
     }
-
     try {
       if (likedByMe) {
-        // unlike
         const { error } = await supabase
           .from("likes")
           .delete()
@@ -123,16 +135,15 @@ const Watch: React.FC = () => {
           .eq("user_id", user.id);
         if (error) throw error;
         setLikedByMe(false);
-        setLikeCount((c) => Math.max(0, c - 1)); // optimistic
+        setLikeCount((c) => Math.max(0, c - 1));
       } else {
-        // like
         const { error } = await supabase.from("likes").insert({
           content_id: id,
           user_id: user.id,
         });
         if (error) throw error;
         setLikedByMe(true);
-        setLikeCount((c) => c + 1); // optimistic
+        setLikeCount((c) => c + 1);
       }
     } catch (e: any) {
       toast({
@@ -195,6 +206,11 @@ const Watch: React.FC = () => {
     );
   }
 
+  const creatorUsername = item.profiles?.username ?? undefined;
+  const creatorDisplayName = item.profiles?.display_name ?? undefined;
+  const creatorId = item.user_id ?? undefined;
+  const creatorHref = creatorUsername ? `/creator/${creatorUsername}` : creatorId ? `/creator/id/${creatorId}` : "#";
+
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
@@ -223,9 +239,23 @@ const Watch: React.FC = () => {
               monetizationEnabled={!!item.monetization_enabled}
               contentId={item.id}
               canDelete={false}
+              // 🔗 pass creator props so the byline inside VideoPlayer works
+              creatorId={creatorId}
+              creatorUsername={creatorUsername}
+              creatorDisplayName={creatorDisplayName}
             />
 
+            {/* Title + explicit byline link on the watch page */}
             <h1 className="mt-4 text-2xl font-bold">{item.title}</h1>
+
+            {(creatorUsername || creatorId) && (
+              <div className="mt-1 text-sm">
+                <span className="text-muted-foreground">by </span>
+                <Link to={creatorHref} className="text-primary font-medium hover:underline">
+                  {creatorDisplayName || creatorUsername || "Creator"}
+                </Link>
+              </div>
+            )}
 
             <div className="mt-2 flex flex-wrap items-center gap-3">
               <Badge variant="secondary" className="font-medium capitalize">
@@ -236,7 +266,7 @@ const Watch: React.FC = () => {
                 {new Date(item.created_at).toLocaleDateString()}
               </span>
 
-              {/* Like / Share — count is visible to EVERYONE */}
+              {/* Like / Share */}
               <div className="ml-auto flex items-center gap-2">
                 <Button
                   variant={likedByMe ? "default" : "secondary"}
@@ -264,7 +294,7 @@ const Watch: React.FC = () => {
               </div>
             )}
 
-            {/* ✅ ADDED: comments block */}
+            {/* Comments */}
             <div className="mt-6">
               <Comments contentId={item.id} />
             </div>

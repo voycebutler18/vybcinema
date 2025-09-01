@@ -10,7 +10,6 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 
-// ADDED: supabase + toast for saving profile fields
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -20,7 +19,6 @@ const Signup = () => {
     fullName: "",
     email: "",
     password: "",
-    // (added previously)
     username: "",
     age: "",
     firstName: "",
@@ -30,36 +28,39 @@ const Signup = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // ADDED: display choice for 18+ users
-  const [displayNameMode, setDisplayNameMode] = useState<"username" | "full_name">("username");
+  // display choice for 18–19 only (default to full name)
+  const [displayNameMode, setDisplayNameMode] =
+    useState<"username" | "full_name">("full_name");
 
   const ageNum = Number.parseInt(formData.age || "", 10);
-  const isMinor = !Number.isNaN(ageNum) && ageNum < 18;
 
   useEffect(() => {
     if (user) {
-      navigate('/dashboard');
+      navigate("/dashboard");
     }
   }, [user, navigate]);
 
-  // When age changes, force minors to username mode; give adults default "full_name"
+  // When age changes: set default for adults (18–19)
   useEffect(() => {
     if (Number.isNaN(ageNum)) return;
-    if (ageNum < 18) {
+    if (ageNum >= 18 && ageNum <= 19) {
+      setDisplayNameMode((prev) =>
+        prev === "username" || prev === "full_name" ? prev : "full_name"
+      );
+    } else if (ageNum >= 13 && ageNum < 18) {
+      // minors (13–17) always username
       setDisplayNameMode("username");
-    } else {
-      setDisplayNameMode((prev) => (prev === "username" || prev === "full_name" ? prev : "full_name"));
     }
   }, [ageNum]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [e.target.name]: e.target.value
+      [e.target.name]: e.target.value,
     }));
   };
 
-  // (from previous step) validate username/age & uniqueness
+  // Validate username, teen-only age (13–19), username uniqueness
   const validateExtras = async () => {
     const u = formData.username.trim();
     if (!/^[a-zA-Z0-9_]{3,20}$/.test(u)) {
@@ -72,10 +73,10 @@ const Signup = () => {
     }
 
     const age = parseInt(formData.age, 10);
-    if (Number.isNaN(age) || age < 13) {
+    if (Number.isNaN(age) || age < 13 || age > 19) {
       toast({
         title: "Age restriction",
-        description: "You must be at least 13 to create an account.",
+        description: "Only users aged 13–19 can create an account.",
         variant: "destructive",
       });
       return false;
@@ -117,14 +118,20 @@ const Signup = () => {
       return;
     }
 
-    const { error } = await signUp(formData.email, formData.password, formData.fullName);
+    const { error } = await signUp(
+      formData.email,
+      formData.password,
+      formData.fullName
+    );
 
     if (!error) {
       const age = parseInt(formData.age, 10);
-      const minor = age < 18;
+      const isMinor = age < 18; // 13–17 only
 
-      // minors always username; adults use selected mode
-      const modeToSave: "username" | "full_name" = minor ? "username" : displayNameMode;
+      // minors always username; 18–19 use selected mode
+      const modeToSave: "username" | "full_name" = isMinor
+        ? "username"
+        : displayNameMode;
 
       const { data: session } = await supabase.auth.getUser();
       const authedId = session.user?.id;
@@ -132,14 +139,12 @@ const Signup = () => {
       if (authedId) {
         const { error: profileErr } = await supabase.from("profiles").upsert(
           {
-            id: authedId,
+            id: authedId, // keeping your original upsert target
             username: formData.username,
             first_name: formData.firstName || null,
             age,
-            is_minor: minor,
-            // ADDED: store how we will display the user's public name
+            is_minor: isMinor,
             display_name_mode: modeToSave, // "username" | "full_name"
-            // you can also store fullName you passed to signUp if you want quick reference
             full_name: formData.fullName || null,
           },
           { onConflict: "id" }
@@ -154,7 +159,7 @@ const Signup = () => {
         } else {
           toast({
             title: "Account created",
-            description: minor
+            description: isMinor
               ? "Your account is set up to show your username only."
               : modeToSave === "full_name"
               ? "Your account will display your full name publicly."
@@ -205,7 +210,7 @@ const Signup = () => {
                     </p>
                   </div>
 
-                  {/* Age (required) */}
+                  {/* Age (required, 13–19 only) */}
                   <div className="space-y-2">
                     <Label htmlFor="age">Age</Label>
                     <Input
@@ -213,7 +218,7 @@ const Signup = () => {
                       name="age"
                       type="number"
                       min={13}
-                      max={120}
+                      max={19}
                       placeholder="Enter your age"
                       className="w-full"
                       value={formData.age}
@@ -221,12 +226,12 @@ const Signup = () => {
                       required
                     />
                     <p className="text-xs text-muted-foreground">
-                      You must be at least 13. Ages 13–17 are set as minors (publicly show username only).
+                      You must be between 13 and 19 years old to create an account.
                     </p>
                   </div>
 
-                  {/* For 18+ only: choice to show Full name or Username */}
-                  {!Number.isNaN(ageNum) && ageNum >= 18 && (
+                  {/* Public display options */}
+                  {!Number.isNaN(ageNum) && ageNum >= 18 && ageNum <= 19 && (
                     <div className="space-y-2">
                       <Label>Public display</Label>
                       <div className="flex items-center gap-4">
@@ -271,7 +276,7 @@ const Signup = () => {
                     />
                   </div>
 
-                  {/* Your original fields (unchanged) */}
+                  {/* Full Name */}
                   <div className="space-y-2">
                     <Label htmlFor="fullName">Full Name</Label>
                     <Input
@@ -286,6 +291,7 @@ const Signup = () => {
                     />
                   </div>
                   
+                  {/* Email */}
                   <div className="space-y-2">
                     <Label htmlFor="email">Email</Label>
                     <Input
@@ -300,6 +306,7 @@ const Signup = () => {
                     />
                   </div>
                   
+                  {/* Password */}
                   <div className="space-y-2">
                     <Label htmlFor="password">Password</Label>
                     <div className="relative">

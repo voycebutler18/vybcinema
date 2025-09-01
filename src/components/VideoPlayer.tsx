@@ -45,17 +45,17 @@ interface VideoPlayerProps {
   onDelete?: () => void;
   canDelete?: boolean;
 
-  // Ads / meta (kept for compat)
+  // Ads / meta (compat)
   monetizationEnabled?: boolean;
   durationSeconds?: number;
   adBreaks?: number[];
   vastTagUrl?: string;
   contentId?: string;
 
-  /** If true, render inline. */
+  /** If true, render the player inline (no dialog). */
   inline?: boolean;
 
-  /** NEW: show the inline title/meta under the player. Default = false (prevents duplicate titles on Watch). */
+  /** Show inline title/meta under the player. Default false (prevents duplicate titles on Watch). */
   showInlineMeta?: boolean;
 
   /** Optional creator info (used only if showInlineMeta is true) */
@@ -442,7 +442,6 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   );
 
   // ---------- RENDER ----------
-
   if (inline) {
     return (
       <Card className="cinema-card overflow-hidden">
@@ -545,3 +544,6 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     </Card>
   );
 };
+
+// ✅ Default export so you can `import VideoPlayer from "@/components/VideoPlayer"`
+export default VideoPlayer;

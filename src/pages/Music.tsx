@@ -30,7 +30,7 @@ const Music = () => {
       const { data, error } = await supabase
         .from("content")
         .select("*")
-        .or("content_type.eq.music_video,genre.ilike.%music%")
+        .or("content_type.eq.music_video,genre.%music%")
         .order("created_at", { ascending: false });
 
       if (error) throw error;

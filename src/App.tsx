@@ -31,12 +31,9 @@ import Shows from "./pages/Shows";
 import Talent from "./pages/Talent";
 import Challenges from "./pages/Challenges";
 import Live from "./pages/Live";
-import Profile from "./pages/Profile";
 
 // NEW: single video watch page
 import Watch from "./pages/Watch";
-
-const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>

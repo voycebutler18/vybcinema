@@ -1,33 +1,21 @@
 import React, { useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabaseClient";
 import { ContentCard, Content } from "@/components/ContentCard";
 import { Button } from "@/components/ui/button";
-import { Link, useNavigate } from "react-router-dom";
 
 type Row = Content & { created_at?: string };
 
-const LIMIT = 8;
+const SECTION_LIMIT = 8;
 
-/** Broader helpers so we match existing data */
-const MUSIC_TYPES = ["music", "song", "track", "audio", "video-music"];
-const SHOW_TYPES = ["show", "tv", "tv-show", "series", "movie"]; // include movie so old data appears
-const STORY_TYPES = ["story", "short", "short-story", "storytime"];
-const TALENT_TYPES = ["talent", "performance", "skills"];
-const CHALLENGE_TYPES = ["challenge", "trend"];
-const LIVE_TYPES = ["live", "stream"];
-
-async function fetchTypes(types: string[]) {
+async function fetchSection(contentTypes: string[], limit: number) {
   const { data, error } = await supabase
     .from("contents")
     .select("id,title,description,genre,cover_url,file_url,trailer_url,preview_url,content_type,created_at")
-    .in("content_type", types)
+    .in("content_type", contentTypes)
     .order("created_at", { ascending: false })
-    .limit(LIMIT);
-
-  if (error) {
-    console.error("Supabase error:", error);
-    return [];
-  }
+    .limit(limit);
+  if (error) return [];
   return (data as Row[]) ?? [];
 }
 
@@ -42,61 +30,55 @@ export default function Index() {
 
   useEffect(() => {
     (async () => {
-      setMusic(await fetchTypes(MUSIC_TYPES));
-      setShows(await fetchTypes(SHOW_TYPES));
-      setStories(await fetchTypes(STORY_TYPES));
-      setTalent(await fetchTypes(TALENT_TYPES));
-      setChallenges(await fetchTypes(CHALLENGE_TYPES));
-      setLive(await fetchTypes(LIVE_TYPES));
+      setMusic(await fetchSection(["music"], SECTION_LIMIT));
+      setShows(await fetchSection(["show", "tv", "tv-show"], SECTION_LIMIT));
+      setStories(await fetchSection(["story"], SECTION_LIMIT));
+      setTalent(await fetchSection(["talent"], SECTION_LIMIT));
+      setChallenges(await fetchSection(["challenge"], SECTION_LIMIT));
+      setLive(await fetchSection(["live"], SECTION_LIMIT));
     })();
   }, []);
 
-  const renderSection = (
-    title: string,
-    data: Row[],
-    typeLabel: string,
-    basePath: string
-  ) => (
-    <section className="mt-10">
-      <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-xl sm:text-2xl font-extrabold text-white">{title}</h2>
-        <Button asChild size="sm" variant="ghost" className="text-gray-300 hover:text-white">
-          <Link to={`/${basePath}`}>See all</Link>
-        </Button>
-      </div>
-
-      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {data.map((it, i) => (
-          <ContentCard
-            key={it.id}
-            content={it}
-            contentType={typeLabel}
-            index={i}
-            onClick={() => navigate(`/${basePath}/${it.id}`)}
-            onPlay={() => navigate(`/${basePath}/${it.id}`)}
-          />
-        ))}
-
-        {/* If a section is temporarily empty, just show nothing (no big warning). */}
-      </div>
-    </section>
+  const card = (item: Row, contentType: string, index: number, base: string) => (
+    <ContentCard
+      key={item.id}
+      content={item}
+      contentType={contentType}
+      index={index}
+      onClick={() => navigate(`/${base}/${item.id}`)}
+      onPlay={() => navigate(`/${base}/${item.id}`)}
+    />
   );
 
   return (
-    <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 text-white">
-      <header>
-        <h1 className="text-3xl sm:text-4xl font-extrabold">VYB Cinema</h1>
-        <p className="mt-2 text-gray-400">
-          Teen culture hub. Music, shows, stories, talent, challenges, and live.
-        </p>
-      </header>
+    <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 text-white">
+      <h1 className="text-2xl sm:text-3xl font-extrabold">VYB Cinema</h1>
+      <p className="mt-2 text-gray-400">Teen culture hub. Music, shows, stories, talent, challenges, and live.</p>
 
-      {renderSection("Music", music, "Music", "music")}
-      {renderSection("Shows", shows, "Shows", "shows")}
-      {renderSection("Stories", stories, "Stories", "stories")}
-      {renderSection("Talent", talent, "Talent", "talent")}
-      {renderSection("Challenges", challenges, "Challenges", "challenges")}
-      {renderSection("Live", live, "Live", "live")}
+      {/* Section builder */}
+      {[
+        { title: "Music", data: music, type: "Music", base: "music" },
+        { title: "Shows", data: shows, type: "Shows", base: "shows" },
+        { title: "Stories", data: stories, type: "Stories", base: "stories" },
+        { title: "Talent", data: talent, type: "Talent", base: "talent" },
+        { title: "Challenges", data: challenges, type: "Challenges", base: "challenges" },
+        { title: "Live", data: live, type: "Live", base: "live" },
+      ].map((sec) => (
+        <section key={sec.title} className="mt-8">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-xl font-bold">{sec.title}</h2>
+            <Button asChild size="sm" variant="ghost" className="text-gray-300 hover:text-white">
+              <Link to={`/${sec.base}`}>See all</Link>
+            </Button>
+          </div>
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {sec.data.map((it, i) => card(it, sec.type, i, sec.base))}
+            {sec.data.length === 0 && (
+              <div className="col-span-full text-gray-400 text-sm">Nothing here yet. Check back soon.</div>
+            )}
+          </div>
+        </section>
+      ))}
     </div>
   );
 }

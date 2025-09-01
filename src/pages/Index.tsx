@@ -1,33 +1,72 @@
 // src/pages/Index.tsx
+import React from "react";
 import Navigation from "@/components/Navigation";
-import { HeroSection } from "@/components/HeroSection";
-import WeeklySpotlightSection from "@/components/WeeklySpotlightSection";
 import { Footer } from "@/components/Footer";
+import HeroSection from "@/components/HeroSection";
 
-const Index = () => {
+// ---- Minimal, safe console filtering (won't hide real errors) ----
+if (typeof window !== "undefined") {
+  const originalError = console.error.bind(console);
+  console.error = (...args: any[]) => {
+    const text = args
+      .map((a) => (typeof a === "string" ? a : a?.message ?? ""))
+      .join(" ");
+
+    // Only ignore obvious extension noise; let everything else through
+    if (text.includes("ws://localhost:8098")) return;
+    originalError(...args);
+  };
+}
+
+// ---- Error Boundary so render errors show a screen instead of a blank page ----
+class PageErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  { hasError: boolean; error?: any }
+> {
+  constructor(props: any) {
+    super(props);
+    this.state = { hasError: false, error: undefined };
+  }
+  static getDerivedStateFromError(error: any) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error: any) {
+    // still log to console – we didn't hide real errors
+    // eslint-disable-next-line no-console
+    console.error(error);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen bg-background text-foreground flex items-center justify-center px-6">
+          <div className="max-w-md text-center">
+            <h1 className="text-2xl font-bold mb-2">Something went wrong</h1>
+            <p className="text-muted-foreground mb-4">
+              The home page failed to render. Check the console for details.
+            </p>
+            <button
+              onClick={() => location.reload()}
+              className="inline-flex items-center rounded-md bg-primary px-4 py-2 text-primary-foreground hover:opacity-90"
+            >
+              Reload
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+const Index: React.FC = () => {
   return (
-    <div className="relative min-h-screen bg-background overflow-hidden">
-      {/* Vibes backdrop */}
-      <div className="absolute inset-0 bg-gradient-hero" />
-      <div className="absolute inset-0 bg-gradient-mesh opacity-60" />
-
-      {/* Floaty orbs */}
-      <span className="pointer-events-none absolute -top-6 left-6 h-5 w-5 rounded-full bg-primary/30 animate-float" />
-      <span
-        className="pointer-events-none absolute top-24 right-16 h-7 w-7 rounded-full bg-accent/25 animate-float"
-        style={{ animationDelay: "1.4s" }}
-      />
-      <span
-        className="pointer-events-none absolute bottom-28 left-1/5 h-4 w-4 rounded-full bg-cinema-gold/40 animate-float"
-        style={{ animationDelay: "2.8s" }}
-      />
-
+    <div className="min-h-screen bg-background">
       <Navigation />
 
-      <main className="relative z-10 pt-20 space-y-20 md:space-y-28">
+      <main className="pt-16">
+        {/* If HeroSection renders fine, you’ll see your main hero.
+            If not, the error boundary will show the message above instead of a blank page. */}
         <HeroSection />
-        {/* New: real content “Video of the Week” per category */}
-        <WeeklySpotlightSection />
       </main>
 
       <Footer />
@@ -35,4 +74,10 @@ const Index = () => {
   );
 };
 
-export default Index;
+export default function IndexPage() {
+  return (
+    <PageErrorBoundary>
+      <Index />
+    </PageErrorBoundary>
+  );
+}

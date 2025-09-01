@@ -190,7 +190,10 @@ export const Navigation: React.FC = () => {
                   className="bg-neutral-900 text-white border border-gray-700"
                 >
                   <DropdownMenuItem asChild className="hover:bg-neutral-800 cursor-pointer">
+                    <Link to="/profile">
                       <User className="h-4 w-4 mr-2" />
+                    </Link>
+                  </DropdownMenuItem>
                   <DropdownMenuItem asChild className="hover:bg-neutral-800 cursor-pointer">
                     <Link to="/dashboard">Creator Dashboard</Link>
                   </DropdownMenuItem>
@@ -198,6 +201,7 @@ export const Navigation: React.FC = () => {
                     <Link to="/create">Create</Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild className="hover:bg-neutral-800 cursor-pointer">
+                    <Link to="/safety">Safety Center</Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator className="bg-gray-700" />
                   <DropdownMenuItem className="hover:bg-neutral-800" onClick={() => signOut()}>
@@ -310,6 +314,7 @@ export const Navigation: React.FC = () => {
               </Link>
               <span className="opacity-30">•</span>
               <Link to="/safety" onClick={() => setMobileOpen(false)} className="hover:text-white">
+                Safety Center
               </Link>
               <span className="opacity-30">•</span>
               <Link to="/about" onClick={() => setMobileOpen(false)} className="hover:text-white">

@@ -1,75 +1,76 @@
-import React, { useEffect, useState } from "react";
-import { supabase } from "../integrations/supabase/client";
+import { useEffect, useMemo, useState } from "react";
 import { Eye } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
-type ViewCounterProps = {
+type Props = {
   contentId: string;
+  className?: string;
 };
 
-const ViewCounter: React.FC<ViewCounterProps> = ({ contentId }) => {
-  const [viewCount, setViewCount] = useState<number | null>(null);
+export default function ViewCounter({ contentId, className }: Props) {
+  const [count, setCount] = useState<number | null>(null);
+  const [pending, setPending] = useState(true);
 
+  // stable session id (once per browser)
+  const sessionId = useMemo(() => {
+    let sid = localStorage.getItem("vyb_view_session");
+    if (!sid) {
+      sid = crypto.randomUUID();
+      localStorage.setItem("vyb_view_session", sid);
+    }
+    return sid;
+  }, []);
+
+  // fetch total count
+  const fetchCount = async () => {
+    const { count: total, error } = await supabase
+      .from("views")
+      .select("id", { head: true, count: "exact" })
+      .eq("content_id", contentId);
+    if (!error) setCount(total ?? 0);
+  };
+
+  // record a view immediately on mount, then refresh count
   useEffect(() => {
-    if (!contentId) return;
+    let alive = true;
 
-    // 1. Get the initial view count when the component loads
-    const fetchInitialViews = async () => {
-      const { data, error } = await supabase
-        .from("content")
-        .select("views_count")
-        .eq("id", contentId)
-        .single();
+    const run = async () => {
+      setPending(true);
 
-      if (error) {
-        console.warn("Could not fetch initial view count:", error.message);
-        setViewCount(0); // Default to 0 if there's an error
-      } else {
-        setViewCount(data?.views_count ?? 0);
-      }
+      // call RPC — deduped by (content_id, session_id, viewed_on)
+      await supabase.rpc("increment_view", {
+        p_content_id: contentId,
+        p_session: sessionId,
+      });
+
+      if (!alive) return;
+
+      await fetchCount();
+      setPending(false);
     };
 
-    fetchInitialViews();
+    run();
 
-    // 2. Subscribe to real-time updates for this specific video's view count
-    const channel = supabase
-      .channel(`content-views-channel-${contentId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "UPDATE",
-          schema: "public",
-          table: "content",
-          filter: `id=eq.${contentId}`,
-        },
-        (payload) => {
-          // When an update happens, get the new views_count from the payload
-          const newViewsCount = (payload.new as { views_count: number })
-            .views_count;
-          setViewCount(newViewsCount);
-        }
-      )
-      .subscribe();
+    // optional: keep the number fresh if others are watching
+    const t = setInterval(fetchCount, 30000);
 
-    // 3. Cleanup function to remove the subscription when the component is no longer displayed
     return () => {
-      supabase.removeChannel(channel);
+      alive = false;
+      clearInterval(t);
     };
-  }, [contentId]);
-
-  // Don't render anything until the count has been loaded to prevent a flicker
-  if (viewCount === null) {
-    return null;
-  }
+    // run once per contentId
+  }, [contentId, sessionId]);
 
   return (
-    <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+    <span
+      className={[
+        "inline-flex items-center gap-1 text-sm text-muted-foreground",
+        className || "",
+      ].join(" ")}
+      title="Views"
+    >
       <Eye className="h-4 w-4" />
-      <span>
-        {viewCount.toLocaleString()} {viewCount === 1 ? "view" : "views"}
-      </span>
-    </div>
+      {pending && count === null ? "…" : count ?? 0}
+    </span>
   );
-};
-
-export default ViewCounter;
-
+}

@@ -9,10 +9,12 @@ import { ContentCard, type Content } from "@/components/ContentCard";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
 
 const Stories = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const [content, setContent] = useState<Content[]>([]);
   const [loading, setLoading] = useState(true);
@@ -44,14 +46,13 @@ const Stories = () => {
   };
 
   const handleContentClick = (item: Content) => {
-    setSelectedContent(item);
-    setShowDetailModal(true);
+    // ROUTE TO WATCH PAGE (YouTube-style)
+    navigate(`/watch/${item.id}`);
   };
 
   const handlePlay = (item: Content) => {
-    setPlayingContent(item);
-    setShowVideoPlayer(true);
-    setShowDetailModal(false);
+    // ROUTE TO WATCH PAGE (YouTube-style)
+    navigate(`/watch/${item.id}`);
   };
 
   const deleteContent = async (id: string, fileUrl?: string) => {
@@ -111,8 +112,8 @@ const Stories = () => {
               content={c}
               contentType="Story"
               index={i % 4}
-              onClick={() => handleContentClick(c)}
-              onPlay={() => handlePlay(c)}
+              onClick={() => handleContentClick(c)}   // -> /watch/:id
+              onPlay={() => handlePlay(c)}            // -> /watch/:id
             />
           ))}
         </div>
@@ -161,6 +162,7 @@ const Stories = () => {
       </main>
       <Footer />
 
+      {/* Keeping modal/player intact (they just won’t be used since clicks route to /watch/:id) */}
       <NetflixDetailModal
         content={selectedContent as any}
         contentType="Story"
@@ -189,7 +191,7 @@ const Stories = () => {
               streamStatus={(playingContent as any).stream_status}
               streamId={(playingContent as any).stream_id}
               streamThumbnailUrl={(playingContent as any).stream_thumbnail_url}
-              playbackId={(playingContent as any).playback_id}
+              playbackId={(playingContent as any).playback_id)
               vastTagUrl={(playingContent as any).vast_tag_url}
               adBreaks={(playingContent as any).ad_breaks}
               durationSeconds={(playingContent as any).duration_seconds}

@@ -18,13 +18,13 @@ import {
   VolumeX,
   X,
 } from "lucide-react";
+import { Link } from "react-router-dom";
 
 interface VideoPlayerProps {
   // Media sources
   videoUrl?: string;
   trailerUrl?: string;
   playbackId?: string;
-  streamUrl?: string; // (passed by Watch.tsx; not used here but allowed)
 
   // Visuals
   coverUrl?: string;
@@ -39,6 +39,7 @@ interface VideoPlayerProps {
   // Optional stream meta
   streamStatus?: string;
   streamId?: string;
+  streamUrl?: string;
 
   // Actions
   onDelete?: () => void;
@@ -51,10 +52,13 @@ interface VideoPlayerProps {
   vastTagUrl?: string;
   contentId?: string;
 
-  /** If true, render the player inline (no Dialog). */
+  /** If true, render inline. */
   inline?: boolean;
 
-  /** Creator info (passed from Watch.tsx; optional to render) */
+  /** NEW: show the inline title/meta under the player. Default = false (prevents duplicate titles on Watch). */
+  showInlineMeta?: boolean;
+
+  /** Optional creator info (used only if showInlineMeta is true) */
   creatorId?: string;
   creatorUsername?: string;
   creatorDisplayName?: string;
@@ -77,8 +81,9 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   canDelete = false,
 
   streamStatus,
+  streamId,
+  streamUrl,
 
-  // compat
   monetizationEnabled,
   durationSeconds,
   adBreaks,
@@ -86,8 +91,8 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   contentId,
 
   inline = false,
+  showInlineMeta = false,
 
-  // creator props (unused here; we show creator link on Watch page)
   creatorId,
   creatorUsername,
   creatorDisplayName,
@@ -302,7 +307,9 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
                 <source src={videoUrl} type="video/webm" />
               </>
             ) : null}
-            <p className="text-white text-center p-4">Your browser does not support the video tag.</p>
+            <p className="text-white text-center p-4">
+              Your browser does not support the video tag.
+            </p>
           </video>
 
           {/* Error overlay */}
@@ -316,7 +323,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             </div>
           )}
 
-          {/* Controls overlay */}
+          {/* Controls */}
           <div
             className={`absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/30 transition-opacity duration-300 ${
               showControls ? "opacity-100" : "opacity-0"
@@ -403,13 +410,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
                       {isMuted || volume === 0 ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
                     </Button>
                     <div className="w-20 hidden md:block">
-                      <Slider
-                        value={[isMuted ? 0 : volume]}
-                        max={1}
-                        step={0.1}
-                        onValueChange={handleVolumeChange}
-                        className="cursor-pointer"
-                      />
+                      <Slider value={[isMuted ? 0 : volume]} max={1} step={0.1} onValueChange={handleVolumeChange} className="cursor-pointer" />
                     </div>
                   </div>
 
@@ -441,34 +442,52 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   );
 
   // ---------- RENDER ----------
+
   if (inline) {
-    // Inline: show the player immediately (no dialog), plus meta below
     return (
       <Card className="cinema-card overflow-hidden">
         <div className="relative aspect-video bg-black">{PlayerSurface}</div>
-        <CardContent className="p-4">
-          <div className="flex items-center justify-between mb-2">
-            <Badge variant="secondary">{contentType}</Badge>
-            {genre && <Badge variant="outline">{genre}</Badge>}
-          </div>
-          <h3 className="text-lg font-semibold mb-2 line-clamp-1">{title}</h3>
-          {description && (
-            <p className="text-muted-foreground text-sm mb-4 line-clamp-3">{description}</p>
-          )}
-          {canDelete && (
-            <div className="flex justify-end">
-              <Button size="sm" variant="destructive" onClick={onDelete}>
-                <X className="h-4 w-4 mr-1" />
-                Delete
-              </Button>
+
+        {/* Only render the inline meta if explicitly requested */}
+        {showInlineMeta && (
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between mb-2">
+              <Badge variant="secondary">{contentType}</Badge>
+              {genre && <Badge variant="outline">{genre}</Badge>}
             </div>
-          )}
-        </CardContent>
+
+            <h3 className="text-lg font-semibold mb-1 line-clamp-1">{title}</h3>
+
+            <div className="text-sm text-muted-foreground mb-2">
+              by{" "}
+              {creatorId ? (
+                <Link to={`/creator/id/${creatorId}`} className="text-primary hover:underline">
+                  {creatorDisplayName || creatorUsername || "Creator"}
+                </Link>
+              ) : (
+                <span>Creator</span>
+              )}
+            </div>
+
+            {description && (
+              <p className="text-muted-foreground text-sm mb-2 line-clamp-3">{description}</p>
+            )}
+
+            {canDelete && (
+              <div className="flex justify-end">
+                <Button size="sm" variant="destructive" onClick={onDelete}>
+                  <X className="h-4 w-4 mr-1" />
+                  Delete
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        )}
       </Card>
     );
   }
 
-  // Original card + dialog behavior for grid pages
+  // Card + dialog behavior for grid pages
   const [showFullPlayer, setShowFullPlayer] = useState(false);
   const open = () => setShowFullPlayer(true);
 
@@ -478,12 +497,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       <div className="relative">
         <div className="aspect-video bg-secondary/20 rounded-t-lg relative overflow-hidden group cursor-pointer">
           {displayThumbnail ? (
-            <img
-              src={displayThumbnail}
-              alt={`${title} cover`}
-              className="w-full h-full object-cover"
-              loading="lazy"
-            />
+            <img src={displayThumbnail} alt={`${title} cover`} className="w-full h-full object-cover" loading="lazy" />
           ) : canPlaySomething ? (
             <div className="w-full h-full bg-black" />
           ) : (
@@ -493,12 +507,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
           )}
           <div className="absolute inset-0 bg-gradient-overlay opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
             {canPlaySomething && (
-              <Button
-                size="lg"
-                variant="secondary"
-                className="bg-white/10 backdrop-blur-sm border-white/20"
-                onClick={open}
-              >
+              <Button size="lg" variant="secondary" className="bg-white/10 backdrop-blur-sm border-white/20" onClick={open}>
                 <Play className="h-5 w-5 mr-2" />
                 Play {contentType}
               </Button>
@@ -513,9 +522,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
           {genre && <Badge variant="outline">{genre}</Badge>}
         </div>
         <h3 className="text-lg font-semibold mb-2 line-clamp-1">{title}</h3>
-        {description && (
-          <p className="text-muted-foreground text-sm mb-4 line-clamp-3">{description}</p>
-        )}
+        {description && <p className="text-muted-foreground text-sm mb-4 line-clamp-3">{description}</p>}
         {canDelete && (
           <div className="flex justify-end">
             <Button size="sm" variant="destructive" onClick={onDelete}>
@@ -538,5 +545,3 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     </Card>
   );
 };
-
-export default VideoPlayer;

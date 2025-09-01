@@ -190,7 +190,6 @@ export const Navigation: React.FC = () => {
                   className="bg-neutral-900 text-white border border-gray-700"
                 >
                   <DropdownMenuItem asChild className="hover:bg-neutral-800 cursor-pointer">
-                    <Link to="/profile">
                       <User className="h-4 w-4 mr-2" />
                     </Link>
                   </DropdownMenuItem>

@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -24,7 +23,6 @@ import DMCA from "./pages/DMCA";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsOfService from "./pages/TermsOfService";
 import CookiePolicy from "./pages/CookiePolicy";
-import NotFound from "./pages/NotFound";
 import Dashboard from "./pages/Dashboard";
 
 // Teen IA pages
@@ -87,8 +85,8 @@ const App = () => (
             {/* Legacy */}
             <Route path="/browse" element={<Movies />} />
 
-            {/* 404 */}
-            <Route path="*" element={<NotFound />} />
+            {/* Fallback → go back to Index (your homepage) */}
+            <Route path="*" element={<Index />} />
           </Routes>
         </BrowserRouter>
       </TooltipProvider>

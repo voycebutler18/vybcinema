@@ -77,7 +77,7 @@ export const Footer = () => {
             </p>
           </div>
           <div className="text-center text-sm text-muted-foreground border-t border-border/50 pt-4">
-            <p>&copy; 2024 VYB Cinema. All rights reserved.</p>
+            <p>&copy; 2025 VYB Cinema. All rights reserved.</p>
           </div>
         </div>
       </div>

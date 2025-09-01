@@ -1,100 +1,75 @@
 import React, { useEffect, useState } from "react";
-import Navigation from "@/components/Navigation";
-import { Footer } from "@/components/Footer";
-import { ContentCard, type Content } from "@/components/ContentCard";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/lib/supabaseClient";
+import { ContentCard, Content } from "@/components/ContentCard";
+import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 
-const Shows = () => {
-  const { user } = useAuth();
+type Row = Content & { created_at?: string };
+const PAGE_SIZE = 24;
+
+export default function Shows() {
+  const [items, setItems] = useState<Row[]>([]);
+  const [from, setFrom] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
   const navigate = useNavigate();
 
-  const [content, setContent] = useState<Content[]>([]);
-  const [loading, setLoading] = useState(true);
+  const load = async (append: boolean) => {
+    if (loading) return;
+    setLoading(true);
+    const start = append ? from : 0;
+    const end = start + PAGE_SIZE - 1;
+
+    const { data, error } = await supabase
+      .from("contents")
+      .select("id,title,description,genre,cover_url,file_url,trailer_url,preview_url,content_type,created_at")
+      .in("content_type", ["show", "tv", "tv-show"])
+      .order("created_at", { ascending: false })
+      .range(start, end);
+
+    if (!error) {
+      const rows = (data as Row[]) ?? [];
+      setItems(append ? [...items, ...rows] : rows);
+      setFrom(end + 1);
+      if (rows.length < PAGE_SIZE) setHasMore(false);
+    }
+    setLoading(false);
+  };
 
   useEffect(() => {
-    (async () => {
-      try {
-        const { data, error } = await supabase
-          .from("content")
-          .select("*")
-          .or("content_type.eq.tv_show,genre.ilike.%show%")
-          .order("created_at", { ascending: false });
-
-        if (error) throw error;
-        setContent((data as Content[]) || []);
-      } finally {
-        setLoading(false);
-      }
-    })();
+    load(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const openWatch = (c: Content) => navigate(`/watch/${c.id}`);
-
-  const recentlyAdded = content.slice(0, 12);
-  const comedy = content.filter((v) => v.genre?.toLowerCase().includes("comedy"));
-  const drama = content.filter((v) => v.genre?.toLowerCase().includes("drama"));
-  const reality = content.filter((v) => v.genre?.toLowerCase().includes("reality"));
-  const myShows = user ? content.filter((s: any) => s.user_id === user.id) : [];
-
-  const Section = ({ title, items }: { title: string; items: Content[] }) =>
-    !items.length ? null : (
-      <section className="container mx-auto px-6 mb-12">
-        <h2 className="text-2xl md:text-3xl font-bold mb-6">{title}</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-          {items.map((c, i) => (
-            <ContentCard
-              key={c.id}
-              content={c}
-              contentType="Show"
-              index={i % 4}
-              onClick={() => openWatch(c)}
-              onPlay={() => openWatch(c)}
-            />
-          ))}
-        </div>
-      </section>
-    );
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-background">
-        <Navigation />
-        <main className="container mx-auto px-6 pt-28 pb-16">
-          <h2 className="text-2xl md:text-3xl font-bold mb-6">Recently Added Shows</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className="aspect-video rounded-lg bg-card/60 animate-pulse" />
-            ))}
-          </div>
-        </main>
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen bg-background">
-      <Navigation />
-      <main className="pt-24 pb-20">
-        <Section title="Recently Added Shows" items={recentlyAdded} />
-        <Section title="Comedy Shows" items={comedy} />
-        <Section title="Drama Shows" items={drama} />
-        <Section title="Reality Shows" items={reality} />
-        <Section title="My Shows" items={myShows as Content[]} />
+    <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 text-white">
+      <h1 className="text-2xl sm:text-3xl font-extrabold">Shows</h1>
+      <p className="mt-2 text-gray-400">Original teen shows and web series.</p>
 
-        {!content.length && (
-          <div className="container mx-auto px-6">
-            <div className="bg-card/60 border border-border/40 rounded-2xl p-8 text-center">
-              <h2 className="text-2xl font-bold">No Shows Yet</h2>
-              <p className="text-muted-foreground">Upload your first series or episode.</p>
-            </div>
-          </div>
-        )}
-      </main>
-      <Footer />
+      <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        {items.map((it, i) => (
+          <ContentCard
+            key={it.id}
+            content={it}
+            contentType="Shows"
+            index={i}
+            onClick={() => navigate(`/shows/${it.id}`)}
+            onPlay={() => navigate(`/shows/${it.id}`)}
+          />
+        ))}
+      </div>
+
+      {items.length === 0 && !loading && (
+        <div className="mt-6 text-sm text-gray-400">No shows yet.</div>
+      )}
+
+      {hasMore && (
+        <div className="mt-8">
+          <Button onClick={() => load(true)} disabled={loading}>
+            {loading ? "Loading..." : "Load more"}
+          </Button>
+        </div>
+      )}
     </div>
   );
-};
-
-export default Shows;
+}

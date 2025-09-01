@@ -10,7 +10,15 @@ const API_URL = import.meta.env.VITE_SUPABASE_URL as string; // e.g. https://xxx
 const API_KEY =
   (import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string) ||
   (import.meta.env.VITE_SUPABASE_ANON_KEY as string);
-const REST_TABLE = "contents"; // change this if your table/view has a different name
+
+// IMPORTANT: your DB table is singular
+const REST_TABLE = "content";
+
+function buildInFilter(values: string[]) {
+  // -> in.("music","tv","tv-show")
+  const quoted = values.map((v) => `"${v}"`).join(",");
+  return `in.(${quoted})`;
+}
 
 async function fetchSection(contentTypes: string[], limit: number): Promise<Row[]> {
   if (!API_URL || !API_KEY) {
@@ -23,10 +31,11 @@ async function fetchSection(contentTypes: string[], limit: number): Promise<Row[
       "id,title,description,genre,cover_url,file_url,trailer_url,preview_url,content_type,created_at",
     order: "created_at.desc",
     limit: String(limit),
-    content_type: `in.(${contentTypes.join(",")})`, // PostgREST filter
+    content_type: buildInFilter(contentTypes),
   });
 
-  const res = await fetch(`${API_URL}/rest/v1/${REST_TABLE}?${params.toString()}`, {
+  const url = `${API_URL}/rest/v1/${REST_TABLE}?${params.toString()}`;
+  const res = await fetch(url, {
     headers: {
       apikey: API_KEY,
       Authorization: `Bearer ${API_KEY}`,
@@ -34,9 +43,11 @@ async function fetchSection(contentTypes: string[], limit: number): Promise<Row[
   });
 
   if (!res.ok) {
-    console.error("[Index] REST error", res.status, await res.text());
+    const text = await res.text();
+    console.error("[Index] REST error", res.status, text);
     return [];
   }
+
   return (await res.json()) as Row[];
 }
 

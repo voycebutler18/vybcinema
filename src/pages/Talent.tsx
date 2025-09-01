@@ -1,11 +1,14 @@
 import React, { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabaseClient";
 import { ContentCard, Content } from "@/components/ContentCard";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 
 type Row = Content & { created_at?: string };
+
 const PAGE_SIZE = 24;
+const API_URL = import.meta.env.VITE_SUPABASE_URL as string;
+const API_KEY = (import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string) || (import.meta.env.VITE_SUPABASE_ANON_KEY as string);
+const REST_TABLE = "contents";
 
 export default function Talent() {
   const [items, setItems] = useState<Row[]>([]);
@@ -14,25 +17,36 @@ export default function Talent() {
   const [hasMore, setHasMore] = useState(true);
   const navigate = useNavigate();
 
+  const fetchPage = async (start: number, size: number) => {
+    if (!API_URL || !API_KEY) {
+      console.warn("[Talent] Missing VITE_SUPABASE_URL or VITE_SUPABASE_PUBLISHABLE_KEY");
+      return [];
+    }
+    const params = new URLSearchParams({
+      select: "id,title,description,genre,cover_url,file_url,trailer_url,preview_url,content_type,created_at",
+      order: "created_at.desc",
+      limit: String(size),
+      offset: String(start),
+      content_type: "in.(talent)",
+    });
+    const res = await fetch(`${API_URL}/rest/v1/${REST_TABLE}?${params.toString()}`, {
+      headers: { apikey: API_KEY, Authorization: `Bearer ${API_KEY}` },
+    });
+    if (!res.ok) {
+      console.error("[Talent] REST error", res.status, await res.text());
+      return [];
+    }
+    return (await res.json()) as Row[];
+  };
+
   const load = async (append: boolean) => {
     if (loading) return;
     setLoading(true);
     const start = append ? from : 0;
-    const end = start + PAGE_SIZE - 1;
-
-    const { data, error } = await supabase
-      .from("contents")
-      .select("id,title,description,genre,cover_url,file_url,trailer_url,preview_url,content_type,created_at")
-      .eq("content_type", "talent")
-      .order("created_at", { ascending: false })
-      .range(start, end);
-
-    if (!error) {
-      const rows = (data as Row[]) ?? [];
-      setItems(append ? [...items, ...rows] : rows);
-      setFrom(end + 1);
-      if (rows.length < PAGE_SIZE) setHasMore(false);
-    }
+    const rows = await fetchPage(start, PAGE_SIZE);
+    setItems(append ? [...items, ...rows] : rows);
+    setFrom(start + rows.length);
+    setHasMore(rows.length === PAGE_SIZE);
     setLoading(false);
   };
 

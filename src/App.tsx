@@ -24,6 +24,8 @@ import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsOfService from "./pages/TermsOfService";
 import CookiePolicy from "./pages/CookiePolicy";
 import Dashboard from "./pages/Dashboard";
+// where you define routes (e.g., src/App.tsx)
+import CreatorVideosPage from "@/pages/CreatorVideosPage";
 
 // Teen IA pages
 import Music from "./pages/Music";
@@ -66,6 +68,8 @@ const App = () => (
             <Route path="/create" element={<Upload />} />
             <Route path="/create/:type" element={<Upload />} />
             <Route path="/upload" element={<Upload />} />
+            <Route path="/creator/:username" element={<CreatorVideosPage />} />
+            <Route path="/creator/id/:id" element={<CreatorVideosPage />} />
 
             {/* Auth + misc */}
             <Route path="/dashboard" element={<Dashboard />} />

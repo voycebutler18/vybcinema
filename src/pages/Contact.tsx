@@ -1,3 +1,4 @@
+// src/pages/Contact.tsx
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
 import { Mail, MessageCircle, Phone, MapPin } from "lucide-react";
@@ -7,9 +8,12 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 
 const Contact = () => {
+  const [searchParams] = useSearchParams();
+
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -18,6 +22,14 @@ const Contact = () => {
     message: ''
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // If navigated from Dashboard with ?subject=delete-account, preselect it
+  useEffect(() => {
+    const sub = searchParams.get("subject");
+    if (sub === "delete-account") {
+      setFormData(prev => ({ ...prev, subject: "Delete Account (24–48 hour process)" }));
+    }
+  }, [searchParams]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { id, value } = e.target;
@@ -53,6 +65,7 @@ const Contact = () => {
       setIsSubmitting(false);
     }
   };
+
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
@@ -128,6 +141,7 @@ const Contact = () => {
                       <option>Technical Support</option>
                       <option>Press & Media</option>
                       <option>Other</option>
+                      <option>Delete Account (24–48 hour process)</option>
                     </select>
                   </div>
                   
@@ -194,6 +208,7 @@ const Contact = () => {
                     </div>
                   </div>
                 </div>
+
               </div>
 
             </div>

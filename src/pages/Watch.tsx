@@ -1,5 +1,5 @@
 // src/pages/Watch.tsx
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import Navigation from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
@@ -33,6 +33,7 @@ type Content = {
   monetization_enabled?: boolean | null;
   created_at: string;
   user_id?: string | null;
+  likes_count?: number | null; // <-- new
 };
 
 const Watch: React.FC = () => {
@@ -44,19 +45,16 @@ const Watch: React.FC = () => {
   const [item, setItem] = useState<Content | null>(null);
   const [loading, setLoading] = useState(true);
   const [related, setRelated] = useState<Content[]>([]);
-
-  // likes UI (optional if you created a `likes` table)
-  const [likeCount, setLikeCount] = useState<number | null>(null);
+  const [likeCount, setLikeCount] = useState<number>(0);
   const [likedByMe, setLikedByMe] = useState<boolean>(false);
-  const likeEnabled = useMemo(() => !!id && !!user, [id, user]);
 
   useEffect(() => {
     if (!id) return;
 
-    const load = async () => {
+    (async () => {
       setLoading(true);
 
-      // 1) main content
+      // 1) load the video row (includes likes_count)
       const { data, error } = await supabase
         .from("content")
         .select("*")
@@ -73,9 +71,11 @@ const Watch: React.FC = () => {
         });
         return;
       }
-      setItem(data as Content);
 
-      // 2) related list (same content_type, newest first)
+      setItem(data as Content);
+      setLikeCount((data as Content).likes_count ?? 0); // visible to everyone
+
+      // 2) load related
       const { data: rel } = await supabase
         .from("content")
         .select("*")
@@ -83,37 +83,23 @@ const Watch: React.FC = () => {
         .eq("content_type", data.content_type)
         .order("created_at", { ascending: false })
         .limit(12);
-
       setRelated((rel as Content[]) || []);
 
-      // 3) likes (optional table)
-      try {
-        const { count } = await supabase
+      // 3) only check "did I like it?" if signed in
+      if (user) {
+        const { data: myLike } = await supabase
           .from("likes")
-          .select("*", { count: "exact", head: true })
-          .eq("content_id", id);
-
-        setLikeCount(count ?? 0);
-
-        if (user) {
-          const { data: myLike } = await supabase
-            .from("likes")
-            .select("id")
-            .eq("content_id", id)
-            .eq("user_id", user.id)
-            .maybeSingle();
-
-          setLikedByMe(!!myLike);
-        }
-      } catch {
-        // if table doesn't exist, hide likes gracefully
-        setLikeCount(null);
+          .select("id")
+          .eq("content_id", id)
+          .eq("user_id", user.id)
+          .maybeSingle();
+        setLikedByMe(!!myLike);
+      } else {
+        setLikedByMe(false);
       }
 
       setLoading(false);
-    };
-
-    load();
+    })();
   }, [id, user, toast]);
 
   const toggleLike = async () => {
@@ -122,9 +108,10 @@ const Watch: React.FC = () => {
       toast({ title: "Sign in to like videos" });
       return;
     }
+
     try {
       if (likedByMe) {
-        // Unlike
+        // unlike
         const { error } = await supabase
           .from("likes")
           .delete()
@@ -132,16 +119,16 @@ const Watch: React.FC = () => {
           .eq("user_id", user.id);
         if (error) throw error;
         setLikedByMe(false);
-        setLikeCount((c) => (typeof c === "number" ? Math.max(0, c - 1) : c));
+        setLikeCount((c) => Math.max(0, c - 1)); // optimistic
       } else {
-        // Like
+        // like
         const { error } = await supabase.from("likes").insert({
           content_id: id,
           user_id: user.id,
         });
         if (error) throw error;
         setLikedByMe(true);
-        setLikeCount((c) => (typeof c === "number" ? c + 1 : c));
+        setLikeCount((c) => c + 1); // optimistic
       }
     } catch (e: any) {
       toast({
@@ -234,10 +221,8 @@ const Watch: React.FC = () => {
               canDelete={false}
             />
 
-            {/* Title */}
             <h1 className="mt-4 text-2xl font-bold">{item.title}</h1>
 
-            {/* Meta row */}
             <div className="mt-2 flex flex-wrap items-center gap-3">
               <Badge variant="secondary" className="font-medium capitalize">
                 {item.content_type.replace("_", " ")}
@@ -247,20 +232,19 @@ const Watch: React.FC = () => {
                 {new Date(item.created_at).toLocaleDateString()}
               </span>
 
-              {/* Like / Share */}
+              {/* Like / Share — count is visible to EVERYONE */}
               <div className="ml-auto flex items-center gap-2">
-                {likeCount !== null && (
-                  <Button
-                    variant={likedByMe ? "default" : "secondary"}
-                    size="sm"
-                    onClick={toggleLike}
-                    className="gap-2"
-                  >
-                    <ThumbsUp className="h-4 w-4" />
-                    {likedByMe ? "Liked" : "Like"}
-                    <span className="opacity-80">• {likeCount}</span>
-                  </Button>
-                )}
+                <Button
+                  variant={likedByMe ? "default" : "secondary"}
+                  size="sm"
+                  onClick={toggleLike}
+                  className="gap-2"
+                >
+                  <ThumbsUp className="h-4 w-4" />
+                  {likedByMe ? "Liked" : "Like"}
+                  <span className="opacity-80">• {likeCount}</span>
+                </Button>
+
                 <Button variant="outline" size="sm" onClick={share} className="gap-2">
                   <Share2 className="h-4 w-4" />
                   Share
@@ -268,7 +252,6 @@ const Watch: React.FC = () => {
               </div>
             </div>
 
-            {/* Description */}
             {item.description && (
               <div className="mt-4 rounded-xl border border-border/50 bg-card/60 p-4">
                 <p className="whitespace-pre-line text-sm text-foreground/90">
@@ -278,7 +261,7 @@ const Watch: React.FC = () => {
             )}
           </div>
 
-          {/* RIGHT: Related list */}
+          {/* RIGHT: related */}
           <aside className="space-y-4">
             {related.map((r) => (
               <Link
@@ -293,9 +276,17 @@ const Watch: React.FC = () => {
                     className="h-full w-full object-cover"
                     loading="lazy"
                   />
+                  {typeof r.likes_count === "number" && (
+                    <div className="absolute bottom-2 right-2 flex items-center gap-1 rounded-full bg-black/60 px-2 py-0.5 text-xs">
+                      <ThumbsUp className="h-3 w-3" />
+                      {r.likes_count}
+                    </div>
+                  )}
                 </div>
                 <div className="py-2 pr-3">
-                  <p className="line-clamp-2 font-semibold group-hover:underline">{r.title}</p>
+                  <p className="line-clamp-2 font-semibold group-hover:underline">
+                    {r.title}
+                  </p>
                   {r.genre && (
                     <p className="mt-1 text-xs text-muted-foreground">{r.genre}</p>
                   )}
@@ -305,7 +296,6 @@ const Watch: React.FC = () => {
                 </div>
               </Link>
             ))}
-
             {related.length === 0 && (
               <div className="text-sm text-muted-foreground">No related videos yet.</div>
             )}

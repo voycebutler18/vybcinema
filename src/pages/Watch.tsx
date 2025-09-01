@@ -38,9 +38,11 @@ type Content = {
 };
 
 type Profile = {
-  id: string;
-  username: string | null;
-  display_name: string | null;
+  id?: string;
+  user_id: string;
+  username?: string | null;
+  display_name?: string | null;
+  full_name?: string | null;
   avatar_url?: string | null;
 };
 
@@ -62,18 +64,17 @@ const Watch: React.FC = () => {
 
     (async () => {
       setLoading(true);
-      setCreator(null);
 
-      // 1) Load the video row first (no join — safer with RLS)
+      // 1) load the video row (includes likes_count)
       const { data, error } = await supabase
         .from("content")
         .select("*")
         .eq("id", id)
-        .maybeSingle();
+        .single();
 
       if (error || !data) {
-        console.error("content query error:", error);
         setItem(null);
+        setCreator(null);
         setLoading(false);
         toast({
           title: "Not found",
@@ -87,21 +88,24 @@ const Watch: React.FC = () => {
       setItem(row);
       setLikeCount(row.likes_count ?? 0);
 
-      // 2) Fetch creator profile separately (won’t break the page if blocked)
+      // 1a) fetch the creator profile by user_id (not profiles.id)
       if (row.user_id) {
         const { data: prof, error: pErr } = await supabase
           .from("profiles")
-          .select("id, username, display_name, avatar_url")
-          .eq("id", row.user_id)
+          .select("id, user_id, username, display_name, full_name, avatar_url")
+          .eq("user_id", row.user_id)
           .maybeSingle();
-        if (pErr) {
-          console.warn("profiles query blocked or failed (show page anyway):", pErr);
-        } else {
+
+        if (!pErr && prof) {
           setCreator(prof as Profile);
+        } else {
+          setCreator(null);
         }
+      } else {
+        setCreator(null);
       }
 
-      // 3) Related videos
+      // 2) load related
       const { data: rel } = await supabase
         .from("content")
         .select("*")
@@ -111,7 +115,7 @@ const Watch: React.FC = () => {
         .limit(12);
       setRelated((rel as Content[]) || []);
 
-      // 4) Did I like it?
+      // 3) only check "did I like it?" if signed in
       if (user) {
         const { data: myLike } = await supabase
           .from("likes")
@@ -134,6 +138,7 @@ const Watch: React.FC = () => {
       toast({ title: "Sign in to like videos" });
       return;
     }
+
     try {
       if (likedByMe) {
         const { error } = await supabase
@@ -214,8 +219,10 @@ const Watch: React.FC = () => {
     );
   }
 
+  // Compute creator name + link
   const creatorUsername = creator?.username ?? undefined;
-  const creatorDisplayName = creator?.display_name ?? undefined;
+  const creatorDisplayName =
+    creator?.display_name || creator?.full_name || creator?.username || undefined;
   const creatorId = item.user_id ?? undefined;
   const creatorHref = creatorUsername
     ? `/creator/${creatorUsername}`
@@ -242,7 +249,7 @@ const Watch: React.FC = () => {
               description={item.description || undefined}
               genre={item.genre || undefined}
               contentType={item.content_type}
-              streamUrl={item.stream_url || undefined}        // harmless if unused
+              streamUrl={item.stream_url || undefined}
               streamStatus={item.stream_status || undefined}
               streamId={item.stream_id || undefined}
               vastTagUrl={item.vast_tag_url || undefined}
@@ -251,20 +258,19 @@ const Watch: React.FC = () => {
               monetizationEnabled={!!item.monetization_enabled}
               contentId={item.id}
               canDelete={false}
-              // pass creator props so the byline inside VideoPlayer works
+              // NEW: pass creator info to the player (it can render a small byline too)
               creatorId={creatorId}
               creatorUsername={creatorUsername}
               creatorDisplayName={creatorDisplayName}
             />
 
-            {/* Title + clickable byline on the page */}
             <h1 className="mt-4 text-2xl font-bold">{item.title}</h1>
 
-            {(creatorUsername || creatorId) && (
+            {(creatorUsername || creatorId) && creatorDisplayName && (
               <div className="mt-1 text-sm">
                 <span className="text-muted-foreground">by </span>
                 <Link to={creatorHref} className="text-primary font-medium hover:underline">
-                  {creatorDisplayName || creatorUsername || "Creator"}
+                  {creatorDisplayName}
                 </Link>
               </div>
             )}
@@ -278,7 +284,7 @@ const Watch: React.FC = () => {
                 {new Date(item.created_at).toLocaleDateString()}
               </span>
 
-              {/* Like / Share */}
+              {/* Like / Share — count is visible to EVERYONE */}
               <div className="ml-auto flex items-center gap-2">
                 <Button
                   variant={likedByMe ? "default" : "secondary"}

@@ -1,20 +1,10 @@
+// src/components/Navigation.tsx
 import React, { useEffect, useRef, useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import {
-  Search,
-  Bell,
-  User,
-  ChevronDown,
-  Menu,
-  X,
-  Upload,
-  Sparkles,
-  Trophy,
-  Radio,
-} from "lucide-react";
+import { Search, Bell, ChevronDown, Menu, X, Upload, Sparkles, Trophy, Radio } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -33,7 +23,6 @@ export const Navigation: React.FC = () => {
   const [query, setQuery] = useState("");
   const searchRef = useRef<HTMLInputElement | null>(null);
 
-  // Teen-first IA
   const baseNav = [
     { path: "/", label: "Home" },
     { path: "/music", label: "Music" },
@@ -82,7 +71,7 @@ export const Navigation: React.FC = () => {
               {mobileOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
             </Button>
 
-            {/* Teen-first logo + badge */}
+            {/* Logo + badge */}
             <Link to="/" className="flex items-center gap-2 group">
               <div className="text-xl sm:text-2xl font-extrabold tracking-tight">
                 <span className="bg-gradient-to-r from-pink-500 via-red-500 to-yellow-400 bg-clip-text text-transparent">
@@ -151,7 +140,7 @@ export const Navigation: React.FC = () => {
               )}
             </div>
 
-            {/* Create: teen-friendly upload */}
+            {/* Create */}
             {user && (
               <Button asChild size="sm" className="bg-pink-500 hover:bg-pink-600 text-white">
                 <Link to="/create" aria-label="Create">
@@ -189,20 +178,20 @@ export const Navigation: React.FC = () => {
                   align="end"
                   className="bg-neutral-900 text-white border border-gray-700"
                 >
+                  {/* Profile item without person icon */}
                   <DropdownMenuItem asChild className="hover:bg-neutral-800 cursor-pointer">
-                    <Link to="/profile">
-                      <User className="h-4 w-4 mr-2" />
-                    </Link>
+                    <Link to="/profile">Profile</Link>
                   </DropdownMenuItem>
+
                   <DropdownMenuItem asChild className="hover:bg-neutral-800 cursor-pointer">
                     <Link to="/dashboard">Creator Dashboard</Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild className="hover:bg-neutral-800 cursor-pointer">
                     <Link to="/create">Create</Link>
                   </DropdownMenuItem>
-                  <DropdownMenuItem asChild className="hover:bg-neutral-800 cursor-pointer">
-                    <Link to="/safety">Safety Center</Link>
-                  </DropdownMenuItem>
+
+                  {/* Safety Center removed */}
+
                   <DropdownMenuSeparator className="bg-gray-700" />
                   <DropdownMenuItem className="hover:bg-neutral-800" onClick={() => signOut()}>
                     Sign Out
@@ -307,14 +296,10 @@ export const Navigation: React.FC = () => {
               )}
             </div>
 
-            {/* Quick links row */}
+            {/* Quick links row (Safety Center removed) */}
             <div className="mt-3 flex items-center gap-3 text-xs text-gray-400">
               <Link to="/charts" onClick={() => setMobileOpen(false)} className="hover:text-white">
                 Teen Charts
-              </Link>
-              <span className="opacity-30">•</span>
-              <Link to="/safety" onClick={() => setMobileOpen(false)} className="hover:text-white">
-                Safety Center
               </Link>
               <span className="opacity-30">•</span>
               <Link to="/about" onClick={() => setMobileOpen(false)} className="hover:text-white">

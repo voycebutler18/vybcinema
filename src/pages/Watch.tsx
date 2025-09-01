@@ -35,14 +35,13 @@ type Content = {
   created_at: string;
   user_id?: string | null;
   likes_count?: number | null;
+};
 
-  // joined profile
-  profiles?: {
-    id: string;
-    username: string | null;
-    display_name: string | null;
-    avatar_url?: string | null;
-  } | null;
+type Profile = {
+  id: string;
+  username: string | null;
+  display_name: string | null;
+  avatar_url?: string | null;
 };
 
 const Watch: React.FC = () => {
@@ -52,6 +51,7 @@ const Watch: React.FC = () => {
   const { user } = useAuth();
 
   const [item, setItem] = useState<Content | null>(null);
+  const [creator, setCreator] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [related, setRelated] = useState<Content[]>([]);
   const [likeCount, setLikeCount] = useState<number>(0);
@@ -62,23 +62,17 @@ const Watch: React.FC = () => {
 
     (async () => {
       setLoading(true);
+      setCreator(null);
 
-      // 1) Load the video row + JOIN the creator profile (for username)
+      // 1) Load the video row first (no join — safer with RLS)
       const { data, error } = await supabase
         .from("content")
-        .select(
-          `
-          id, title, description, content_type, genre, cover_url, thumbnail_url,
-          file_url, trailer_url, stream_url, stream_status, stream_id,
-          stream_thumbnail_url, playback_id, vast_tag_url, ad_breaks,
-          duration_seconds, monetization_enabled, created_at, user_id, likes_count,
-          profiles:profiles!content_user_id_fkey ( id, username, display_name, avatar_url )
-        `
-        )
+        .select("*")
         .eq("id", id)
         .maybeSingle();
 
       if (error || !data) {
+        console.error("content query error:", error);
         setItem(null);
         setLoading(false);
         toast({
@@ -89,11 +83,25 @@ const Watch: React.FC = () => {
         return;
       }
 
-      const row = data as unknown as Content;
+      const row = data as Content;
       setItem(row);
       setLikeCount(row.likes_count ?? 0);
 
-      // 2) Related
+      // 2) Fetch creator profile separately (won’t break the page if blocked)
+      if (row.user_id) {
+        const { data: prof, error: pErr } = await supabase
+          .from("profiles")
+          .select("id, username, display_name, avatar_url")
+          .eq("id", row.user_id)
+          .maybeSingle();
+        if (pErr) {
+          console.warn("profiles query blocked or failed (show page anyway):", pErr);
+        } else {
+          setCreator(prof as Profile);
+        }
+      }
+
+      // 3) Related videos
       const { data: rel } = await supabase
         .from("content")
         .select("*")
@@ -103,7 +111,7 @@ const Watch: React.FC = () => {
         .limit(12);
       setRelated((rel as Content[]) || []);
 
-      // 3) Did I like it?
+      // 4) Did I like it?
       if (user) {
         const { data: myLike } = await supabase
           .from("likes")
@@ -206,10 +214,14 @@ const Watch: React.FC = () => {
     );
   }
 
-  const creatorUsername = item.profiles?.username ?? undefined;
-  const creatorDisplayName = item.profiles?.display_name ?? undefined;
+  const creatorUsername = creator?.username ?? undefined;
+  const creatorDisplayName = creator?.display_name ?? undefined;
   const creatorId = item.user_id ?? undefined;
-  const creatorHref = creatorUsername ? `/creator/${creatorUsername}` : creatorId ? `/creator/id/${creatorId}` : "#";
+  const creatorHref = creatorUsername
+    ? `/creator/${creatorUsername}`
+    : creatorId
+    ? `/creator/id/${creatorId}`
+    : "#";
 
   return (
     <div className="min-h-screen bg-background">
@@ -230,7 +242,7 @@ const Watch: React.FC = () => {
               description={item.description || undefined}
               genre={item.genre || undefined}
               contentType={item.content_type}
-              streamUrl={item.stream_url || undefined}
+              streamUrl={item.stream_url || undefined}        // harmless if unused
               streamStatus={item.stream_status || undefined}
               streamId={item.stream_id || undefined}
               vastTagUrl={item.vast_tag_url || undefined}
@@ -239,13 +251,13 @@ const Watch: React.FC = () => {
               monetizationEnabled={!!item.monetization_enabled}
               contentId={item.id}
               canDelete={false}
-              // 🔗 pass creator props so the byline inside VideoPlayer works
+              // pass creator props so the byline inside VideoPlayer works
               creatorId={creatorId}
               creatorUsername={creatorUsername}
               creatorDisplayName={creatorDisplayName}
             />
 
-            {/* Title + explicit byline link on the watch page */}
+            {/* Title + clickable byline on the page */}
             <h1 className="mt-4 text-2xl font-bold">{item.title}</h1>
 
             {(creatorUsername || creatorId) && (

@@ -1,350 +1,113 @@
-// src/pages/Watch.tsx
+// src/pages/CreatorVideosPage.tsx
 import React, { useEffect, useState } from "react";
-import { useNavigate, useParams, Link } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import Navigation from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
-import { VideoPlayer } from "@/components/VideoPlayer";
-import { Button } from "@/components/ui/button";
+import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/hooks/useAuth";
-import { supabase } from "@/integrations/supabase/client";
-import { ThumbsUp, Share2 } from "lucide-react";
-import Comments from "@/components/Comments";
+
+type Profile = {
+  user_id: string;               // AUTH UID (route param)
+  username?: string | null;
+  display_name?: string | null;
+};
 
 type Content = {
   id: string;
   title: string;
-  description?: string | null;
-  content_type: string;
-  genre?: string | null;
   cover_url?: string | null;
   thumbnail_url?: string | null;
-  file_url?: string | null;
-  trailer_url?: string | null;
-  stream_url?: string | null;
-  stream_status?: string | null;
-  stream_id?: string | null;
-  stream_thumbnail_url?: string | null;
-  playback_id?: string | null;
-  vast_tag_url?: string | null;
-  ad_breaks?: number[] | null;
-  duration_seconds?: number | null;
-  monetization_enabled?: boolean | null;
   created_at: string;
-  user_id?: string | null;
-  likes_count?: number | null;
+  genre?: string | null;
+  content_type: string;
 };
 
-type Profile = {
-  id: string;
-  username?: string | null;
-  full_name?: string | null;
-  display_name_mode?: "username" | "full_name" | null;
-};
-
-const Watch: React.FC = () => {
-  const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
-  const { toast } = useToast();
-  const { user } = useAuth();
-
-  const [item, setItem] = useState<Content | null>(null);
-  const [creator, setCreator] = useState<Profile | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [related, setRelated] = useState<Content[]>([]);
-  const [likeCount, setLikeCount] = useState<number>(0);
-  const [likedByMe, setLikedByMe] = useState<boolean>(false);
+const CreatorVideosPage: React.FC = () => {
+  const { id } = useParams<{ id: string }>(); // /creator/id/:id  (AUTH UID)
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [videos, setVideos] = useState<Content[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
     if (!id) return;
-
     (async () => {
       setLoading(true);
 
-      // 1) Load the video
-      const { data, error } = await supabase
+      // 1) profile by AUTH UID
+      const { data: p } = await supabase
+        .from("profiles")
+        .select("user_id, username, display_name")
+        .eq("user_id", id)
+        .maybeSingle();
+      setProfile((p as Profile) ?? null);
+
+      // 2) videos by AUTH UID
+      const { data: rows } = await supabase
         .from("content")
-        .select("*")
-        .eq("id", id)
-        .single();
-
-      if (error || !data) {
-        setItem(null);
-        setLoading(false);
-        toast({
-          title: "Not found",
-          description: "That video doesn’t exist (or was removed).",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      const c = data as Content;
-      setItem(c);
-      setLikeCount(c.likes_count ?? 0);
-
-      // 2) Load the creator profile if user_id is present
-      if (c.user_id) {
-        const { data: p } = await supabase
-          .from("profiles")
-          .select("id, username, full_name, display_name_mode")
-          .eq("id", c.user_id)
-          .maybeSingle();
-
-        setCreator((p as Profile) ?? null);
-      } else {
-        setCreator(null);
-      }
-
-      // 3) Related videos
-      const { data: rel } = await supabase
-        .from("content")
-        .select("*")
-        .neq("id", id)
-        .eq("content_type", c.content_type)
-        .order("created_at", { ascending: false })
-        .limit(12);
-      setRelated((rel as Content[]) || []);
-
-      // 4) Did I like it?
-      if (user) {
-        const { data: myLike } = await supabase
-          .from("likes")
-          .select("id")
-          .eq("content_id", id)
-          .eq("user_id", user.id)
-          .maybeSingle();
-        setLikedByMe(!!myLike);
-      } else {
-        setLikedByMe(false);
-      }
+        .select("id, title, cover_url, thumbnail_url, created_at, genre, content_type")
+        .eq("user_id", id)
+        .order("created_at", { ascending: false });
+      setVideos((rows as Content[]) || []);
 
       setLoading(false);
     })();
-  }, [id, user, toast]);
-
-  const toggleLike = async () => {
-    if (!id) return;
-    if (!user) {
-      toast({ title: "Sign in to like videos" });
-      return;
-    }
-
-    try {
-      if (likedByMe) {
-        const { error } = await supabase
-          .from("likes")
-          .delete()
-          .eq("content_id", id)
-          .eq("user_id", user.id);
-        if (error) throw error;
-        setLikedByMe(false);
-        setLikeCount((c) => Math.max(0, c - 1));
-      } else {
-        const { error } = await supabase
-          .from("likes")
-          .insert({ content_id: id, user_id: user.id });
-        if (error) throw error;
-        setLikedByMe(true);
-        setLikeCount((c) => c + 1);
-      }
-    } catch (e: any) {
-      toast({
-        title: "Couldn’t update like",
-        description: e.message,
-        variant: "destructive",
-      });
-    }
-  };
-
-  const share = async () => {
-    try {
-      const url = `${window.location.origin}/watch/${id}`;
-      await navigator.clipboard.writeText(url);
-      toast({ title: "Link copied", description: "Share it with friends!" });
-    } catch {
-      toast({ title: "Copy failed", variant: "destructive" });
-    }
-  };
+  }, [id]);
 
   const displayName =
-    creator?.display_name_mode === "full_name"
-      ? (creator?.full_name || creator?.username || "Creator")
-      : (creator?.username || creator?.full_name || "Creator");
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-background">
-        <Navigation />
-        <main className="container mx-auto px-6 pt-24 pb-20">
-          <div className="grid lg:grid-cols-[minmax(0,2fr),minmax(280px,1fr)] gap-8">
-            <div className="space-y-4">
-              <div className="aspect-video rounded-xl bg-card/60 animate-pulse" />
-              <div className="h-6 w-2/3 bg-card/60 rounded animate-pulse" />
-              <div className="h-4 w-1/2 bg-card/60 rounded animate-pulse" />
-            </div>
-            <div className="space-y-4">
-              {Array.from({ length: 6 }).map((_, i) => (
-                <div key={i} className="h-24 rounded-xl bg-card/60 animate-pulse" />
-              ))}
-            </div>
-          </div>
-        </main>
-      </div>
-    );
-  }
-
-  if (!item) {
-    return (
-      <div className="min-h-screen bg-background">
-        <Navigation />
-        <main className="container mx-auto px-6 pt-32 pb-20">
-          <Card className="p-8 text-center">
-            <h2 className="text-2xl font-bold">Video not found</h2>
-            <p className="text-muted-foreground mt-2">
-              It may have been removed or the link is wrong.
-            </p>
-            <Button className="mt-6" onClick={() => navigate("/")}>
-              Go Home
-            </Button>
-          </Card>
-        </main>
-        <Footer />
-      </div>
-    );
-  }
+    profile?.display_name?.trim() ||
+    profile?.username?.trim() ||
+    "Creator";
 
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
 
       <main className="container mx-auto px-6 pt-24 pb-20">
-        <div className="grid lg:grid-cols-[minmax(0,2fr),minmax(300px,1fr)] gap-8">
-          {/* LEFT: Player + details */}
-          <div>
-            <VideoPlayer
-              inline
-              videoUrl={item.file_url || undefined}
-              trailerUrl={item.trailer_url || undefined}
-              playbackId={item.playback_id || undefined}
-              coverUrl={item.cover_url || undefined}
-              streamThumbnailUrl={item.stream_thumbnail_url || undefined}
-              title={item.title}
-              description={undefined /* avoid double description block */}
-              genre={item.genre || undefined}
-              contentType={item.content_type}
-              streamStatus={item.stream_status || undefined}
-              streamId={item.stream_id || undefined}
-              vastTagUrl={item.vast_tag_url || undefined}
-              adBreaks={item.ad_breaks || undefined}
-              durationSeconds={item.duration_seconds || undefined}
-              monetizationEnabled={!!item.monetization_enabled}
-              contentId={item.id}
-              canDelete={false}
-            />
-
-            {/* Single title (no duplication) */}
-            <h1 className="mt-4 text-2xl font-bold">{item.title}</h1>
-
-            {/* Creator line */}
-            <div className="mt-1 text-sm text-muted-foreground">
-              by{" "}
-              {creator?.id ? (
-                <Link
-                  to={`/creator/id/${creator.id}`}
-                  className="text-primary hover:underline"
-                >
-                  {displayName}
-                </Link>
-              ) : (
-                <span>Creator</span>
-              )}
+        <div className="mb-6">
+          <div className="flex items-center gap-3">
+            <div className="h-12 w-12 rounded-full bg-primary/20 flex items-center justify-center uppercase font-semibold">
+              {displayName?.[0]?.toUpperCase() || "C"}
             </div>
-
-            <div className="mt-2 flex flex-wrap items-center gap-3">
-              <Badge variant="secondary" className="font-medium capitalize">
-                {item.content_type.replace("_", " ")}
-              </Badge>
-              {item.genre && <Badge variant="outline">{item.genre}</Badge>}
-              <span className="text-sm text-muted-foreground">
-                {new Date(item.created_at).toLocaleDateString()}
-              </span>
-
-              <div className="ml-auto flex items-center gap-2">
-                <Button
-                  variant={likedByMe ? "default" : "secondary"}
-                  size="sm"
-                  onClick={toggleLike}
-                  className="gap-2"
-                >
-                  <ThumbsUp className="h-4 w-4" />
-                  {likedByMe ? "Liked" : "Like"}
-                  <span className="opacity-80">• {likeCount}</span>
-                </Button>
-
-                <Button variant="outline" size="sm" onClick={share} className="gap-2">
-                  <Share2 className="h-4 w-4" />
-                  Share
-                </Button>
-              </div>
-            </div>
-
-            {/* Optional description block */}
-            {item.description && (
-              <div className="mt-4 rounded-xl border border-border/50 bg-card/60 p-4">
-                <p className="whitespace-pre-line text-sm text-foreground/90">
-                  {item.description}
-                </p>
-              </div>
-            )}
-
-            {/* Comments */}
-            <div className="mt-6">
-              <Comments contentId={item.id} />
+            <div>
+              <h1 className="text-xl font-bold">{displayName}</h1>
+              <p className="text-sm text-muted-foreground">@{profile?.username ?? "creator"}</p>
             </div>
           </div>
+        </div>
 
-          {/* RIGHT: related */}
-          <aside className="space-y-4">
-            {related.map((r) => (
-              <Link
-                to={`/watch/${r.id}`}
-                key={r.id}
-                className="group grid grid-cols-[168px,1fr] gap-3 rounded-xl border border-border/40 bg-card/60 hover:bg-card transition"
-              >
-                <div className="relative aspect-video w-full overflow-hidden rounded-l-xl">
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {videos.map((v) => (
+            <Link key={v.id} to={`/watch/${v.id}`} className="group">
+              <Card className="overflow-hidden hover:bg-card/70 transition">
+                <div className="aspect-video overflow-hidden">
                   <img
-                    src={r.cover_url || r.thumbnail_url || ""}
-                    alt={r.title}
-                    className="h-full w-full object-cover"
-                    loading="lazy"
+                    src={v.cover_url || v.thumbnail_url || ""}
+                    alt={v.title}
+                    className="h-full w-full object-cover group-hover:scale-[1.02] transition"
                   />
-                  {typeof r.likes_count === "number" && (
-                    <div className="absolute bottom-2 right-2 flex items-center gap-1 rounded-full bg-black/60 px-2 py-0.5 text-xs">
-                      <ThumbsUp className="h-3 w-3" />
-                      {r.likes_count}
-                    </div>
-                  )}
                 </div>
-                <div className="py-2 pr-3">
-                  <p className="line-clamp-2 font-semibold group-hover:underline">
-                    {r.title}
-                  </p>
-                  {r.genre && (
-                    <p className="mt-1 text-xs text-muted-foreground">{r.genre}</p>
-                  )}
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {new Date(r.created_at).toLocaleDateString()}
-                  </p>
+                <div className="p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Badge variant="secondary" className="capitalize">
+                      {v.content_type.replace("_", " ")}
+                    </Badge>
+                    {v.genre && <Badge variant="outline">{v.genre}</Badge>}
+                  </div>
+                  <div className="font-semibold line-clamp-2">{v.title}</div>
+                  <div className="mt-1 text-xs text-muted-foreground">
+                    {new Date(v.created_at).toLocaleDateString()}
+                  </div>
                 </div>
-              </Link>
-            ))}
-            {related.length === 0 && (
-              <div className="text-sm text-muted-foreground">No related videos yet.</div>
-            )}
-          </aside>
+              </Card>
+            </Link>
+          ))}
+
+          {!loading && videos.length === 0 && (
+            <div className="col-span-full rounded-lg border border-border/50 bg-card/60 p-6 text-sm text-muted-foreground">
+              No videos yet.
+            </div>
+          )}
         </div>
       </main>
 
@@ -353,4 +116,4 @@ const Watch: React.FC = () => {
   );
 };
 
-export default Watch;
+export default CreatorVideosPage;

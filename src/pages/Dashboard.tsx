@@ -23,6 +23,13 @@ import {
   Trash2,
   Save,
   Loader2,
+  // NEW: icons for Safety Center
+  ShieldCheck,
+  AlertTriangle,
+  Lock,
+  Flag,
+  HelpCircle,
+  MessageSquareWarning,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -656,6 +663,104 @@ const Dashboard = () => {
                 </>
               )}
             </div>
+          </section>
+
+          {/* ============================ SAFETY CENTER ============================ */}
+          <section className="space-y-6">
+            <h2 className="text-2xl md:text-3xl font-bold flex items-center gap-2">
+              <ShieldCheck className="h-6 w-6 text-green-500" />
+              Safety Center
+            </h2>
+
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {/* Account safety */}
+              <div className="cinema-card p-6">
+                <div className="flex items-center gap-2 mb-2">
+                  <Lock className="h-5 w-5" />
+                  <h3 className="font-semibold">Account Safety (13–19)</h3>
+                </div>
+                <ul className="text-sm text-muted-foreground space-y-2">
+                  <li>• Use a strong password you don’t share with anyone.</li>
+                  <li>• Turn on device screen locks; log out on shared devices.</li>
+                  <li>• Never post private info (address, phone, school).</li>
+                </ul>
+              </div>
+
+              {/* Reporting & blocking */}
+              <div className="cinema-card p-6">
+                <div className="flex items-center gap-2 mb-2">
+                  <Flag className="h-5 w-5" />
+                  <h3 className="font-semibold">Reporting & Blocking</h3>
+                </div>
+                <ul className="text-sm text-muted-foreground space-y-2">
+                  <li>• Report harmful or inappropriate content immediately.</li>
+                  <li>• Block users who harass or make you uncomfortable.</li>
+                  <li>• We review reports and take action quickly.</li>
+                </ul>
+              </div>
+
+              {/* Privacy controls */}
+              <div className="cinema-card p-6">
+                <div className="flex items-center gap-2 mb-2">
+                  <Shield className="h-5 w-5" />
+                  <h3 className="font-semibold">Privacy Controls</h3>
+                </div>
+                <ul className="text-sm text-muted-foreground space-y-2">
+                  <li>• Set your profile to private if you want more control.</li>
+                  <li>• Review what you share before posting (photos, names, locations).</li>
+                  <li>• You can change your display name and avatar anytime.</li>
+                </ul>
+              </div>
+
+              {/* Community guidelines */}
+              <div className="cinema-card p-6">
+                <div className="flex items-center gap-2 mb-2">
+                  <AlertTriangle className="h-5 w-5" />
+                  <h3 className="font-semibold">Community Guidelines</h3>
+                </div>
+                <ul className="text-sm text-muted-foreground space-y-2">
+                  <li>• Be respectful—no bullying, hate, or harassment.</li>
+                  <li>• Keep content age-appropriate and legal.</li>
+                  <li>• No sharing others’ personal info without consent.</li>
+                </ul>
+              </div>
+
+              {/* Get help */}
+              <div className="cinema-card p-6">
+                <div className="flex items-center gap-2 mb-2">
+                  <HelpCircle className="h-5 w-5" />
+                  <h3 className="font-semibold">Need Help?</h3>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  If something feels wrong or unsafe, talk to a trusted adult and contact us.
+                </p>
+                <div className="mt-3">
+                  <Button onClick={() => navigate("/contact?subject=safety-help")} variant="secondary">
+                    Contact Support
+                  </Button>
+                </div>
+              </div>
+
+              {/* Report a problem */}
+              <div className="cinema-card p-6">
+                <div className="flex items-center gap-2 mb-2">
+                  <MessageSquareWarning className="h-5 w-5" />
+                  <h3 className="font-semibold">Report a Problem</h3>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  See something that breaks the rules or puts someone at risk? Let us know.
+                </p>
+                <div className="mt-3">
+                  <Button onClick={() => navigate("/contact?subject=report")} variant="secondary">
+                    Report Content/User
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            <p className="text-xs text-muted-foreground">
+              This Safety Center is designed for users ages 13–19. If you need immediate help or feel in danger, contact local authorities.
+            </p>
           </section>
         </div>
       </main>

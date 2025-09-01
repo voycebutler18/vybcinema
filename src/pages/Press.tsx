@@ -50,7 +50,7 @@ const Press = () => {
                   <p>
                     <strong className="text-foreground">Peter Butler</strong>, professionally known as 
                     <strong className="text-foreground"> Voyce Butler</strong>, is a singer, actor, and writer 
-                    who tells honest stories through R&B vocals, film-style content, and live performance.
+                    who tells honest stories through R&amp;B vocals, film-style content, and live performance.
                   </p>
                   <p>
                     Born in Chicago, Butler carries that city's grit and heart into everything he creates. 

@@ -108,6 +108,37 @@ const Watch: React.FC = () => {
     })();
   }, [id, user, toast]);
 
+  /* ✅ ADDED: count a view after the watch page has been open 5s */
+  useEffect(() => {
+    if (!item?.id) return;
+
+    // stable per-device session id for de-dupe
+    const key = "vyb_view_session";
+    let sessionId = localStorage.getItem(key);
+    if (!sessionId) {
+      sessionId = crypto.randomUUID();
+      localStorage.setItem(key, sessionId);
+    }
+
+    const timer = setTimeout(async () => {
+      try {
+        // Call your RPC that increments views (match arg names to your SQL)
+        const { error } = await supabase.rpc("increment_view", {
+          p_content_id: item.id,
+          p_session: sessionId,
+        });
+        if (error) {
+          // Non-fatal; the view counter UI will simply stay the same
+          console.warn("increment_view error:", error.message);
+        }
+      } catch (e) {
+        console.warn("increment_view failed:", e);
+      }
+    }, 5000); // 5 seconds on page
+
+    return () => clearTimeout(timer);
+  }, [item?.id]);
+
   const toggleLike = async () => {
     if (!id) return;
     if (!user) {

@@ -1,89 +1,111 @@
 import React, { useEffect, useState } from "react";
-import { ContentCard, Content } from "@/components/ContentCard";
-import { Button } from "@/components/ui/button";
+import Navigation from "@/components/Navigation";
+import { Footer } from "@/components/Footer";
+import { ContentCard, type Content } from "@/components/ContentCard";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 
-type Row = Content & { created_at?: string };
-
-const PAGE_SIZE = 24;
-const API_URL = import.meta.env.VITE_SUPABASE_URL as string;
-const API_KEY = (import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string) || (import.meta.env.VITE_SUPABASE_ANON_KEY as string);
-const REST_TABLE = "contents";
-
-export default function Talent() {
-  const [items, setItems] = useState<Row[]>([]);
-  const [from, setFrom] = useState(0);
-  const [loading, setLoading] = useState(false);
-  const [hasMore, setHasMore] = useState(true);
+const Talent = () => {
+  const { user } = useAuth();
   const navigate = useNavigate();
 
-  const fetchPage = async (start: number, size: number) => {
-    if (!API_URL || !API_KEY) {
-      console.warn("[Talent] Missing VITE_SUPABASE_URL or VITE_SUPABASE_PUBLISHABLE_KEY");
-      return [];
-    }
-    const params = new URLSearchParams({
-      select: "id,title,description,genre,cover_url,file_url,trailer_url,preview_url,content_type,created_at",
-      order: "created_at.desc",
-      limit: String(size),
-      offset: String(start),
-      content_type: "in.(talent)",
-    });
-    const res = await fetch(`${API_URL}/rest/v1/${REST_TABLE}?${params.toString()}`, {
-      headers: { apikey: API_KEY, Authorization: `Bearer ${API_KEY}` },
-    });
-    if (!res.ok) {
-      console.error("[Talent] REST error", res.status, await res.text());
-      return [];
-    }
-    return (await res.json()) as Row[];
-  };
-
-  const load = async (append: boolean) => {
-    if (loading) return;
-    setLoading(true);
-    const start = append ? from : 0;
-    const rows = await fetchPage(start, PAGE_SIZE);
-    setItems(append ? [...items, ...rows] : rows);
-    setFrom(start + rows.length);
-    setHasMore(rows.length === PAGE_SIZE);
-    setLoading(false);
-  };
+  const [content, setContent] = useState<Content[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    load(false);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    (async () => {
+      try {
+        const { data, error } = await supabase
+          .from("content")
+          .select("*")
+          .or("content_type.eq.talent,genre.ilike.%talent%")
+          .order("created_at", { ascending: false });
+
+        if (error) throw error;
+        setContent((data as Content[]) || []);
+      } finally {
+        setLoading(false);
+      }
+    })();
   }, []);
 
-  return (
-    <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 text-white">
-      <h1 className="text-2xl sm:text-3xl font-extrabold">Talent</h1>
-      <p className="mt-2 text-gray-400">Show off your skills and find new creators.</p>
+  const openWatch = (c: Content) => navigate(`/watch/${c.id}`);
 
-      <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {items.map((it, i) => (
-          <ContentCard
-            key={it.id}
-            content={it}
-            contentType="Talent"
-            index={i}
-            onClick={() => navigate(`/talent/${it.id}`)}
-            onPlay={() => navigate(`/talent/${it.id}`)}
-          />
-        ))}
-      </div>
+  const recent = content.slice(0, 12);
+  const dance = content.filter((v) => v.genre?.toLowerCase().includes("dance"));
+  const singing = content.filter(
+    (v) => v.genre?.toLowerCase().includes("sing") || v.genre?.toLowerCase().includes("vocal")
+  );
+  const comedy = content.filter((v) => v.genre?.toLowerCase().includes("comedy"));
+  const myTalent = user ? content.filter((s: any) => s.user_id === user.id) : [];
 
-      {items.length === 0 && !loading && (
-        <div className="mt-6 text-sm text-gray-400">No talent posts yet.</div>
-      )}
+  const Section = ({ title, items }: { title: string; items: Content[] }) =>
+    !items.length ? null : (
+      <section className="container mx-auto px-6 mb-12">
+        {/* Hide like badge & like/unlike buttons inside cards on this page */}
+        <style>{`
+          .hide-likes [title$="likes"],
+          .hide-likes button[title="Like"],
+          .hide-likes button[title="Unlike"] {
+            display: none !important;
+          }
+        `}</style>
 
-      {hasMore && (
-        <div className="mt-8">
-          <Button onClick={() => load(true)} disabled={loading}>
-            {loading ? "Loading..." : "Load more"}
-          </Button>
+        <h2 className="text-2xl md:text-3xl font-bold mb-6">{title}</h2>
+        <div className="hide-likes grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+          {items.map((c, i) => (
+            <ContentCard
+              key={c.id}
+              content={c}
+              contentType="Talent"
+              index={i % 4}
+              onClick={() => openWatch(c)}
+              onPlay={() => openWatch(c)}
+            />
+          ))}
         </div>
-      )}
+      </section>
+    );
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navigation />
+        <main className="container mx-auto px-6 pt-28 pb-16">
+          <h2 className="text-2xl md:text-3xl font-bold mb-6">New Talent</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className="aspect-video rounded-lg bg-card/60 animate-pulse" />
+            ))}
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-background">
+      <Navigation />
+      <main className="pt-24 pb-20">
+        <Section title="New Talent" items={recent} />
+        <Section title="Dance" items={dance} />
+        <Section title="Singing" items={singing} />
+        <Section title="Comedy" items={comedy} />
+        <Section title="My Talent" items={myTalent as Content[]} />
+
+        {!content.length && (
+          <div className="container mx-auto px-6">
+            <div className="bg-card/60 border border-border/40 rounded-2xl p-8 text-center">
+              <h2 className="text-2xl font-bold">No Talent Videos Yet</h2>
+              <p className="text-muted-foreground">Show off your skills!</p>
+            </div>
+          </div>
+        )}
+      </main>
+      <Footer />
     </div>
   );
-}
+};
+
+export default Talent;

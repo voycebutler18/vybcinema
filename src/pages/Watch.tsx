@@ -1,22 +1,21 @@
-// src/pages/Watch.tsx
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
-import Navigation from "@/components/Navigation";
-import { Footer } from "@/components/Footer";
-import { VideoPlayer } from "@/components/VideoPlayer";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Card } from "@/components/ui/card";
-import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/hooks/useAuth";
-import { supabase } from "@/integrations/supabase/client";
+import Navigation from "../components/Navigation";
+import { Footer } from "../components/Footer";
+import { VideoPlayer } from "../components/VideoPlayer";
+import { Button } from "../components/ui/button";
+import { Badge } from "../components/ui/badge";
+import { Card } from "../components/ui/card";
+import { useToast } from "../hooks/use-toast";
+import { useAuth } from "../hooks/useAuth";
+import { supabase } from "../integrations/supabase/client";
 import { ThumbsUp, Share2 } from "lucide-react";
 
 /* ✅ ADDED: live view counter */
-import ViewCounter from "@/components/ViewCounter";
+import ViewCounter from "../components/ViewCounter";
 
 /* ✅ ADDED: comments component */
-import Comments from "@/components/Comments";
+import Comments from "../components/Comments";
 
 type Content = {
   id: string;
@@ -39,7 +38,8 @@ type Content = {
   monetization_enabled?: boolean | null;
   created_at: string;
   user_id?: string | null;
-  likes_count?: number | null; // <-- new
+  likes_count?: number | null;
+  views_count?: number | null; // <-- ✅ FIX: Added views_count property
 };
 
 const Watch: React.FC = () => {

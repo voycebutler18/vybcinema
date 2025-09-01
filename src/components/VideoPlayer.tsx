@@ -18,7 +18,6 @@ import {
   VolumeX,
   X,
 } from 'lucide-react';
-import { useViewCounter } from '@/hooks/useViewCounter'; // ⬅️ ADDED
 
 interface VideoPlayerProps {
   // Media sources

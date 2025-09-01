@@ -1,6 +1,5 @@
 // src/components/VideoPlayer.tsx
 import React, { useEffect, useRef, useState } from "react";
-import { Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -25,6 +24,7 @@ interface VideoPlayerProps {
   videoUrl?: string;
   trailerUrl?: string;
   playbackId?: string;
+  streamUrl?: string; // (passed by Watch.tsx; not used here but allowed)
 
   // Visuals
   coverUrl?: string;
@@ -54,10 +54,10 @@ interface VideoPlayerProps {
   /** If true, render the player inline (no Dialog). */
   inline?: boolean;
 
-  /** NEW: creator info so we can render a clickable username */
+  /** Creator info (passed from Watch.tsx; optional to render) */
   creatorId?: string;
-  creatorUsername?: string;      // e.g. "vybteen"
-  creatorDisplayName?: string;   // e.g. "VYB Teen"
+  creatorUsername?: string;
+  creatorDisplayName?: string;
 }
 
 export const VideoPlayer: React.FC<VideoPlayerProps> = ({
@@ -87,7 +87,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
   inline = false,
 
-  // NEW creator props
+  // creator props (unused here; we show creator link on Watch page)
   creatorId,
   creatorUsername,
   creatorDisplayName,
@@ -143,11 +143,13 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     if (isPlaying) {
       videoRef.current.pause();
     } else {
-      videoRef.current.play().catch(() => {
-        videoRef.current!.muted = true;
-        setIsMuted(true);
-        videoRef.current!.play().catch(() => {});
-      });
+      videoRef.current
+        .play()
+        .catch(() => {
+          videoRef.current!.muted = true;
+          setIsMuted(true);
+          videoRef.current!.play().catch(() => {});
+        });
     }
     setIsPlaying(!isPlaying);
   };
@@ -249,22 +251,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     return `${m}:${s.toString().padStart(2, "0")}`;
   };
 
-  // ---------- small helper: creator link ----------
-  const CreatorByline: React.FC = () => {
-    if (!(creatorUsername || creatorId)) return null;
-    const to = creatorUsername ? `/creator/${creatorUsername}` : `/creator/id/${creatorId}`;
-    const label = creatorDisplayName || creatorUsername || "Creator";
-    return (
-      <div className="mb-2 text-sm">
-        <span className="text-muted-foreground">by </span>
-        <Link to={to} className="font-medium text-primary hover:underline">
-          {label}
-        </Link>
-      </div>
-    );
-  };
-
-  // ---------- shared player markup (used for inline and dialog) ----------
+  // ---------- shared player markup ----------
   const PlayerSurface = (
     <div
       ref={playerRef}
@@ -329,7 +316,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             </div>
           )}
 
-          {/* Controls */}
+          {/* Controls overlay */}
           <div
             className={`absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/30 transition-opacity duration-300 ${
               showControls ? "opacity-100" : "opacity-0"
@@ -464,14 +451,10 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             <Badge variant="secondary">{contentType}</Badge>
             {genre && <Badge variant="outline">{genre}</Badge>}
           </div>
-
-          <h3 className="text-lg font-semibold mb-1 line-clamp-1">{title}</h3>
-          <CreatorByline />
-
+          <h3 className="text-lg font-semibold mb-2 line-clamp-1">{title}</h3>
           {description && (
             <p className="text-muted-foreground text-sm mb-4 line-clamp-3">{description}</p>
           )}
-
           {canDelete && (
             <div className="flex justify-end">
               <Button size="sm" variant="destructive" onClick={onDelete}>
@@ -529,14 +512,10 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
           <Badge variant="secondary">{contentType}</Badge>
           {genre && <Badge variant="outline">{genre}</Badge>}
         </div>
-
-        <h3 className="text-lg font-semibold mb-1 line-clamp-1">{title}</h3>
-        <CreatorByline />
-
+        <h3 className="text-lg font-semibold mb-2 line-clamp-1">{title}</h3>
         {description && (
           <p className="text-muted-foreground text-sm mb-4 line-clamp-3">{description}</p>
         )}
-
         {canDelete && (
           <div className="flex justify-end">
             <Button size="sm" variant="destructive" onClick={onDelete}>

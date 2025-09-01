@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -6,7 +7,6 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { ScrollToTop } from "@/components/ScrollToTop";
 
-// Pages
 import Index from "./pages/Index";
 import Movies from "./pages/Movies";
 import TVShows from "./pages/TVShows";
@@ -24,6 +24,7 @@ import DMCA from "./pages/DMCA";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsOfService from "./pages/TermsOfService";
 import CookiePolicy from "./pages/CookiePolicy";
+import NotFound from "./pages/NotFound";
 import Dashboard from "./pages/Dashboard";
 
 // Teen IA pages
@@ -33,7 +34,7 @@ import Talent from "./pages/Talent";
 import Challenges from "./pages/Challenges";
 import Live from "./pages/Live";
 
-// Watch page
+// NEW: single video watch page
 import Watch from "./pages/Watch";
 
 const queryClient = new QueryClient();
@@ -60,7 +61,7 @@ const App = () => (
             <Route path="/challenges" element={<Challenges />} />
             <Route path="/live" element={<Live />} />
 
-            {/* Watch */}
+            {/* Watch (YouTube-style page) */}
             <Route path="/watch/:id" element={<Watch />} />
 
             {/* Creator */}
@@ -86,8 +87,8 @@ const App = () => (
             {/* Legacy */}
             <Route path="/browse" element={<Movies />} />
 
-            {/* Fallback: ANY unknown path → Index */}
-            <Route path="*" element={<Index />} />
+            {/* 404 */}
+            <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
       </TooltipProvider>

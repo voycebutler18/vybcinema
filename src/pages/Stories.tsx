@@ -94,8 +94,17 @@ const Stories = () => {
     if (!items.length) return null;
     return (
       <section className="container mx-auto px-6 mb-12">
+        {/* Hide like badge & like/unlike buttons inside cards on this page */}
+        <style>{`
+          .hide-likes [title$="likes"],
+          .hide-likes button[title="Like"],
+          .hide-likes button[title="Unlike"] {
+            display: none !important;
+          }
+        `}</style>
+
         <h2 className="text-2xl md:text-3xl font-bold mb-6">{title}</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+        <div className="hide-likes grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
           {items.map((c, i) => (
             <ContentCard
               key={c.id}

@@ -1,7 +1,10 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Play, ChevronDown } from "lucide-react";
+import { Play, ThumbsUp, ChevronDown } from "lucide-react";
+
+// Local like helpers (no Supabase)
+import { getLikeCount, isLikedLocal, likeOnce, unlikeOnce } from "@/lib/likes";
 
 /* ---------- Types ---------- */
 
@@ -13,7 +16,7 @@ export interface Content {
   cover_url?: string;
   file_url?: string;
   trailer_url?: string;
-  preview_url?: string;
+  preview_url?: string;     // <- make sure this exists in your data model
   content_type?: string;
 }
 
@@ -37,10 +40,50 @@ export const ContentCard: React.FC<ContentCardProps> = ({
   const [isHovered, setIsHovered] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
 
-  const hasPoster = Boolean(content.cover_url);
-  const hasVideo = Boolean(content.file_url);
+  // ❤️ like state (local only)
+  const [likeCount, setLikeCount] = useState<number>(0);
+  const [liked, setLiked] = useState<boolean>(false);
 
-  // what to show on hover: preview > trailer > file
+  // Load initial like state / count
+  useEffect(() => {
+    let alive = true;
+
+    (async () => {
+      try {
+        const initialLiked = isLikedLocal(content.id);
+        const count = await getLikeCount(content.id);
+        if (!alive) return;
+        setLiked(initialLiked);
+        setLikeCount(count);
+      } catch (e) {
+        console.warn("Like load error:", e);
+      }
+    })();
+
+    return () => {
+      alive = false;
+    };
+  }, [content.id]);
+
+  const handleLikeClick = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    try {
+      if (liked) {
+        const newCount = await unlikeOnce(content.id);
+        setLiked(false);
+        setLikeCount(newCount);
+      } else {
+        const newCount = await likeOnce(content.id);
+        setLiked(true);
+        setLikeCount(newCount);
+      }
+    } catch (err) {
+      console.warn("Like update error:", err);
+    }
+  };
+
   const hoverPreview =
     content.preview_url || content.trailer_url || content.file_url || "";
 
@@ -55,12 +98,11 @@ export const ContentCard: React.FC<ContentCardProps> = ({
         transformOrigin: index === 0 ? "left center" : "center",
         marginRight: isHovered ? "2rem" : "0",
       }}
-      onClick={onClick}
     >
       <div className="relative overflow-hidden rounded-lg bg-secondary/20 border border-border/50">
         {/* Poster / Video */}
         <div className="aspect-video relative">
-          {hasPoster ? (
+          {content.cover_url ? (
             <img
               src={content.cover_url}
               alt={content.title}
@@ -69,7 +111,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
               }`}
               onLoad={() => setImageLoaded(true)}
             />
-          ) : hasVideo ? (
+          ) : content.file_url ? (
             <video
               className="w-full h-full object-cover"
               muted
@@ -145,6 +187,21 @@ export const ContentCard: React.FC<ContentCardProps> = ({
                 >
                   <Play className="h-4 w-4" />
                 </Button>
+
+                {/* Like button + live count */}
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={liked ? "default" : "outline"}
+                  className="rounded-full px-3"
+                  onClick={handleLikeClick}
+                  title={liked ? "Unlike" : "Like"}
+                >
+                  <div className="flex items-center gap-2">
+                    <ThumbsUp className="h-4 w-4" />
+                    <span className="text-xs tabular-nums">{likeCount}</span>
+                  </div>
+                </Button>
               </div>
 
               <Button
@@ -186,12 +243,21 @@ export const ContentCard: React.FC<ContentCardProps> = ({
           </div>
         )}
 
-        {/* Title overlay when not hovered */}
+        {/* Title + small like badge when not hovered */}
         {!isHovered && (
           <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-background/90 to-transparent p-3">
-            <h3 className="text-foreground font-semibold text-sm line-clamp-1">
-              {content.title}
-            </h3>
+            <div className="flex items-center justify-between">
+              <h3 className="text-foreground font-semibold text-sm line-clamp-1">
+                {content.title}
+              </h3>
+              <div
+                className="flex items-center gap-1 text-xs text-foreground/80 bg-background/60 rounded-full px-2 py-0.5"
+                title={`${likeCount} likes`}
+              >
+                <ThumbsUp className="h-3.5 w-3.5" />
+                <span className="tabular-nums">{likeCount}</span>
+              </div>
+            </div>
           </div>
         )}
       </div>

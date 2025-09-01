@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+// src/pages/Dashboard.tsx
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { Navigation } from "@/components/Navigation";
@@ -16,10 +17,18 @@ import {
   Radio,
   Plus,
   BadgeInfo,
+  Image as ImageIcon,
+  Shield,
+  KeyRound,
+  Trash2,
+  Save,
+  Loader2,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { VideoPlayer } from "@/components/VideoPlayer";
+
+/* -------------------------------- Types ---------------------------------- */
 
 type VYBType =
   | "music"
@@ -53,6 +62,17 @@ interface ContentItem {
   monetization_enabled?: boolean;
 }
 
+type ProfileRow = {
+  id: string;
+  user_id: string;
+  username: string | null;
+  avatar_url: string | null;
+  is_private: boolean | null;
+  last_username_change: string | null; // ISO date string
+  created_at: string;
+  updated_at: string | null;
+};
+
 const typeMeta: Record<
   VYBType,
   { label: string; icon: JSX.Element; param: string }
@@ -67,7 +87,10 @@ const typeMeta: Record<
 
 const order: VYBType[] = ["music", "show", "story", "talent", "challenge", "live"];
 
-const getMeta = (t: VYBType) => typeMeta[t] ?? { label: t || "Other", icon: <Upload className="h-5 w-5" />, param: t || "other" };
+const getMeta = (t: VYBType) =>
+  typeMeta[t] ?? { label: t || "Other", icon: <Upload className="h-5 w-5" />, param: t || "other" };
+
+/* ------------------------------ Page Component --------------------------- */
 
 const Dashboard = () => {
   const { user, loading } = useAuth();
@@ -78,6 +101,19 @@ const Dashboard = () => {
   const [loadingContent, setLoadingContent] = useState(true);
   const [filter, setFilter] = useState<VYBType | "all">("all");
 
+  // Profile state
+  const [profile, setProfile] = useState<ProfileRow | null>(null);
+  const [profileLoading, setProfileLoading] = useState(true);
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [displayName, setDisplayName] = useState("");
+  const [isPrivate, setIsPrivate] = useState(false);
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const [newPassword, setNewPassword] = useState("");
+  const [changingPassword, setChangingPassword] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
   useEffect(() => {
     if (!loading && !user) {
       navigate("/login");
@@ -85,6 +121,7 @@ const Dashboard = () => {
     }
     if (user) {
       fetchUserContent();
+      fetchProfile();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, loading]);
@@ -110,7 +147,52 @@ const Dashboard = () => {
     }
   };
 
-  // Refresh often to catch processing changes
+  const fetchProfile = async () => {
+    if (!user) return;
+    setProfileLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("user_id", user.id)
+        .single();
+
+      if (error && error.code !== "PGRST116") throw error; // not found vs error
+      let row = data as ProfileRow | null;
+
+      if (!row) {
+        // create a new row if missing
+        const insert = {
+          user_id: user.id,
+          username: user.user_metadata?.name ?? user.email?.split("@")[0] ?? "user",
+          avatar_url: null,
+          is_private: false,
+          last_username_change: null,
+        };
+        const { data: created, error: insertErr } = await supabase
+          .from("profiles")
+          .insert(insert)
+          .select("*")
+          .single();
+        if (insertErr) throw insertErr;
+        row = created as ProfileRow;
+      }
+
+      setProfile(row);
+      setDisplayName(row.username ?? "");
+      setIsPrivate(Boolean(row.is_private));
+    } catch (e: any) {
+      toast({
+        title: "Profile error",
+        description: e.message,
+        variant: "destructive",
+      });
+    } finally {
+      setProfileLoading(false);
+    }
+  };
+
+  // Refresh content often to catch processing changes
   useEffect(() => {
     if (!user) return;
     const interval = setInterval(fetchUserContent, 10000);
@@ -165,6 +247,153 @@ const Dashboard = () => {
     );
   }
 
+  /* ----------------------- Profile helper functions ---------------------- */
+
+  const canChangeUsername = () => {
+    if (!profile?.last_username_change) return true;
+    const last = new Date(profile.last_username_change).getTime();
+    const now = Date.now();
+    const days = (now - last) / (1000 * 60 * 60 * 24);
+    return days >= 30;
+  };
+
+  const usernameCooldownLeft = () => {
+    if (!profile?.last_username_change) return 0;
+    const last = new Date(profile.last_username_change).getTime();
+    const now = Date.now();
+    const days = Math.max(0, 30 - Math.floor((now - last) / (1000 * 60 * 60 * 24)));
+    return days;
+  };
+
+  const saveProfile = async () => {
+    if (!user || !profile) return;
+    setSavingProfile(true);
+    try {
+      // username guard
+      const wantsUsernameChange = displayName.trim() !== (profile.username ?? "");
+      if (wantsUsernameChange && !canChangeUsername()) {
+        toast({
+          title: "Username lock",
+          description: `You can change your username again in ${usernameCooldownLeft()} day(s).`,
+          variant: "destructive",
+        });
+        setSavingProfile(false);
+        return;
+      }
+
+      const updates: Partial<ProfileRow> = {
+        username: displayName.trim(),
+        is_private: isPrivate,
+        updated_at: new Date().toISOString(),
+      };
+
+      if (wantsUsernameChange) {
+        (updates as any).last_username_change = new Date().toISOString();
+      }
+
+      const { data, error } = await supabase
+        .from("profiles")
+        .update(updates)
+        .eq("user_id", user.id)
+        .select("*")
+        .single();
+      if (error) throw error;
+
+      setProfile(data as ProfileRow);
+      toast({ title: "Saved", description: "Profile updated successfully." });
+    } catch (e: any) {
+      toast({ title: "Save failed", description: e.message, variant: "destructive" });
+    } finally {
+      setSavingProfile(false);
+    }
+  };
+
+  const uploadAvatar = async (file: File) => {
+    if (!user) return;
+    setAvatarUploading(true);
+    try {
+      const ext = file.name.split(".").pop();
+      const path = `${user.id}/${crypto.randomUUID()}.${ext ?? "jpg"}`;
+
+      const { error: upErr } = await supabase.storage.from("avatars").upload(path, file, {
+        upsert: true,
+        cacheControl: "3600",
+      });
+      if (upErr) throw upErr;
+
+      const { data: pub } = supabase.storage.from("avatars").getPublicUrl(path);
+      const publicUrl = pub?.publicUrl;
+
+      const { error: profErr } = await supabase
+        .from("profiles")
+        .update({ avatar_url: publicUrl, updated_at: new Date().toISOString() })
+        .eq("user_id", user.id);
+      if (profErr) throw profErr;
+
+      setProfile((p) => (p ? { ...p, avatar_url: publicUrl } : p));
+      toast({ title: "Avatar updated", description: "Your profile photo has been changed." });
+    } catch (e: any) {
+      toast({ title: "Upload failed", description: e.message, variant: "destructive" });
+    } finally {
+      setAvatarUploading(false);
+    }
+  };
+
+  const changePassword = async () => {
+    if (!newPassword || newPassword.length < 8) {
+      toast({
+        title: "Password too short",
+        description: "Please use at least 8 characters.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setChangingPassword(true);
+    try {
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) throw error;
+      setNewPassword("");
+      toast({ title: "Password changed", description: "Use your new password next time you log in." });
+    } catch (e: any) {
+      toast({ title: "Change failed", description: e.message, variant: "destructive" });
+    } finally {
+      setChangingPassword(false);
+    }
+  };
+
+  const requestAccountDeletion = async () => {
+    if (!user) return;
+    const confirm = window.confirm(
+      "This will permanently delete your account and all associated data. This action cannot be undone. Continue?"
+    );
+    if (!confirm) return;
+
+    setDeleting(true);
+    try {
+      // Prefer invoking an Edge Function that deletes the auth.user and all rows in a transaction.
+      const { error: fxErr } = await supabase.functions.invoke("delete-user", {
+        body: { user_id: user.id },
+      });
+      if (fxErr) throw fxErr;
+
+      toast({ title: "Account deleted", description: "We’re signing you out now." });
+      await supabase.auth.signOut();
+      navigate("/goodbye");
+    } catch (e: any) {
+      // If function is not configured, explain next step but keep user safe
+      toast({
+        title: "Deletion not available",
+        description:
+          "Server deletion function is not configured. Ask your admin to add an Edge Function named `delete-user` that deletes the auth user and related rows.",
+        variant: "destructive",
+      });
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  /* --------------------------------- Render -------------------------------- */
+
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
@@ -178,26 +407,15 @@ const Dashboard = () => {
               Upload your <b>Music</b>, <b>Shows</b>, <b>Stories</b>, showcase your <b>Talent</b>, start a <b>Challenge</b>, or go <b>Live</b>.
             </p>
             <div className="mt-6 flex flex-wrap gap-2">
-              <Button
-                onClick={() => navigateToCreate("music")}
-                className="bg-white text-neutral-900 hover:bg-white/90"
-              >
+              <Button onClick={() => navigateToCreate("music")} className="bg-white text-neutral-900 hover:bg-white/90">
                 <Music2 className="h-4 w-4 mr-2" />
                 Upload Music
               </Button>
-              <Button
-                onClick={() => navigateToCreate("show")}
-                variant="secondary"
-                className="bg-white/10 text-white hover:bg-white/20"
-              >
+              <Button onClick={() => navigateToCreate("show")} variant="secondary" className="bg-white/10 text-white hover:bg-white/20">
                 <Tv className="h-4 w-4 mr-2" />
                 Upload Show
               </Button>
-              <Button
-                onClick={() => navigateToCreate("story")}
-                variant="secondary"
-                className="bg-white/10 text-white hover:bg-white/20"
-              >
+              <Button onClick={() => navigateToCreate("story")} variant="secondary" className="bg-white/10 text-white hover:bg-white/20">
                 <BookOpen className="h-4 w-4 mr-2" />
                 Upload Story
               </Button>
@@ -205,9 +423,7 @@ const Dashboard = () => {
 
             <div className="mt-6 text-sm flex items-start gap-2">
               <BadgeInfo className="h-5 w-5 mt-0.5" />
-              <p className="text-white/90">
-                Tip: Choose the category that matches your upload — you can switch categories later in Edit.
-              </p>
+              <p className="text-white/90">Tip: Choose the category that matches your upload — you can switch categories later in Edit.</p>
             </div>
           </div>
         </div>
@@ -215,48 +431,17 @@ const Dashboard = () => {
 
       <main className="py-10">
         <div className="container mx-auto px-4 max-w-6xl space-y-10">
-
           {/* QUICK CREATE GRID (all six) */}
           <section>
             <h2 className="text-2xl md:text-3xl font-bold mb-5">Create something new</h2>
 
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              <CreateCard
-                color="bg-pink-500"
-                label="Music"
-                icon={<Music2 className="h-6 w-6" />}
-                onClick={() => navigateToCreate("music")}
-              />
-              <CreateCard
-                color="bg-indigo-500"
-                label="Shows"
-                icon={<Tv className="h-6 w-6" />}
-                onClick={() => navigateToCreate("show")}
-              />
-              <CreateCard
-                color="bg-emerald-500"
-                label="Stories"
-                icon={<BookOpen className="h-6 w-6" />}
-                onClick={() => navigateToCreate("story")}
-              />
-              <CreateCard
-                color="bg-amber-500"
-                label="Talent"
-                icon={<Sparkles className="h-6 w-6" />}
-                onClick={() => navigateToCreate("talent")}
-              />
-              <CreateCard
-                color="bg-violet-500"
-                label="Challenges"
-                icon={<Trophy className="h-6 w-6" />}
-                onClick={() => navigateToCreate("challenge")}
-              />
-              <CreateCard
-                color="bg-rose-500"
-                label="Live"
-                icon={<Radio className="h-6 w-6" />}
-                onClick={() => navigateToCreate("live")}
-              />
+              <CreateCard color="bg-pink-500" label="Music" icon={<Music2 className="h-6 w-6" />} onClick={() => navigateToCreate("music")} />
+              <CreateCard color="bg-indigo-500" label="Shows" icon={<Tv className="h-6 w-6" />} onClick={() => navigateToCreate("show")} />
+              <CreateCard color="bg-emerald-500" label="Stories" icon={<BookOpen className="h-6 w-6" />} onClick={() => navigateToCreate("story")} />
+              <CreateCard color="bg-amber-500" label="Talent" icon={<Sparkles className="h-6 w-6" />} onClick={() => navigateToCreate("talent")} />
+              <CreateCard color="bg-violet-500" label="Challenges" icon={<Trophy className="h-6 w-6" />} onClick={() => navigateToCreate("challenge")} />
+              <CreateCard color="bg-rose-500" label="Live" icon={<Radio className="h-6 w-6" />} onClick={() => navigateToCreate("live")} />
             </div>
           </section>
 
@@ -292,9 +477,7 @@ const Dashboard = () => {
               <div className="cinema-card p-10 text-center">
                 <Upload className="h-16 w-16 mx-auto text-pink-500/60 mb-4" />
                 <h3 className="text-xl font-bold mb-1">Nothing here yet</h3>
-                <p className="text-muted-foreground mb-6">
-                  Start by creating something in the category you love.
-                </p>
+                <p className="text-muted-foreground mb-6">Start by creating something in the category you love.</p>
                 <Button onClick={() => navigateToCreate("music")} className="bg-pink-500 hover:bg-pink-600">
                   <Plus className="h-4 w-4 mr-2" />
                   Upload now
@@ -336,6 +519,153 @@ const Dashboard = () => {
                 ))}
               </div>
             )}
+          </section>
+
+          {/* ========================== PROFILE SECTION ========================== */}
+          <section className="space-y-6">
+            <h2 className="text-2xl md:text-3xl font-bold">Profile</h2>
+
+            {/* Profile card */}
+            <div className="cinema-card rounded-2xl border bg-card p-6">
+              {profileLoading ? (
+                <div className="flex items-center gap-3 text-muted-foreground">
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                  Loading profile…
+                </div>
+              ) : (
+                <>
+                  {/* Top row */}
+                  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+                    <div className="flex items-center gap-4">
+                      <div className="h-16 w-16 rounded-full bg-muted overflow-hidden border">
+                        {profile?.avatar_url ? (
+                          <img src={profile.avatar_url} alt="avatar" className="h-full w-full object-cover" />
+                        ) : (
+                          <div className="h-full w-full flex items-center justify-center text-muted-foreground">
+                            <ImageIcon className="h-6 w-6" />
+                          </div>
+                        )}
+                      </div>
+                      <div>
+                        <div className="text-sm text-muted-foreground">Signed in as</div>
+                        <div className="font-semibold">{user?.email}</div>
+                        {profile?.username ? (
+                          <div className="text-sm text-muted-foreground">Display name: {profile.username}</div>
+                        ) : null}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const f = e.target.files?.[0];
+                          if (f) uploadAvatar(f);
+                        }}
+                      />
+                      <Button
+                        variant="secondary"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={avatarUploading}
+                      >
+                        {avatarUploading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <ImageIcon className="h-4 w-4 mr-2" />}
+                        {avatarUploading ? "Uploading…" : "Change photo"}
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Editable fields */}
+                  <div className="grid md:grid-cols-2 gap-6 mt-6">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Display name</label>
+                      <input
+                        value={displayName}
+                        onChange={(e) => setDisplayName(e.target.value)}
+                        placeholder="Your public display name"
+                        className="w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-pink-500"
+                      />
+                      {!canChangeUsername() ? (
+                        <p className="text-xs text-muted-foreground">
+                          You can change your username again in {usernameCooldownLeft()} day(s).
+                        </p>
+                      ) : (
+                        <p className="text-xs text-muted-foreground">You can change your username now.</p>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium flex items-center gap-2">
+                        <Shield className="h-4 w-4" />
+                        Privacy
+                      </label>
+                      <div className="flex items-center gap-3">
+                        <input
+                          id="private"
+                          type="checkbox"
+                          checked={isPrivate}
+                          onChange={(e) => setIsPrivate(e.target.checked)}
+                          className="h-4 w-4"
+                        />
+                        <label htmlFor="private" className="text-sm">
+                          Make my profile private
+                        </label>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        When private, only approved users can see your full profile and uploads.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 flex gap-2">
+                    <Button onClick={saveProfile} disabled={savingProfile}>
+                      {savingProfile ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
+                      Save changes
+                    </Button>
+                  </div>
+
+                  {/* Password */}
+                  <div className="mt-10 border-t pt-6">
+                    <h3 className="text-lg font-semibold flex items-center gap-2">
+                      <KeyRound className="h-5 w-5" />
+                      Change password
+                    </h3>
+                    <div className="mt-3 flex flex-col sm:flex-row gap-3">
+                      <input
+                        type="password"
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        placeholder="New password (min 8 characters)"
+                        className="w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-pink-500"
+                      />
+                      <Button onClick={changePassword} disabled={changingPassword}>
+                        {changingPassword ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+                        Update password
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Danger zone */}
+                  <div className="mt-10 border-t pt-6">
+                    <h3 className="text-lg font-semibold text-red-600">Danger zone</h3>
+                    <div className="mt-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                      <div>
+                        <div className="font-medium">Delete account</div>
+                        <p className="text-sm text-muted-foreground">
+                          Permanently delete your account and all content. This cannot be undone.
+                        </p>
+                      </div>
+                      <Button variant="destructive" onClick={requestAccountDeletion} disabled={deleting}>
+                        {deleting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Trash2 className="h-4 w-4 mr-2" />}
+                        Delete account
+                      </Button>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
           </section>
         </div>
       </main>
